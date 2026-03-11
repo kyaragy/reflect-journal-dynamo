@@ -1,3 +1,5 @@
+import { getAuthSession } from '../auth/authSession';
+
 type ApiClientConfig = {
   baseUrl: string;
   defaultHeaders?: HeadersInit;
@@ -29,10 +31,12 @@ export class ApiClient {
   }
 
   async request<T>(path: string, init: RequestInit = {}): Promise<T> {
+    const accessToken = getAuthSession().accessToken;
     const response = await fetch(new URL(path, this.baseUrl).toString(), {
       ...init,
       headers: {
         'Content-Type': 'application/json',
+        ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
         ...this.defaultHeaders,
         ...init.headers,
       },

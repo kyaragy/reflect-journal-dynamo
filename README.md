@@ -40,3 +40,9 @@
 
 - 将来の backend API に向けた client contract は `src/contracts/journalApi.ts` に定義しています
 - 仕様メモは `docs/api-contract.md` を参照してください
+
+## Auth Context
+
+- `src/auth/AuthContext.tsx` に mock auth ベースの auth context を用意しています
+- `currentUser / login / logout` を扱え、将来 Cognito に差し替え可能です
+- `apiClient` は auth session に access token があれば `Authorization: Bearer ...` を自動で付与します

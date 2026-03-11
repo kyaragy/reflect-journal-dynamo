@@ -1,6 +1,7 @@
 import { v4 as uuidv4 } from 'uuid';
 import { addDays, format, parseISO } from 'date-fns';
 import { createEmptyJournalSnapshot } from '../domain/journal';
+import { getAuthSession } from '../auth/authSession';
 import type {
   CreateCardInput,
   Card,
@@ -212,6 +213,8 @@ const writeSnapshot = (snapshot: JournalSnapshot) => {
 const getDay = (snapshot: JournalSnapshot, date: string) =>
   snapshot.days.find((day) => day.date === date) ?? null;
 
+const getCurrentUserId = () => getAuthSession().userId ?? undefined;
+
 const upsertWeeklySummary = (
   summaries: WeeklySummary[],
   weekKey: string,
@@ -220,10 +223,10 @@ const upsertWeeklySummary = (
   const now = new Date().toISOString();
   const existing = summaries.find((item) => item.weekKey === weekKey);
   if (!existing) {
-    return [...summaries, { weekKey, summary, createdAt: now, updatedAt: now }];
+    return [...summaries, { userId: getCurrentUserId(), weekKey, summary, createdAt: now, updatedAt: now }];
   }
   return summaries.map((item) =>
-    item.weekKey === weekKey ? { ...item, summary, updatedAt: now } : item
+    item.weekKey === weekKey ? { ...item, userId: item.userId ?? getCurrentUserId(), summary, updatedAt: now } : item
   );
 };
 
@@ -235,10 +238,10 @@ const upsertMonthlySummary = (
   const now = new Date().toISOString();
   const existing = summaries.find((item) => item.monthKey === monthKey);
   if (!existing) {
-    return [...summaries, { monthKey, summary, createdAt: now, updatedAt: now }];
+    return [...summaries, { userId: getCurrentUserId(), monthKey, summary, createdAt: now, updatedAt: now }];
   }
   return summaries.map((item) =>
-    item.monthKey === monthKey ? { ...item, summary, updatedAt: now } : item
+    item.monthKey === monthKey ? { ...item, userId: item.userId ?? getCurrentUserId(), summary, updatedAt: now } : item
   );
 };
 
@@ -250,10 +253,10 @@ const upsertYearlySummary = (
   const now = new Date().toISOString();
   const existing = summaries.find((item) => item.yearKey === yearKey);
   if (!existing) {
-    return [...summaries, { yearKey, summary, createdAt: now, updatedAt: now }];
+    return [...summaries, { userId: getCurrentUserId(), yearKey, summary, createdAt: now, updatedAt: now }];
   }
   return summaries.map((item) =>
-    item.yearKey === yearKey ? { ...item, summary, updatedAt: now } : item
+    item.yearKey === yearKey ? { ...item, userId: item.userId ?? getCurrentUserId(), summary, updatedAt: now } : item
   );
 };
 
@@ -349,6 +352,7 @@ export const localStorageRepository: JournalRepository = {
     if (!currentDay) {
       const nextDay: Day = {
         date,
+        userId: getCurrentUserId(),
         cards: [nextCard],
         dailySummary: '',
         createdAt: now,
@@ -367,6 +371,7 @@ export const localStorageRepository: JournalRepository = {
         day.date === date
           ? {
               ...day,
+              userId: day.userId ?? getCurrentUserId(),
               cards: [...day.cards, nextCard],
               updatedAt: now,
             }
@@ -443,6 +448,7 @@ export const localStorageRepository: JournalRepository = {
           ...snapshot.days,
           {
             date,
+            userId: getCurrentUserId(),
             cards: [],
             dailySummary: summary,
             createdAt: now,
@@ -459,6 +465,7 @@ export const localStorageRepository: JournalRepository = {
         day.date === date
           ? {
               ...day,
+              userId: day.userId ?? getCurrentUserId(),
               dailySummary: summary,
               updatedAt: now,
             }
