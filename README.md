@@ -14,6 +14,7 @@
 ## スクリプト
 
 - `npm run dev`: 開発サーバー起動（`http://localhost:3000`）
+- `npm run backend:dev`: backend API 雛形を起動（`http://localhost:4000`）
 - `npm run build`: 本番ビルド作成
 - `npm run preview`: ビルド結果をローカル確認
 - `npm run lint`: TypeScript 型チェック
@@ -46,3 +47,9 @@
 - `src/auth/AuthContext.tsx` に mock auth ベースの auth context を用意しています
 - `currentUser / login / logout` を扱え、将来 Cognito に差し替え可能です
 - `apiClient` は auth session に access token があれば `Authorization: Bearer ...` を自動で付与します
+
+## Backend Skeleton
+
+- `backend/` に App Runner 配備を見据えた API 雛形を追加しています
+- ローカル起動は `npm run backend:dev`
+- エンドポイント一覧とヘルスチェックは `backend/README.md` を参照してください
