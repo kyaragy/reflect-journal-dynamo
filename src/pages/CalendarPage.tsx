@@ -11,10 +11,9 @@ import {
   isSameMonth,
   isSameDay,
   addDays,
-  parseISO,
 } from 'date-fns';
 import { ja } from 'date-fns/locale';
-import { ChevronLeft, ChevronRight, FileText, Calendar as CalendarIcon } from 'lucide-react';
+import { ChevronLeft, ChevronRight, FileText, Calendar as CalendarIcon, PenSquare } from 'lucide-react';
 import { useJournalStore } from '../store/useJournalStore';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -26,8 +25,13 @@ function cn(...inputs: (string | undefined | null | false)[]) {
 export default function CalendarPage() {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const navigate = useNavigate();
-  const days = useJournalStore((state) => state.days);
+  const journalDays = useJournalStore((state) => state.days);
   const weeklySummaries = useJournalStore((state) => state.weeklySummaries);
+  const today = new Date();
+  const todayKey = format(today, 'yyyy-MM-dd');
+  const todayRecord = journalDays.find((day) => day.date === todayKey);
+  const todayCount = todayRecord?.cards.length ?? 0;
+  const hasTodaySummary = Boolean(todayRecord?.dailySummary.trim());
 
   const nextMonth = () => setCurrentMonth(addMonths(currentMonth, 1));
   const prevMonth = () => setCurrentMonth(subMonths(currentMonth, 1));
@@ -80,7 +84,7 @@ export default function CalendarPage() {
 
     const dateFormat = 'd';
     const rows = [];
-    let days = [];
+    let cells = [];
     let day = startDate;
     let formattedDate = '';
 
@@ -93,12 +97,12 @@ export default function CalendarPage() {
         formattedDate = format(day, dateFormat);
         const cloneDay = day;
         const dateString = format(cloneDay, 'yyyy-MM-dd');
-        const dayRecord = days.find((currentDay) => currentDay.date === dateString);
+        const dayRecord = journalDays.find((currentDay) => currentDay.date === dateString);
         const entryCount = dayRecord?.cards.length ?? 0;
         const hasEntries = entryCount > 0;
         const hasDailyReflection = Boolean(dayRecord?.dailySummary.trim());
 
-        days.push(
+        cells.push(
           <div
             key={day.toString()}
             onClick={() => onDateClick(cloneDay)}
@@ -133,7 +137,7 @@ export default function CalendarPage() {
       }
       rows.push(
         <div className="grid grid-cols-[repeat(7,1fr)_auto] group" key={weekStartDate}>
-          {days}
+          {cells}
           <div 
             onClick={() => navigate(`/week/${weekStartDate}`)}
             className={cn(
@@ -148,28 +152,49 @@ export default function CalendarPage() {
           </div>
         </div>
       );
-      days = [];
+      cells = [];
     }
     return <div className="bg-white rounded-2xl shadow-sm border border-stone-200 overflow-hidden">{rows}</div>;
   };
 
   return (
     <div className="animate-in fade-in duration-500">
+      <section className="mb-6 rounded-3xl border border-stone-200 bg-white/90 p-4 sm:p-5 shadow-sm">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-xs font-medium uppercase tracking-[0.2em] text-stone-400">Today</p>
+            <h2 className="mt-2 font-serif text-2xl text-stone-800">
+              {format(today, 'M月d日', { locale: ja })}
+            </h2>
+            <p className="mt-1 text-sm text-stone-500">
+              {todayCount > 0 ? `${todayCount}件の記録があります` : '思いついた今のまま書き始められます'}
+              {hasTodaySummary ? ' · 1日のまとめあり' : ''}
+            </p>
+          </div>
+          <button
+            onClick={() => navigate(`/day/${todayKey}`)}
+            className="inline-flex shrink-0 items-center gap-2 rounded-2xl bg-stone-800 px-4 py-3 text-sm font-medium text-stone-50 transition-colors hover:bg-stone-700"
+          >
+            <PenSquare className="h-4 w-4" />
+            今日を書く
+          </button>
+        </div>
+      </section>
       {renderHeader()}
       {renderDays()}
       {renderCells()}
       
-      <div className="mt-8 flex justify-center gap-4">
+      <div className="mt-8 flex flex-col justify-center gap-3 sm:flex-row sm:gap-4">
         <button
           onClick={() => navigate(`/month/${format(currentMonth, 'yyyy-MM')}`)}
-          className="flex items-center gap-2 px-6 py-3 bg-stone-800 text-stone-50 rounded-xl font-medium hover:bg-stone-700 transition-colors shadow-sm"
+          className="flex items-center justify-center gap-2 px-6 py-3 bg-stone-800 text-stone-50 rounded-xl font-medium hover:bg-stone-700 transition-colors shadow-sm"
         >
           <CalendarIcon className="w-5 h-5" />
           {format(currentMonth, 'yyyy年 M月', { locale: ja })}の振り返り
         </button>
         <button
           onClick={() => navigate(`/year/${format(currentMonth, 'yyyy')}`)}
-          className="flex items-center gap-2 px-6 py-3 bg-stone-100 text-stone-700 rounded-xl font-medium hover:bg-stone-200 transition-colors shadow-sm"
+          className="flex items-center justify-center gap-2 px-6 py-3 bg-stone-100 text-stone-700 rounded-xl font-medium hover:bg-stone-200 transition-colors shadow-sm"
         >
           <FileText className="w-5 h-5" />
           {format(currentMonth, 'yyyy年', { locale: ja })}の振り返り
