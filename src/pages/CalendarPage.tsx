@@ -26,9 +26,8 @@ function cn(...inputs: (string | undefined | null | false)[]) {
 export default function CalendarPage() {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const navigate = useNavigate();
-  const entries = useJournalStore((state) => state.entries);
-  const summaries = useJournalStore((state) => state.summaries);
-  const weeklyReflections = useJournalStore((state) => state.weeklyReflections);
+  const days = useJournalStore((state) => state.days);
+  const weeklySummaries = useJournalStore((state) => state.weeklySummaries);
 
   const nextMonth = () => setCurrentMonth(addMonths(currentMonth, 1));
   const prevMonth = () => setCurrentMonth(subMonths(currentMonth, 1));
@@ -87,18 +86,17 @@ export default function CalendarPage() {
 
     while (day <= endDate) {
       const weekStartDate = format(day, 'yyyy-MM-dd');
-      const hasWeeklyReflection = Boolean(weeklyReflections[weekStartDate]?.trim());
+      const hasWeeklyReflection = Boolean(
+        weeklySummaries.find((summary) => summary.weekKey === weekStartDate)?.summary.trim()
+      );
       for (let i = 0; i < 7; i++) {
         formattedDate = format(day, dateFormat);
         const cloneDay = day;
         const dateString = format(cloneDay, 'yyyy-MM-dd');
-        
-        // Check if there are entries for this day
-        const dayEntries = entries.filter((e) => e.date === dateString);
-        const daySummary = summaries[dateString];
-        const hasEntries = dayEntries.length > 0;
-        const entryCount = dayEntries.length;
-        const hasDailyReflection = Boolean(daySummary?.reflection?.trim());
+        const dayRecord = days.find((currentDay) => currentDay.date === dateString);
+        const entryCount = dayRecord?.cards.length ?? 0;
+        const hasEntries = entryCount > 0;
+        const hasDailyReflection = Boolean(dayRecord?.dailySummary.trim());
 
         days.push(
           <div

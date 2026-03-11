@@ -1,30 +1,36 @@
 import { create } from 'zustand';
-import type { DailySummary, JournalEntry, JournalSnapshot } from '../domain/journal';
+import type {
+  Card,
+  CreateCardInput,
+  Day,
+  JournalSnapshot,
+  MonthlySummary,
+  WeeklySummary,
+  YearlySummary,
+} from '../domain/journal';
 import { localStorageRepository } from '../repositories/localStorageRepository';
 
-export type { DailySummary, JournalEntry } from '../domain/journal';
+export type { Card, Day, MonthlySummary, WeeklySummary, YearlySummary } from '../domain/journal';
 
 interface JournalState {
-  entries: JournalEntry[];
-  summaries: Record<string, DailySummary>;
-  weeklyReflections: Record<string, string>;
-  monthlyReflections: Record<string, string>;
-  yearlyReflections: Record<string, string>;
-  addEntry: (entry: Omit<JournalEntry, 'id' | 'createdAt'>) => void;
-  updateEntry: (id: string, entry: Partial<JournalEntry>) => void;
-  deleteEntry: (id: string) => void;
-  setSummary: (date: string, summary: DailySummary) => void;
+  days: Day[];
+  weeklySummaries: WeeklySummary[];
+  monthlySummaries: MonthlySummary[];
+  yearlySummaries: YearlySummary[];
+  addEntry: (entry: CreateCardInput & { date: string }) => void;
+  updateEntry: (date: string, id: string, entry: Partial<Card>) => void;
+  deleteEntry: (date: string, id: string) => void;
+  setSummary: (date: string, summary: string) => void;
   setWeeklyReflection: (weekKey: string, reflection: string) => void;
   setMonthlyReflection: (monthKey: string, reflection: string) => void;
   setYearlyReflection: (yearKey: string, reflection: string) => void;
 }
 
 const snapshotToState = (snapshot: JournalSnapshot) => ({
-  entries: snapshot.entries,
-  summaries: snapshot.summaries,
-  weeklyReflections: snapshot.weeklyReflections,
-  monthlyReflections: snapshot.monthlyReflections,
-  yearlyReflections: snapshot.yearlyReflections,
+  days: snapshot.days,
+  weeklySummaries: snapshot.weeklySummaries,
+  monthlySummaries: snapshot.monthlySummaries,
+  yearlySummaries: snapshot.yearlySummaries,
 });
 
 export const useJournalStore = create<JournalState>()((set, get) => ({
@@ -33,22 +39,22 @@ export const useJournalStore = create<JournalState>()((set, get) => ({
     localStorageRepository.createCard(entry.date, entry);
     set(snapshotToState(localStorageRepository.getState()));
   },
-  updateEntry: (id, updatedEntry) => {
-    const currentEntry = get().entries.find((entry) => entry.id === id);
-    if (!currentEntry) {
+  updateEntry: (date, id, updatedEntry) => {
+    const currentDay = get().days.find((day) => day.date === date);
+    if (!currentDay?.cards.find((card) => card.id === id)) {
       return;
     }
 
-    localStorageRepository.updateCard(currentEntry.date, id, updatedEntry);
+    localStorageRepository.updateCard(date, id, updatedEntry);
     set(snapshotToState(localStorageRepository.getState()));
   },
-  deleteEntry: (id) => {
-    const currentEntry = get().entries.find((entry) => entry.id === id);
-    if (!currentEntry) {
+  deleteEntry: (date, id) => {
+    const currentDay = get().days.find((day) => day.date === date);
+    if (!currentDay?.cards.find((card) => card.id === id)) {
       return;
     }
 
-    localStorageRepository.deleteCard(currentEntry.date, id);
+    localStorageRepository.deleteCard(date, id);
     set(snapshotToState(localStorageRepository.getState()));
   },
   setSummary: (date, summary) => {

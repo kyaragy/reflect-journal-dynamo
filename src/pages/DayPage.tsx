@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { format, parseISO } from 'date-fns';
 import { ja } from 'date-fns/locale';
 import { ArrowLeft, Plus, Sparkles, Save, Copy, FileText, Check } from 'lucide-react';
-import { useJournalStore, JournalEntry } from '../store/useJournalStore';
+import { useJournalStore, Card } from '../store/useJournalStore';
 import JournalCard from '../components/JournalCard';
 import JournalForm from '../components/JournalForm';
 import { motion, AnimatePresence } from 'motion/react';
@@ -12,26 +12,29 @@ export default function DayPage() {
   const { date } = useParams<{ date: string }>();
   const navigate = useNavigate();
   const [isFormOpen, setIsFormOpen] = useState(false);
-  const [entryToEdit, setEntryToEdit] = useState<JournalEntry | null>(null);
+  const [entryToEdit, setEntryToEdit] = useState<Card | null>(null);
   const [reflectionText, setReflectionText] = useState('');
   const [showMarkdown, setShowMarkdown] = useState(false);
   const [copied, setCopied] = useState(false);
   
-  const allEntries = useJournalStore((state) => state.entries);
-  const entries = useMemo(() => allEntries.filter(e => e.date === date), [allEntries, date]);
-  const summary = useJournalStore((state) => state.summaries[date || '']);
+  const days = useJournalStore((state) => state.days);
+  const day = useMemo(
+    () => days.find((currentDay) => currentDay.date === date) ?? null,
+    [days, date]
+  );
+  const entries = day?.cards ?? [];
   const setSummary = useJournalStore((state) => state.setSummary);
   
   useEffect(() => {
-    setReflectionText(summary?.reflection || '');
-  }, [summary]);
+    setReflectionText(day?.dailySummary || '');
+  }, [day]);
 
   if (!date) return null;
 
   const parsedDate = parseISO(date);
   const formattedDate = format(parsedDate, 'yyyy年M月d日', { locale: ja });
 
-  const handleEdit = (entry: JournalEntry) => {
+  const handleEdit = (entry: Card) => {
     setEntryToEdit(entry);
     setIsFormOpen(true);
   };
@@ -42,11 +45,7 @@ export default function DayPage() {
   };
 
   const handleSaveReflection = () => {
-    setSummary(date, {
-      date,
-      summary: summary?.summary || '',
-      reflection: reflectionText
-    });
+    setSummary(date, reflectionText);
   };
 
   const generateMarkdown = () => {
@@ -62,8 +61,8 @@ export default function DayPage() {
       if (entry.emotion) {
         md += `### 感情\n${entry.emotion}\n\n`;
       }
-      if (entry.sensation) {
-        md += `### 身体感覚\n${entry.sensation}\n\n`;
+      if (entry.bodySensation) {
+        md += `### 身体感覚\n${entry.bodySensation}\n\n`;
       }
     });
     return md;

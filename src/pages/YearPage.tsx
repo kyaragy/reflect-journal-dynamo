@@ -13,13 +13,13 @@ export default function YearPage() {
   const [showMarkdown, setShowMarkdown] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  const allEntries = useJournalStore((state) => state.entries);
-  const monthlyReflections = useJournalStore((state) => state.monthlyReflections);
-  const yearlyReflections = useJournalStore((state) => state.yearlyReflections);
+  const allDays = useJournalStore((state) => state.days);
+  const monthlySummaries = useJournalStore((state) => state.monthlySummaries);
+  const yearlySummaries = useJournalStore((state) => state.yearlySummaries);
   const setYearlyReflection = useJournalStore((state) => state.setYearlyReflection);
 
   const yearKey = year || '';
-  const currentReflection = yearlyReflections[yearKey] || '';
+  const currentReflection = yearlySummaries.find((summary) => summary.yearKey === yearKey)?.summary || '';
 
   useEffect(() => {
     setReflectionText(currentReflection);
@@ -36,8 +36,10 @@ export default function YearPage() {
 
   // Filter entries for this year
   const yearEntries = useMemo(() => {
-    return allEntries.filter(e => e.date.startsWith(year));
-  }, [allEntries, year]);
+    return allDays
+      .filter((day) => day.date.startsWith(year))
+      .flatMap((day) => day.cards);
+  }, [allDays, year]);
 
   const handleSaveReflection = () => {
     setYearlyReflection(yearKey, reflectionText);
@@ -51,8 +53,10 @@ export default function YearPage() {
     }
 
     monthsInYear.forEach((monthStr) => {
-      const monthRef = monthlyReflections[monthStr];
-      const monthEntries = yearEntries.filter(e => e.date.startsWith(monthStr));
+      const monthRef = monthlySummaries.find((summary) => summary.monthKey === monthStr)?.summary;
+      const monthEntries = allDays
+        .filter((day) => day.date.startsWith(monthStr))
+        .flatMap((day) => day.cards);
       
       if (monthEntries.length > 0 || monthRef) {
         md += `## ${format(parseISO(`${monthStr}-01`), 'M月', { locale: ja })}\n\n`;
@@ -144,8 +148,10 @@ export default function YearPage() {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-24">
           {monthsInYear.map((monthStr) => {
-            const monthEntries = yearEntries.filter(e => e.date.startsWith(monthStr));
-            const monthRef = monthlyReflections[monthStr];
+            const monthEntries = allDays
+              .filter((day) => day.date.startsWith(monthStr))
+              .flatMap((day) => day.cards);
+            const monthRef = monthlySummaries.find((summary) => summary.monthKey === monthStr)?.summary;
             
             return (
               <div 

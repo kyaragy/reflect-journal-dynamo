@@ -1,12 +1,12 @@
 import React from 'react';
 import { format } from 'date-fns';
-import { JournalEntry } from '../store/useJournalStore';
+import { Card } from '../store/useJournalStore';
 import { motion } from 'motion/react';
 import { Brain, Activity, Heart, Eye, Edit2 } from 'lucide-react';
 
 interface JournalCardProps {
-  entry: JournalEntry;
-  onEdit?: (entry: JournalEntry) => void;
+  entry: Card;
+  onEdit?: (entry: Card) => void;
 }
 
 const JournalCard: React.FC<JournalCardProps> = ({ entry, onEdit }) => {
@@ -72,14 +72,14 @@ const JournalCard: React.FC<JournalCardProps> = ({ entry, onEdit }) => {
           </div>
         )}
 
-        {entry.sensation && (
+        {entry.bodySensation && (
           <div className="flex gap-3">
             <div className="mt-1 flex-shrink-0">
               <Activity className="w-4 h-4 text-emerald-400" />
             </div>
             <div>
               <h4 className="text-xs font-semibold text-emerald-500 uppercase tracking-wider mb-1">身体感覚 (Sensation)</h4>
-              <p className="text-stone-800 leading-relaxed text-[15px] whitespace-pre-wrap">{entry.sensation}</p>
+              <p className="text-stone-800 leading-relaxed text-[15px] whitespace-pre-wrap">{entry.bodySensation}</p>
             </div>
           </div>
         )}

@@ -14,13 +14,12 @@ export default function WeekPage() {
   const [showMarkdown, setShowMarkdown] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  const allEntries = useJournalStore((state) => state.entries);
-  const summaries = useJournalStore((state) => state.summaries);
-  const weeklyReflections = useJournalStore((state) => state.weeklyReflections);
+  const allDays = useJournalStore((state) => state.days);
+  const weeklySummaries = useJournalStore((state) => state.weeklySummaries);
   const setWeeklyReflection = useJournalStore((state) => state.setWeeklyReflection);
 
   const weekKey = weekStart || '';
-  const currentReflection = weeklyReflections[weekKey] || '';
+  const currentReflection = weeklySummaries.find((summary) => summary.weekKey === weekKey)?.summary || '';
 
   useEffect(() => {
     setReflectionText(currentReflection);
@@ -39,9 +38,12 @@ export default function WeekPage() {
   });
 
   // Filter entries for this week
+  const weekDays = useMemo(() => {
+    return allDays.filter((day) => daysInWeek.includes(day.date));
+  }, [allDays, daysInWeek]);
   const weekEntries = useMemo(() => {
-    return allEntries.filter(e => daysInWeek.includes(e.date));
-  }, [allEntries, daysInWeek]);
+    return weekDays.flatMap((day) => day.cards);
+  }, [weekDays]);
 
   const handleSaveReflection = () => {
     setWeeklyReflection(weekKey, reflectionText);
@@ -55,14 +57,14 @@ export default function WeekPage() {
     }
 
     daysInWeek.forEach((dateStr) => {
-      const dayEntries = weekEntries.filter(e => e.date === dateStr);
-      const daySummary = summaries[dateStr];
+      const dayRecord = weekDays.find((day) => day.date === dateStr);
+      const dayEntries = dayRecord?.cards ?? [];
       
-      if (dayEntries.length > 0 || daySummary?.reflection) {
+      if (dayEntries.length > 0 || dayRecord?.dailySummary) {
         md += `## ${format(parseISO(dateStr), 'yyyy年M月d日(E)', { locale: ja })}\n\n`;
         
-        if (daySummary?.reflection) {
-          md += `### 1日の振り返り\n${daySummary.reflection}\n\n`;
+        if (dayRecord?.dailySummary) {
+          md += `### 1日の振り返り\n${dayRecord.dailySummary}\n\n`;
         }
 
         dayEntries.forEach((entry, index) => {
@@ -70,7 +72,7 @@ export default function WeekPage() {
           if (entry.fact) md += `#### 事実\n${entry.fact}\n\n`;
           if (entry.thought) md += `#### 思考\n${entry.thought}\n\n`;
           if (entry.emotion) md += `#### 感情\n${entry.emotion}\n\n`;
-          if (entry.sensation) md += `#### 身体感覚\n${entry.sensation}\n\n`;
+          if (entry.bodySensation) md += `#### 身体感覚\n${entry.bodySensation}\n\n`;
         });
       }
     });
@@ -156,10 +158,10 @@ export default function WeekPage() {
       ) : (
         <div className="space-y-10 mb-24">
           {daysInWeek.map((dateStr) => {
-            const dayEntries = weekEntries.filter(e => e.date === dateStr);
-            const daySummary = summaries[dateStr];
+            const dayRecord = weekDays.find((day) => day.date === dateStr);
+            const dayEntries = dayRecord?.cards ?? [];
             
-            if (dayEntries.length === 0 && !daySummary?.reflection) return null;
+            if (dayEntries.length === 0 && !dayRecord?.dailySummary) return null;
 
             return (
               <div key={dateStr} className="space-y-4">
@@ -167,10 +169,10 @@ export default function WeekPage() {
                   {format(parseISO(dateStr), 'yyyy年M月d日(E)', { locale: ja })}
                 </h3>
                 
-                {daySummary?.reflection && (
+                {dayRecord?.dailySummary && (
                   <div className="bg-stone-50 rounded-xl p-4 border border-stone-200/60">
                     <h4 className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-2">1日の振り返り</h4>
-                    <p className="text-stone-700 text-sm leading-relaxed whitespace-pre-wrap">{daySummary.reflection}</p>
+                    <p className="text-stone-700 text-sm leading-relaxed whitespace-pre-wrap">{dayRecord.dailySummary}</p>
                   </div>
                 )}
 

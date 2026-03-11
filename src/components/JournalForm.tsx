@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { useJournalStore, JournalEntry } from '../store/useJournalStore';
+import { useJournalStore, Card } from '../store/useJournalStore';
 import { motion } from 'motion/react';
 import { X, Brain, Activity, Heart, Eye } from 'lucide-react';
 
 interface JournalFormProps {
   date: string;
   onClose: () => void;
-  entryToEdit?: JournalEntry | null;
+  entryToEdit?: Card | null;
 }
 
 export default function JournalForm({ date, onClose, entryToEdit }: JournalFormProps) {
@@ -16,31 +16,31 @@ export default function JournalForm({ date, onClose, entryToEdit }: JournalFormP
   const [fact, setFact] = useState('');
   const [thought, setThought] = useState('');
   const [emotion, setEmotion] = useState('');
-  const [sensation, setSensation] = useState('');
+  const [bodySensation, setBodySensation] = useState('');
 
   useEffect(() => {
     if (entryToEdit) {
       setFact(entryToEdit.fact || '');
       setThought(entryToEdit.thought || '');
       setEmotion(entryToEdit.emotion || '');
-      setSensation(entryToEdit.sensation || '');
+      setBodySensation(entryToEdit.bodySensation || '');
     }
   }, [entryToEdit]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!fact && !thought && !emotion && !sensation) {
+    if (!fact && !thought && !emotion && !bodySensation) {
       // Don't save empty entries
       onClose();
       return;
     }
     
     if (entryToEdit) {
-      updateEntry(entryToEdit.id, {
+      updateEntry(date, entryToEdit.id, {
         fact,
         thought,
         emotion,
-        sensation,
+        bodySensation,
       });
     } else {
       addEntry({
@@ -48,7 +48,7 @@ export default function JournalForm({ date, onClose, entryToEdit }: JournalFormP
         fact,
         thought,
         emotion,
-        sensation,
+        bodySensation,
       });
     }
     onClose();
@@ -123,8 +123,8 @@ export default function JournalForm({ date, onClose, entryToEdit }: JournalFormP
                 <Activity className="w-4 h-4" /> 身体感覚 (Sensation)
               </label>
               <textarea
-                value={sensation}
-                onChange={(e) => setSensation(e.target.value)}
+                value={bodySensation}
+                onChange={(e) => setBodySensation(e.target.value)}
                 placeholder="体にどんな感覚がありましたか？"
                 className="w-full p-4 bg-white border border-emerald-100 rounded-xl focus:ring-2 focus:ring-emerald-400 focus:border-emerald-400 outline-none transition-all resize-none min-h-[100px] text-[15px] text-stone-800 placeholder:text-stone-400"
               />

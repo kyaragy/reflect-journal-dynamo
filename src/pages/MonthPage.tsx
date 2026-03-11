@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { format, parseISO, startOfMonth, endOfMonth, eachDayOfInterval, eachWeekOfInterval, startOfWeek } from 'date-fns';
+import { format, parseISO, endOfMonth, eachDayOfInterval, eachWeekOfInterval } from 'date-fns';
 import { ja } from 'date-fns/locale';
 import { ArrowLeft, Sparkles, Save, Copy, FileText, Check } from 'lucide-react';
 import { useJournalStore } from '../store/useJournalStore';
@@ -14,14 +14,13 @@ export default function MonthPage() {
   const [showMarkdown, setShowMarkdown] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  const allEntries = useJournalStore((state) => state.entries);
-  const summaries = useJournalStore((state) => state.summaries);
-  const weeklyReflections = useJournalStore((state) => state.weeklyReflections);
-  const monthlyReflections = useJournalStore((state) => state.monthlyReflections);
+  const allDays = useJournalStore((state) => state.days);
+  const weeklySummaries = useJournalStore((state) => state.weeklySummaries);
+  const monthlySummaries = useJournalStore((state) => state.monthlySummaries);
   const setMonthlyReflection = useJournalStore((state) => state.setMonthlyReflection);
 
   const monthKey = yearMonth || '';
-  const currentReflection = monthlyReflections[monthKey] || '';
+  const currentReflection = monthlySummaries.find((summary) => summary.monthKey === monthKey)?.summary || '';
 
   useEffect(() => {
     setReflectionText(currentReflection);
@@ -41,9 +40,12 @@ export default function MonthPage() {
   const weeksInMonth = eachWeekOfInterval({ start: startDate, end: endDate }, { weekStartsOn: 0 }).map(d => format(d, 'yyyy-MM-dd'));
 
   // Filter entries for this month
+  const monthDays = useMemo(() => {
+    return allDays.filter((day) => daysInMonth.includes(day.date));
+  }, [allDays, daysInMonth]);
   const monthEntries = useMemo(() => {
-    return allEntries.filter(e => daysInMonth.includes(e.date));
-  }, [allEntries, daysInMonth]);
+    return monthDays.flatMap((day) => day.cards);
+  }, [monthDays]);
 
   const handleSaveReflection = () => {
     setMonthlyReflection(monthKey, reflectionText);
@@ -57,21 +59,21 @@ export default function MonthPage() {
     }
 
     weeksInMonth.forEach((weekStartStr) => {
-      const weekRef = weeklyReflections[weekStartStr];
+      const weekRef = weeklySummaries.find((summary) => summary.weekKey === weekStartStr)?.summary;
       if (weekRef) {
         md += `## 週の振り返り (${format(parseISO(weekStartStr), 'M/d', { locale: ja })}〜)\n${weekRef}\n\n`;
       }
     });
 
     daysInMonth.forEach((dateStr) => {
-      const dayEntries = monthEntries.filter(e => e.date === dateStr);
-      const daySummary = summaries[dateStr];
+      const dayRecord = monthDays.find((day) => day.date === dateStr);
+      const dayEntries = dayRecord?.cards ?? [];
       
-      if (dayEntries.length > 0 || daySummary?.reflection) {
+      if (dayEntries.length > 0 || dayRecord?.dailySummary) {
         md += `## ${format(parseISO(dateStr), 'yyyy年M月d日(E)', { locale: ja })}\n\n`;
         
-        if (daySummary?.reflection) {
-          md += `### 1日の振り返り\n${daySummary.reflection}\n\n`;
+        if (dayRecord?.dailySummary) {
+          md += `### 1日の振り返り\n${dayRecord.dailySummary}\n\n`;
         }
 
         dayEntries.forEach((entry, index) => {
@@ -79,7 +81,7 @@ export default function MonthPage() {
           if (entry.fact) md += `#### 事実\n${entry.fact}\n\n`;
           if (entry.thought) md += `#### 思考\n${entry.thought}\n\n`;
           if (entry.emotion) md += `#### 感情\n${entry.emotion}\n\n`;
-          if (entry.sensation) md += `#### 身体感覚\n${entry.sensation}\n\n`;
+          if (entry.bodySensation) md += `#### 身体感覚\n${entry.bodySensation}\n\n`;
         });
       }
     });
@@ -165,10 +167,10 @@ export default function MonthPage() {
       ) : (
         <div className="space-y-10 mb-24">
           {daysInMonth.map((dateStr) => {
-            const dayEntries = monthEntries.filter(e => e.date === dateStr);
-            const daySummary = summaries[dateStr];
+            const dayRecord = monthDays.find((day) => day.date === dateStr);
+            const dayEntries = dayRecord?.cards ?? [];
             
-            if (dayEntries.length === 0 && !daySummary?.reflection) return null;
+            if (dayEntries.length === 0 && !dayRecord?.dailySummary) return null;
 
             return (
               <div key={dateStr} className="space-y-4">
@@ -176,10 +178,10 @@ export default function MonthPage() {
                   {format(parseISO(dateStr), 'yyyy年M月d日(E)', { locale: ja })}
                 </h3>
                 
-                {daySummary?.reflection && (
+                {dayRecord?.dailySummary && (
                   <div className="bg-stone-50 rounded-xl p-4 border border-stone-200/60">
                     <h4 className="text-xs font-semibold text-stone-500 uppercase tracking-wider mb-2">1日の振り返り</h4>
-                    <p className="text-stone-700 text-sm leading-relaxed whitespace-pre-wrap">{daySummary.reflection}</p>
+                    <p className="text-stone-700 text-sm leading-relaxed whitespace-pre-wrap">{dayRecord.dailySummary}</p>
                   </div>
                 )}
 

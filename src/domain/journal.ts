@@ -1,50 +1,70 @@
-export type JournalEntry = {
+export type Card = {
   id: string;
-  date: string;
   fact: string;
   thought: string;
   emotion: string;
-  sensation: string;
-  createdAt: number;
+  bodySensation: string;
+  createdAt: string;
+  updatedAt: string;
 };
 
-export type DailySummary = {
+export type Day = {
   date: string;
+  userId?: string;
+  cards: Card[];
+  dailySummary: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type WeeklySummary = {
+  userId?: string;
+  weekKey: string;
   summary: string;
-  reflection: string;
+  createdAt: string;
+  updatedAt: string;
 };
 
-export type DayRecord = {
-  date: string;
-  entries: JournalEntry[];
-  summary?: DailySummary;
+export type MonthlySummary = {
+  userId?: string;
+  monthKey: string;
+  summary: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+export type YearlySummary = {
+  userId?: string;
+  yearKey: string;
+  summary: string;
+  createdAt: string;
+  updatedAt: string;
 };
 
 export type WeekRecord = {
   weekKey: string;
-  reflection: string;
-  days: DayRecord[];
+  summary?: WeeklySummary;
+  days: Day[];
 };
 
 export type MonthRecord = {
   monthKey: string;
-  reflection: string;
-  weekSummaries: Record<string, string>;
-  days: DayRecord[];
+  summary?: MonthlySummary;
+  weeklySummaries: WeeklySummary[];
+  days: Day[];
 };
 
 export type YearRecord = {
   yearKey: string;
-  reflection: string;
-  monthSummaries: Record<string, string>;
+  summary?: YearlySummary;
+  monthlySummaries: MonthlySummary[];
 };
 
 export type JournalSnapshot = {
-  entries: JournalEntry[];
-  summaries: Record<string, DailySummary>;
-  weeklyReflections: Record<string, string>;
-  monthlyReflections: Record<string, string>;
-  yearlyReflections: Record<string, string>;
+  days: Day[];
+  weeklySummaries: WeeklySummary[];
+  monthlySummaries: MonthlySummary[];
+  yearlySummaries: YearlySummary[];
 };
 
-export type CreateJournalCardInput = Omit<JournalEntry, 'id' | 'createdAt'>;
+export type CreateCardInput = Omit<Card, 'id' | 'createdAt' | 'updatedAt'>;
