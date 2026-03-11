@@ -28,7 +28,9 @@
 ## データ永続化の構成
 
 - UI コンポーネントは `useJournalStore` を通じてデータを扱います
-- 永続化の実装は `src/repositories/` に集約され、現状は `localStorageRepository` が `localStorage` を担当します
+- `useJournalStore` は repository 経由でデータを取得・保存します
+- repository 実装は `src/repositories/` に集約されています
+- デフォルトでは `localStorageRepository` が使われ、ブラウザの `localStorage` に保存します
 - 将来 API / DB に移行する場合は repository 実装を差し替えることで、UI 側の変更を最小限に抑えられます
 
 ## Repository 切替
