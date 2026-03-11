@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { format, parseISO, addDays, endOfWeek } from 'date-fns';
 import { ja } from 'date-fns/locale';
-import { ArrowLeft, Sparkles, Edit2, Save, Copy, FileText, Check } from 'lucide-react';
+import { ArrowLeft, Sparkles, Save, Copy, FileText, Check } from 'lucide-react';
 import { useJournalStore } from '../store/useJournalStore';
 import JournalCard from '../components/JournalCard';
 
@@ -10,7 +10,6 @@ export default function WeekPage() {
   const { weekStart } = useParams<{ weekStart: string }>();
   const navigate = useNavigate();
   
-  const [isEditingReflection, setIsEditingReflection] = useState(false);
   const [reflectionText, setReflectionText] = useState('');
   const [showMarkdown, setShowMarkdown] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -24,10 +23,8 @@ export default function WeekPage() {
   const currentReflection = weeklyReflections[weekKey] || '';
 
   useEffect(() => {
-    if (!isEditingReflection) {
-      setReflectionText(currentReflection);
-    }
-  }, [currentReflection, isEditingReflection]);
+    setReflectionText(currentReflection);
+  }, [currentReflection]);
 
   if (!weekStart) return null;
 
@@ -48,7 +45,6 @@ export default function WeekPage() {
 
   const handleSaveReflection = () => {
     setWeeklyReflection(weekKey, reflectionText);
-    setIsEditingReflection(false);
   };
 
   const generateMarkdown = () => {
@@ -122,55 +118,24 @@ export default function WeekPage() {
         <div className="flex items-start gap-3">
           <Sparkles className="w-5 h-5 text-stone-400 mt-0.5 flex-shrink-0" />
           <div className="flex-1">
-            <div className="flex justify-between items-center mb-1">
-              <h3 className="font-medium text-stone-700">週の振り返りメモ</h3>
-              {!isEditingReflection && (
+            <h3 className="font-medium text-stone-700 mb-1">週の振り返りメモ</h3>
+            <div className="mt-2">
+              <textarea
+                value={reflectionText}
+                onChange={(e) => setReflectionText(e.target.value)}
+                placeholder="今週の振り返りや気づきを記入してください..."
+                className="w-full p-3 bg-white border border-stone-200 rounded-xl focus:ring-2 focus:ring-stone-400 focus:border-stone-400 outline-none transition-all resize-none min-h-[120px] text-sm text-stone-800 placeholder:text-stone-400"
+              />
+              <div className="flex justify-end mt-3">
                 <button
-                  onClick={() => setIsEditingReflection(true)}
-                  className="p-1.5 text-stone-400 hover:text-stone-700 hover:bg-stone-200 rounded-md transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
-                  aria-label="振り返りを編集"
+                  onClick={handleSaveReflection}
+                  className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-stone-800 text-stone-50 hover:bg-stone-700 rounded-lg transition-colors"
                 >
-                  <Edit2 className="w-4 h-4" />
+                  <Save className="w-4 h-4" />
+                  保存
                 </button>
-              )}
-            </div>
-            
-            {isEditingReflection ? (
-              <div className="mt-2">
-                <textarea
-                  value={reflectionText}
-                  onChange={(e) => setReflectionText(e.target.value)}
-                  placeholder="今週の振り返りや気づきを記入してください..."
-                  className="w-full p-3 bg-white border border-stone-200 rounded-xl focus:ring-2 focus:ring-stone-400 focus:border-stone-400 outline-none transition-all resize-none min-h-[120px] text-sm text-stone-800 placeholder:text-stone-400"
-                />
-                <div className="flex justify-end gap-2 mt-3">
-                  <button
-                    onClick={() => {
-                      setIsEditingReflection(false);
-                      setReflectionText(currentReflection);
-                    }}
-                    className="px-4 py-2 text-sm font-medium text-stone-600 hover:bg-stone-200 rounded-lg transition-colors"
-                  >
-                    キャンセル
-                  </button>
-                  <button
-                    onClick={handleSaveReflection}
-                    className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-stone-800 text-stone-50 hover:bg-stone-700 rounded-lg transition-colors"
-                  >
-                    <Save className="w-4 h-4" />
-                    保存
-                  </button>
-                </div>
               </div>
-            ) : (
-              currentReflection ? (
-                <p className="text-stone-600 text-sm leading-relaxed whitespace-pre-wrap">{currentReflection}</p>
-              ) : (
-                <p className="text-stone-500 text-sm italic">
-                  右上の編集ボタンから、今週の振り返りを入力できます。
-                </p>
-              )
-            )}
+            </div>
           </div>
         </div>
       </div>

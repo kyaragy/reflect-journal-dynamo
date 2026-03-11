@@ -1,22 +1,8 @@
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
-import { v4 as uuidv4 } from 'uuid';
+import type { DailySummary, JournalEntry, JournalSnapshot } from '../domain/journal';
+import { localStorageRepository } from '../repositories/localStorageRepository';
 
-export type JournalEntry = {
-  id: string;
-  date: string; // YYYY-MM-DD format
-  fact: string;
-  thought: string;
-  emotion: string;
-  sensation: string;
-  createdAt: number;
-};
-
-export type DailySummary = {
-  date: string;
-  summary: string;
-  reflection: string;
-};
+export type { DailySummary, JournalEntry } from '../domain/journal';
 
 interface JournalState {
   entries: JournalEntry[];
@@ -33,48 +19,52 @@ interface JournalState {
   setYearlyReflection: (yearKey: string, reflection: string) => void;
 }
 
-export const useJournalStore = create<JournalState>()(
-  persist(
-    (set) => ({
-      entries: [],
-      summaries: {},
-      weeklyReflections: {},
-      monthlyReflections: {},
-      yearlyReflections: {},
-      addEntry: (entry) =>
-        set((state) => ({
-          entries: [
-            ...state.entries,
-            { ...entry, id: uuidv4(), createdAt: Date.now() },
-          ],
-        })),
-      updateEntry: (id, updatedEntry) =>
-        set((state) => ({
-          entries: state.entries.map((e) => (e.id === id ? { ...e, ...updatedEntry } : e)),
-        })),
-      deleteEntry: (id) =>
-        set((state) => ({
-          entries: state.entries.filter((e) => e.id !== id),
-        })),
-      setSummary: (date, summary) =>
-        set((state) => ({
-          summaries: { ...state.summaries, [date]: summary },
-        })),
-      setWeeklyReflection: (weekKey, reflection) =>
-        set((state) => ({
-          weeklyReflections: { ...state.weeklyReflections, [weekKey]: reflection },
-        })),
-      setMonthlyReflection: (monthKey, reflection) =>
-        set((state) => ({
-          monthlyReflections: { ...state.monthlyReflections, [monthKey]: reflection },
-        })),
-      setYearlyReflection: (yearKey, reflection) =>
-        set((state) => ({
-          yearlyReflections: { ...state.yearlyReflections, [yearKey]: reflection },
-        })),
-    }),
-    {
-      name: 'journal-storage',
+const snapshotToState = (snapshot: JournalSnapshot) => ({
+  entries: snapshot.entries,
+  summaries: snapshot.summaries,
+  weeklyReflections: snapshot.weeklyReflections,
+  monthlyReflections: snapshot.monthlyReflections,
+  yearlyReflections: snapshot.yearlyReflections,
+});
+
+export const useJournalStore = create<JournalState>()((set, get) => ({
+  ...snapshotToState(localStorageRepository.getState()),
+  addEntry: (entry) => {
+    localStorageRepository.createCard(entry.date, entry);
+    set(snapshotToState(localStorageRepository.getState()));
+  },
+  updateEntry: (id, updatedEntry) => {
+    const currentEntry = get().entries.find((entry) => entry.id === id);
+    if (!currentEntry) {
+      return;
     }
-  )
-);
+
+    localStorageRepository.updateCard(currentEntry.date, id, updatedEntry);
+    set(snapshotToState(localStorageRepository.getState()));
+  },
+  deleteEntry: (id) => {
+    const currentEntry = get().entries.find((entry) => entry.id === id);
+    if (!currentEntry) {
+      return;
+    }
+
+    localStorageRepository.deleteCard(currentEntry.date, id);
+    set(snapshotToState(localStorageRepository.getState()));
+  },
+  setSummary: (date, summary) => {
+    localStorageRepository.saveDailySummary(date, summary);
+    set(snapshotToState(localStorageRepository.getState()));
+  },
+  setWeeklyReflection: (weekKey, reflection) => {
+    localStorageRepository.saveWeekSummary(weekKey, reflection);
+    set(snapshotToState(localStorageRepository.getState()));
+  },
+  setMonthlyReflection: (monthKey, reflection) => {
+    localStorageRepository.saveMonthSummary(monthKey, reflection);
+    set(snapshotToState(localStorageRepository.getState()));
+  },
+  setYearlyReflection: (yearKey, reflection) => {
+    localStorageRepository.saveYearSummary(yearKey, reflection);
+    set(snapshotToState(localStorageRepository.getState()));
+  },
+}));
