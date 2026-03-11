@@ -1,5 +1,6 @@
 import { v4 as uuidv4 } from 'uuid';
 import { addDays, format, parseISO } from 'date-fns';
+import { createEmptyJournalSnapshot } from '../domain/journal';
 import type {
   CreateCardInput,
   Card,
@@ -12,13 +13,6 @@ import type {
 import type { JournalRepository } from './journalRepository';
 
 const STORAGE_KEY = 'journal-storage';
-
-const createEmptySnapshot = (): JournalSnapshot => ({
-  days: [],
-  weeklySummaries: [],
-  monthlySummaries: [],
-  yearlySummaries: [],
-});
 
 const isSnapshot = (value: unknown): value is JournalSnapshot => {
   if (!value || typeof value !== 'object') {
@@ -163,12 +157,12 @@ const isLegacySnapshot = (value: unknown): value is LegacySnapshot => {
 
 const readSnapshot = (): JournalSnapshot => {
   if (typeof window === 'undefined') {
-    return createEmptySnapshot();
+    return createEmptyJournalSnapshot();
   }
 
   const raw = window.localStorage.getItem(STORAGE_KEY);
   if (!raw) {
-    return createEmptySnapshot();
+    return createEmptyJournalSnapshot();
   }
 
   try {
@@ -195,10 +189,10 @@ const readSnapshot = (): JournalSnapshot => {
       }
     }
   } catch {
-    return createEmptySnapshot();
+    return createEmptyJournalSnapshot();
   }
 
-  return createEmptySnapshot();
+  return createEmptyJournalSnapshot();
 };
 
 const writeSnapshot = (snapshot: JournalSnapshot) => {

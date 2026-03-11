@@ -68,3 +68,10 @@ export type JournalSnapshot = {
 };
 
 export type CreateCardInput = Omit<Card, 'id' | 'createdAt' | 'updatedAt'>;
+
+export const createEmptyJournalSnapshot = (): JournalSnapshot => ({
+  days: [],
+  weeklySummaries: [],
+  monthlySummaries: [],
+  yearlySummaries: [],
+});

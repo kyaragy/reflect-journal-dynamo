@@ -8,7 +8,7 @@ import type {
   WeeklySummary,
   YearlySummary,
 } from '../domain/journal';
-import { localStorageRepository } from '../repositories/localStorageRepository';
+import { journalRepository } from '../repositories';
 
 export type { Card, Day, MonthlySummary, WeeklySummary, YearlySummary } from '../domain/journal';
 
@@ -34,10 +34,10 @@ const snapshotToState = (snapshot: JournalSnapshot) => ({
 });
 
 export const useJournalStore = create<JournalState>()((set, get) => ({
-  ...snapshotToState(localStorageRepository.getState()),
+  ...snapshotToState(journalRepository.getState()),
   addEntry: (entry) => {
-    localStorageRepository.createCard(entry.date, entry);
-    set(snapshotToState(localStorageRepository.getState()));
+    journalRepository.createCard(entry.date, entry);
+    set(snapshotToState(journalRepository.getState()));
   },
   updateEntry: (date, id, updatedEntry) => {
     const currentDay = get().days.find((day) => day.date === date);
@@ -45,8 +45,8 @@ export const useJournalStore = create<JournalState>()((set, get) => ({
       return;
     }
 
-    localStorageRepository.updateCard(date, id, updatedEntry);
-    set(snapshotToState(localStorageRepository.getState()));
+    journalRepository.updateCard(date, id, updatedEntry);
+    set(snapshotToState(journalRepository.getState()));
   },
   deleteEntry: (date, id) => {
     const currentDay = get().days.find((day) => day.date === date);
@@ -54,23 +54,23 @@ export const useJournalStore = create<JournalState>()((set, get) => ({
       return;
     }
 
-    localStorageRepository.deleteCard(date, id);
-    set(snapshotToState(localStorageRepository.getState()));
+    journalRepository.deleteCard(date, id);
+    set(snapshotToState(journalRepository.getState()));
   },
   setSummary: (date, summary) => {
-    localStorageRepository.saveDailySummary(date, summary);
-    set(snapshotToState(localStorageRepository.getState()));
+    journalRepository.saveDailySummary(date, summary);
+    set(snapshotToState(journalRepository.getState()));
   },
   setWeeklyReflection: (weekKey, reflection) => {
-    localStorageRepository.saveWeekSummary(weekKey, reflection);
-    set(snapshotToState(localStorageRepository.getState()));
+    journalRepository.saveWeekSummary(weekKey, reflection);
+    set(snapshotToState(journalRepository.getState()));
   },
   setMonthlyReflection: (monthKey, reflection) => {
-    localStorageRepository.saveMonthSummary(monthKey, reflection);
-    set(snapshotToState(localStorageRepository.getState()));
+    journalRepository.saveMonthSummary(monthKey, reflection);
+    set(snapshotToState(journalRepository.getState()));
   },
   setYearlyReflection: (yearKey, reflection) => {
-    localStorageRepository.saveYearSummary(yearKey, reflection);
-    set(snapshotToState(localStorageRepository.getState()));
+    journalRepository.saveYearSummary(yearKey, reflection);
+    set(snapshotToState(journalRepository.getState()));
   },
 }));
