@@ -108,30 +108,78 @@ AWS コンソール右上のリージョン選択で、`Asia Pacific (Tokyo) ap-
 
 ## 3. Cognito User Pool を作る
 
+2026-03-17 時点の Cognito コンソールでは、`Create user pool` 画面で次をまとめて設定する UI になっています。
+
+- User Pool
+- App Client
+- サインイン識別子
+- 自己登録の可否
+- Return URL
+
+古い記事では「User Pool を作ったあとに App Client を別画面で作る」手順が出てきますが、今の UI では最初から一体で作る前提で進めて問題ありません。
+
 ### 3-1. コンソールを開く
 
 1. AWS コンソールで `Cognito` を開く
 2. 左メニューで `User pools` を開く
 3. `Create user pool` を押す
 
-### 3-2. サインイン方式を決める
+### 3-2. 作成画面で入れる値
+
+画面上部の `アプリケーションのリソースを設定する` で、以下のように設定します。
+
+#### アプリケーションタイプ
+
+- `シングルページアプリケーション (SPA)`
+
+#### アプリケーション名
+
+- `reflect-journal-prod-web-client`
+
+#### サインイン識別子
+
+- `メールアドレス`
+
+電話番号やユーザー名は最初は不要です。
+
+#### 自己登録
+
+- `自己登録を有効化`: オフ
+
+今回の要件では、一般ユーザーが勝手にサインアップできないようにします。
+
+#### サインアップのための必須属性
+
+- `email`
+
+#### Return URL
+
+ローカル開発用として、まず次を入れます。
+
+```text
+http://localhost:3000
+```
+
+このリポジトリの Vite 開発サーバーはデフォルトの `5173` ではなく、`3000` を使っています。
+
+また、Cognito の callback URL は原則 `https` が必要ですが、ローカル開発用途の `http://localhost` は例外的に許可されます。
+
+#### 補足
+
+- Amplify をまだ作っていなくても、ここでは `http://localhost:3000` を入れて先に進めてよい
+- 後で Amplify の URL が決まったら、app client の callback URL に追加する
+
+### 3-3. サインイン方式と自己登録の方針
 
 最初は email ベースが扱いやすいです。
 
-設定例:
+今回の方針は次の通りです。
 
-- Sign-in options: `Email`
+- sign-in identifier は `email`
+- self sign-up は無効
+- 管理者がユーザーを作成する
 
-### 3-3. サインアップ方式を制限する
-
-今回の要件では `self sign-up` を使いません。
-
-設定:
-
-- Self-registration: `Disable self-registration`
-- つまり管理者だけがユーザーを作成する
-
-この設定は AWS ドキュメント上では `admin create user only` の方針に対応します。
+この設定は AWS ドキュメント上の `admin create user only` の方針に対応します。
 
 ### 3-4. セキュリティ設定
 
@@ -145,38 +193,61 @@ AWS コンソール右上のリージョン選択で、`Asia Pacific (Tokyo) ap-
 
 MFA はあとからでも有効化できます。
 
-### 3-5. アプリケーションクライアントを作る
+### 3-5. 作成後に確認する値
 
-User Pool 作成途中、または作成後に App Client を追加します。
-
-設定の考え方:
-
-- client secret は browser アプリでは使いにくいので通常は作らない
-- 後で frontend から使う Web クライアントを 1 つ作る
-
-推奨:
-
-- App type: `Single-page application`
-- Client name: `reflect-journal-prod-web-client`
-- Generate client secret: `Off`
-
-### 3-6. Hosted UI 用のドメインを作る
-
-後でログイン動作確認をしやすくするため、User Pool の domain を作ります。
-
-1. 作成した User Pool を開く
-2. `Branding` または `Domain` 関連メニューを開く
-3. Cognito domain prefix を設定する
-
-例:
-
-- `reflect-journal-prod-kiaragi`
-
-保存後、以下をメモします。
+User Pool 作成後、まず次を控えます。
 
 - User Pool ID
 - App Client ID
-- domain
+- Cognito domain
+- Allowed callback URL
+- region
+
+今の UI では、Cognito domain が自動生成されることがあります。
+
+例:
+
+```text
+https://ap-northeast-1xxxxx.auth.ap-northeast-1.amazoncognito.com
+```
+
+この自動生成ドメインは、そのまま使って問題ありません。
+
+重要なのは、これは主に managed login / Hosted UI のための URL であり、最終的なアプリ本体の URL ではないことです。
+
+### 3-6. ドメインについての注意
+
+現在の UI では、User Pool 作成時に Cognito domain が自動で作られることがあります。
+
+このときの注意:
+
+- `Cognito ドメイン` セクションの `編集` では、ドメイン名そのものを変更できない場合がある
+- `編集` で変えられるのは、ブランディングバージョンだけのことがある
+- いまの段階では、自動生成ドメインをそのまま使えばよい
+
+つまり、Cognito domain の見た目は後回しで構いません。
+
+#### カスタムドメインについて
+
+`カスタムドメイン` は、独自ドメインと ACM 証明書がある場合に使います。
+
+例:
+
+- `auth.example.com`
+
+個人開発の初期段階では不要です。
+
+#### パスキー編集画面の `サードパーティードメイン` について
+
+これはログインページの URL 名を変える設定ではありません。
+
+これは passkey / relying party ID 用の設定なので、今回の目的では触らないでください。
+
+今の段階では、次の方針で進めます。
+
+- 自動生成された Cognito domain をそのまま使う
+- `パスキー -> サードパーティードメイン` は変更しない
+- custom domain も後回し
 
 ### 3-7. issuer URL をメモする
 
@@ -188,7 +259,19 @@ API Gateway の JWT authorizer で必要になります。
 https://cognito-idp.ap-northeast-1.amazonaws.com/<USER_POOL_ID>
 ```
 
-### 3-8. 管理者ユーザーを 1 人作る
+### 3-8. ログインページ URL の考え方
+
+作成後の画面に `ログインページを表示` があれば、それを使うのが一番簡単です。
+
+手動で組み立てる場合、ログイン URL は通常こうなります。
+
+```text
+https://<COGNITO_DOMAIN>/oauth2/authorize?response_type=code&client_id=<APP_CLIENT_ID>&redirect_uri=http://localhost:3000
+```
+
+ログインページの URL は frontend 本体の URL ではなく、Cognito の認証ページの URL です。
+
+### 3-9. 管理者ユーザーを 1 人作る
 
 1. User Pool を開く
 2. `Users` を開く
@@ -197,6 +280,30 @@ https://cognito-idp.ap-northeast-1.amazonaws.com/<USER_POOL_ID>
 5. 一時パスワードを発行する
 
 最初のログイン確認を必ずしておきます。
+
+### 3-10. 一時パスワードでログインするときの注意
+
+管理者作成ユーザーは、最初のログインで一時パスワードを入力したあと、新しいパスワードへ変更する画面に進むのが通常です。
+
+もし認証に失敗する場合、設定ミスではなく一時パスワード文字列のコピーミスであることがあります。
+
+特に自動生成パスワードは:
+
+- 似た文字が混ざりやすい
+- 記号が見分けにくい
+- メールからコピーすると余計な空白が入ることがある
+
+実運用上、初回確認を確実にしたいなら、ユーザー作成時に一時パスワードを自分で分かりやすい値にするほうが扱いやすいです。
+
+### 3-11. Cognito で最低限確認できていればよいこと
+
+以下が確認できていれば、この時点では十分です。
+
+- User Pool 作成済み
+- App Client 作成済み
+- callback URL に `http://localhost:3000` が入っている
+- 管理者作成ユーザーで初回ログインが成功している
+- User Pool ID / App Client ID / Cognito domain / Issuer URL をメモ済み
 
 ## 4. Aurora PostgreSQL Serverless v2 を作る
 
