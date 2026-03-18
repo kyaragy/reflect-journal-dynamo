@@ -2,14 +2,15 @@ import React from 'react';
 import { format } from 'date-fns';
 import { Card } from '../store/useJournalStore';
 import { motion } from 'motion/react';
-import { Brain, Activity, Heart, Eye, Edit2 } from 'lucide-react';
+import { Brain, Activity, Heart, Eye, Edit2, Trash2 } from 'lucide-react';
 
 interface JournalCardProps {
   entry: Card;
   onEdit?: (entry: Card) => void;
+  onDelete?: (entry: Card) => void;
 }
 
-const JournalCard: React.FC<JournalCardProps> = ({ entry, onEdit }) => {
+const JournalCard: React.FC<JournalCardProps> = ({ entry, onEdit, onDelete }) => {
   const createdAt = new Date(entry.createdAt);
   const time = Number.isNaN(createdAt.getTime())
     ? format(new Date(), 'HH:mm')
@@ -32,14 +33,27 @@ const JournalCard: React.FC<JournalCardProps> = ({ entry, onEdit }) => {
         <span className="text-xs font-medium text-stone-400 uppercase tracking-wider">
           {time}
         </span>
-        {onEdit && (
-          <button
-            onClick={() => onEdit(entry)}
-            className="p-1.5 text-stone-400 hover:text-stone-700 hover:bg-stone-100 rounded-md transition-colors opacity-0 group-hover:opacity-100 focus:opacity-100"
-            aria-label="記録を編集"
-          >
-            <Edit2 className="w-4 h-4" />
-          </button>
+        {(onEdit || onDelete) && (
+          <div className="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 sm:focus-within:opacity-100 transition-opacity">
+            {onEdit && (
+              <button
+                onClick={() => onEdit(entry)}
+                className="p-1.5 text-stone-400 hover:text-stone-700 hover:bg-stone-100 rounded-md transition-colors"
+                aria-label="記録を編集"
+              >
+                <Edit2 className="w-4 h-4" />
+              </button>
+            )}
+            {onDelete && (
+              <button
+                onClick={() => onDelete(entry)}
+                className="p-1.5 text-stone-400 hover:text-rose-600 hover:bg-rose-50 rounded-md transition-colors"
+                aria-label="記録を削除"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            )}
+          </div>
         )}
       </div>
 

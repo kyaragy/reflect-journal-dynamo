@@ -19,6 +19,7 @@ export default function DayPage() {
   
   const days = useJournalStore((state) => state.days);
   const saving = useJournalStore((state) => state.saving);
+  const deleteEntry = useJournalStore((state) => state.deleteEntry);
   const day = useMemo(
     () => days.find((currentDay) => currentDay.date === date) ?? null,
     [days, date]
@@ -38,6 +39,19 @@ export default function DayPage() {
   const handleEdit = (entry: Card) => {
     setEntryToEdit(entry);
     setIsFormOpen(true);
+  };
+
+  const handleDelete = async (entry: Card) => {
+    const shouldDelete = window.confirm('このカードを削除しますか？');
+    if (!shouldDelete) {
+      return;
+    }
+
+    await deleteEntry(date, entry.id);
+
+    if (entryToEdit?.id === entry.id) {
+      handleCloseForm();
+    }
   };
 
   const handleCloseForm = () => {
@@ -149,7 +163,7 @@ export default function DayPage() {
         <div className="space-y-6 mb-24">
           <AnimatePresence>
             {entries.map((entry) => (
-              <JournalCard key={entry.id} entry={entry} onEdit={handleEdit} />
+              <JournalCard key={entry.id} entry={entry} onEdit={handleEdit} onDelete={handleDelete} />
             ))}
           </AnimatePresence>
           
