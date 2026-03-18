@@ -42,15 +42,15 @@ const daySelectSql = `
   SELECT
     d.date,
     d.daily_summary,
-    d.created_at AS day_created_at,
-    d.updated_at AS day_updated_at,
+    to_char(d.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS day_created_at,
+    to_char(d.updated_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS day_updated_at,
     c.id AS card_id,
     c.fact,
     c.thought,
     c.emotion,
     c.body_sensation,
-    c.created_at AS card_created_at,
-    c.updated_at AS card_updated_at
+    to_char(c.created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS card_created_at,
+    to_char(c.updated_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS card_updated_at
   FROM journal_days d
   LEFT JOIN journal_cards c
     ON c.user_id = d.user_id
@@ -87,7 +87,7 @@ export class DataApiJournalRepository implements JournalDataRepository {
       await this.dataApiClient.execute(
         `
           INSERT INTO journal_days (user_id, date, daily_summary, created_at, updated_at)
-          VALUES (:userId, :date, :dailySummary, :createdAt, :updatedAt)
+          VALUES (:userId, CAST(:date AS DATE), :dailySummary, CAST(:createdAt AS TIMESTAMPTZ), CAST(:updatedAt AS TIMESTAMPTZ))
           ON CONFLICT (user_id, date)
           DO UPDATE SET
             daily_summary = EXCLUDED.daily_summary,
@@ -104,7 +104,7 @@ export class DataApiJournalRepository implements JournalDataRepository {
       );
 
       await this.dataApiClient.execute(
-        `DELETE FROM journal_cards WHERE user_id = :userId AND date = :date`,
+        `DELETE FROM journal_cards WHERE user_id = :userId AND date = CAST(:date AS DATE)`,
         [stringParam('userId', userId), stringParam('date', day.date)],
         transactionId
       );
@@ -130,7 +130,7 @@ export class DataApiJournalRepository implements JournalDataRepository {
       await this.dataApiClient.execute(
         `
           INSERT INTO journal_days (user_id, date, daily_summary, created_at, updated_at)
-          VALUES (:userId, :date, :dailySummary, :createdAt, :updatedAt)
+          VALUES (:userId, CAST(:date AS DATE), :dailySummary, CAST(:createdAt AS TIMESTAMPTZ), CAST(:updatedAt AS TIMESTAMPTZ))
           ON CONFLICT (user_id, date)
           DO UPDATE SET
             daily_summary = EXCLUDED.daily_summary,
@@ -176,16 +176,16 @@ export class DataApiJournalRepository implements JournalDataRepository {
             updated_at
           )
           VALUES (
-            :id,
+            CAST(:id AS UUID),
             :userId,
-            :date,
-            COALESCE((SELECT MAX(sort_order) + 1 FROM journal_cards WHERE user_id = :userId AND date = :date), 0),
+            CAST(:date AS DATE),
+            COALESCE((SELECT MAX(sort_order) + 1 FROM journal_cards WHERE user_id = :userId AND date = CAST(:date AS DATE)), 0),
             :fact,
             :thought,
             :emotion,
             :bodySensation,
-            :createdAt,
-            :updatedAt
+            CAST(:createdAt AS TIMESTAMPTZ),
+            CAST(:updatedAt AS TIMESTAMPTZ)
           )
           RETURNING
             id,
@@ -193,8 +193,8 @@ export class DataApiJournalRepository implements JournalDataRepository {
             thought,
             emotion,
             body_sensation AS "bodySensation",
-            created_at AS "createdAt",
-            updated_at AS "updatedAt",
+            to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS "createdAt",
+            to_char(updated_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS "updatedAt",
             sort_order
         `,
         [
@@ -231,18 +231,18 @@ export class DataApiJournalRepository implements JournalDataRepository {
           thought = :thought,
           emotion = :emotion,
           body_sensation = :bodySensation,
-          updated_at = :updatedAt
+          updated_at = CAST(:updatedAt AS TIMESTAMPTZ)
         WHERE user_id = :userId
-          AND date = :date
-          AND id = :cardId
+          AND date = CAST(:date AS DATE)
+          AND id = CAST(:cardId AS UUID)
         RETURNING
           id,
           fact,
           thought,
           emotion,
           body_sensation AS "bodySensation",
-          created_at AS "createdAt",
-          updated_at AS "updatedAt"
+          to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS "createdAt",
+          to_char(updated_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS "updatedAt"
       `,
       [
         stringParam('fact', input.fact ?? existing.fact),
@@ -262,7 +262,7 @@ export class DataApiJournalRepository implements JournalDataRepository {
     }
 
     await this.dataApiClient.execute(
-      `UPDATE journal_days SET updated_at = :updatedAt WHERE user_id = :userId AND date = :date`,
+      `UPDATE journal_days SET updated_at = CAST(:updatedAt AS TIMESTAMPTZ) WHERE user_id = :userId AND date = CAST(:date AS DATE)`,
       [stringParam('updatedAt', timestamp), stringParam('userId', userId), stringParam('date', date)]
     );
 
@@ -274,8 +274,8 @@ export class DataApiJournalRepository implements JournalDataRepository {
       `
         DELETE FROM journal_cards
         WHERE user_id = :userId
-          AND date = :date
-          AND id = :cardId
+          AND date = CAST(:date AS DATE)
+          AND id = CAST(:cardId AS UUID)
         RETURNING id
       `,
       [stringParam('userId', userId), stringParam('date', date), stringParam('cardId', cardId)]
@@ -286,7 +286,7 @@ export class DataApiJournalRepository implements JournalDataRepository {
     }
 
     await this.dataApiClient.execute(
-      `UPDATE journal_days SET updated_at = :updatedAt WHERE user_id = :userId AND date = :date`,
+      `UPDATE journal_days SET updated_at = CAST(:updatedAt AS TIMESTAMPTZ) WHERE user_id = :userId AND date = CAST(:date AS DATE)`,
       [
         stringParam('updatedAt', new Date().toISOString()),
         stringParam('userId', userId),
@@ -315,7 +315,7 @@ export class DataApiJournalRepository implements JournalDataRepository {
     await this.dataApiClient.execute(
       `
         INSERT INTO weekly_summaries (user_id, week_key, summary, created_at, updated_at)
-        VALUES (:userId, :weekKey, :summary, :createdAt, :updatedAt)
+        VALUES (:userId, CAST(:weekKey AS DATE), :summary, CAST(:createdAt AS TIMESTAMPTZ), CAST(:updatedAt AS TIMESTAMPTZ))
         ON CONFLICT (user_id, week_key)
         DO UPDATE SET
           summary = EXCLUDED.summary,
@@ -356,7 +356,7 @@ export class DataApiJournalRepository implements JournalDataRepository {
     await this.dataApiClient.execute(
       `
         INSERT INTO monthly_summaries (user_id, month_key, summary, created_at, updated_at)
-        VALUES (:userId, :monthKey, :summary, :createdAt, :updatedAt)
+        VALUES (:userId, :monthKey, :summary, CAST(:createdAt AS TIMESTAMPTZ), CAST(:updatedAt AS TIMESTAMPTZ))
         ON CONFLICT (user_id, month_key)
         DO UPDATE SET
           summary = EXCLUDED.summary,
@@ -393,7 +393,7 @@ export class DataApiJournalRepository implements JournalDataRepository {
     await this.dataApiClient.execute(
       `
         INSERT INTO yearly_summaries (user_id, year_key, summary, created_at, updated_at)
-        VALUES (:userId, :yearKey, :summary, :createdAt, :updatedAt)
+        VALUES (:userId, :yearKey, :summary, CAST(:createdAt AS TIMESTAMPTZ), CAST(:updatedAt AS TIMESTAMPTZ))
         ON CONFLICT (user_id, year_key)
         DO UPDATE SET
           summary = EXCLUDED.summary,
@@ -424,7 +424,7 @@ export class DataApiJournalRepository implements JournalDataRepository {
         await this.dataApiClient.execute(
           `
             INSERT INTO journal_days (user_id, date, daily_summary, created_at, updated_at)
-            VALUES (:userId, :date, :dailySummary, :createdAt, :updatedAt)
+            VALUES (:userId, CAST(:date AS DATE), :dailySummary, CAST(:createdAt AS TIMESTAMPTZ), CAST(:updatedAt AS TIMESTAMPTZ))
           `,
           [
             stringParam('userId', userId),
@@ -445,7 +445,7 @@ export class DataApiJournalRepository implements JournalDataRepository {
         await this.dataApiClient.execute(
           `
             INSERT INTO weekly_summaries (user_id, week_key, summary, created_at, updated_at)
-            VALUES (:userId, :weekKey, :summary, :createdAt, :updatedAt)
+            VALUES (:userId, CAST(:weekKey AS DATE), :summary, CAST(:createdAt AS TIMESTAMPTZ), CAST(:updatedAt AS TIMESTAMPTZ))
           `,
           [
             stringParam('userId', userId),
@@ -462,7 +462,7 @@ export class DataApiJournalRepository implements JournalDataRepository {
         await this.dataApiClient.execute(
           `
             INSERT INTO monthly_summaries (user_id, month_key, summary, created_at, updated_at)
-            VALUES (:userId, :monthKey, :summary, :createdAt, :updatedAt)
+            VALUES (:userId, :monthKey, :summary, CAST(:createdAt AS TIMESTAMPTZ), CAST(:updatedAt AS TIMESTAMPTZ))
           `,
           [
             stringParam('userId', userId),
@@ -479,7 +479,7 @@ export class DataApiJournalRepository implements JournalDataRepository {
         await this.dataApiClient.execute(
           `
             INSERT INTO yearly_summaries (user_id, year_key, summary, created_at, updated_at)
-            VALUES (:userId, :yearKey, :summary, :createdAt, :updatedAt)
+            VALUES (:userId, :yearKey, :summary, CAST(:createdAt AS TIMESTAMPTZ), CAST(:updatedAt AS TIMESTAMPTZ))
           `,
           [
             stringParam('userId', userId),
@@ -498,7 +498,7 @@ export class DataApiJournalRepository implements JournalDataRepository {
 
   private async getDayInternal(userId: string, date: string, transactionId?: string) {
     const rows = await this.dataApiClient.query<DayWithCardsRow>(
-      `${daySelectSql} AND d.date = :date ORDER BY d.date, c.sort_order, c.created_at, c.id`,
+      `${daySelectSql} AND d.date = CAST(:date AS DATE) ORDER BY d.date, c.sort_order, c.created_at, c.id`,
       [stringParam('userId', userId), stringParam('date', date)],
       transactionId
     );
@@ -511,7 +511,7 @@ export class DataApiJournalRepository implements JournalDataRepository {
     await this.dataApiClient.execute(
       `
         INSERT INTO users (id, created_at, updated_at)
-        VALUES (:userId, :createdAt, :updatedAt)
+        VALUES (:userId, CAST(:createdAt AS TIMESTAMPTZ), CAST(:updatedAt AS TIMESTAMPTZ))
         ON CONFLICT (id)
         DO UPDATE SET updated_at = EXCLUDED.updated_at
       `,
@@ -525,7 +525,7 @@ export class DataApiJournalRepository implements JournalDataRepository {
     await this.dataApiClient.execute(
       `
         INSERT INTO journal_days (user_id, date, daily_summary, created_at, updated_at)
-        VALUES (:userId, :date, :dailySummary, :createdAt, :updatedAt)
+        VALUES (:userId, CAST(:date AS DATE), :dailySummary, CAST(:createdAt AS TIMESTAMPTZ), CAST(:updatedAt AS TIMESTAMPTZ))
         ON CONFLICT (user_id, date)
         DO UPDATE SET updated_at = EXCLUDED.updated_at
       `,
@@ -556,16 +556,16 @@ export class DataApiJournalRepository implements JournalDataRepository {
           updated_at
         )
         VALUES (
-          :id,
+          CAST(:id AS UUID),
           :userId,
-          :date,
+          CAST(:date AS DATE),
           :sortOrder,
           :fact,
           :thought,
           :emotion,
           :bodySensation,
-          :createdAt,
-          :updatedAt
+          CAST(:createdAt AS TIMESTAMPTZ),
+          CAST(:updatedAt AS TIMESTAMPTZ)
         )
       `,
       [
@@ -593,12 +593,12 @@ export class DataApiJournalRepository implements JournalDataRepository {
           thought,
           emotion,
           body_sensation AS "bodySensation",
-          created_at AS "createdAt",
-          updated_at AS "updatedAt"
+          to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS "createdAt",
+          to_char(updated_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS "updatedAt"
         FROM journal_cards
         WHERE user_id = :userId
-          AND date = :date
-          AND id = :cardId
+          AND date = CAST(:date AS DATE)
+          AND id = CAST(:cardId AS UUID)
       `,
       [stringParam('userId', userId), stringParam('date', date), stringParam('cardId', cardId)]
     );
@@ -616,7 +616,7 @@ export class DataApiJournalRepository implements JournalDataRepository {
 
   private async getDaysByDateRange(userId: string, startDate: string, endDate: string) {
     const rows = await this.dataApiClient.query<DayWithCardsRow>(
-      `${daySelectSql} AND d.date BETWEEN :startDate AND :endDate ORDER BY d.date, c.sort_order, c.created_at, c.id`,
+      `${daySelectSql} AND d.date BETWEEN CAST(:startDate AS DATE) AND CAST(:endDate AS DATE) ORDER BY d.date, c.sort_order, c.created_at, c.id`,
       [stringParam('userId', userId), stringParam('startDate', startDate), stringParam('endDate', endDate)]
     );
     return mapDayRows(rows);
@@ -624,7 +624,14 @@ export class DataApiJournalRepository implements JournalDataRepository {
 
   private async getWeeklySummaryRow(userId: string, weekKey: string) {
     const rows = await this.dataApiClient.query<SummaryRow>(
-      `SELECT summary, created_at, updated_at FROM weekly_summaries WHERE user_id = :userId AND week_key = :weekKey`,
+      `
+        SELECT
+          summary,
+          to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS created_at,
+          to_char(updated_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS updated_at
+        FROM weekly_summaries
+        WHERE user_id = :userId AND week_key = CAST(:weekKey AS DATE)
+      `,
       [stringParam('userId', userId), stringParam('weekKey', weekKey)]
     );
     return rows[0];
@@ -632,7 +639,14 @@ export class DataApiJournalRepository implements JournalDataRepository {
 
   private async getMonthlySummaryRow(userId: string, monthKey: string) {
     const rows = await this.dataApiClient.query<SummaryRow>(
-      `SELECT summary, created_at, updated_at FROM monthly_summaries WHERE user_id = :userId AND month_key = :monthKey`,
+      `
+        SELECT
+          summary,
+          to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS created_at,
+          to_char(updated_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS updated_at
+        FROM monthly_summaries
+        WHERE user_id = :userId AND month_key = :monthKey
+      `,
       [stringParam('userId', userId), stringParam('monthKey', monthKey)]
     );
     return rows[0];
@@ -640,7 +654,14 @@ export class DataApiJournalRepository implements JournalDataRepository {
 
   private async getYearlySummaryRow(userId: string, yearKey: string) {
     const rows = await this.dataApiClient.query<SummaryRow>(
-      `SELECT summary, created_at, updated_at FROM yearly_summaries WHERE user_id = :userId AND year_key = :yearKey`,
+      `
+        SELECT
+          summary,
+          to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS created_at,
+          to_char(updated_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS updated_at
+        FROM yearly_summaries
+        WHERE user_id = :userId AND year_key = :yearKey
+      `,
       [stringParam('userId', userId), stringParam('yearKey', yearKey)]
     );
     return rows[0];
@@ -649,7 +670,11 @@ export class DataApiJournalRepository implements JournalDataRepository {
   private async getWeeklySummaries(userId: string, prefix?: string) {
     const rows = await this.dataApiClient.query<SummaryRow & { week_key: string }>(
       `
-        SELECT week_key, summary, created_at, updated_at
+        SELECT
+          week_key,
+          summary,
+          to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS created_at,
+          to_char(updated_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS updated_at
         FROM weekly_summaries
         WHERE user_id = :userId
           ${prefix ? `AND week_key LIKE :prefix` : ''}
@@ -666,7 +691,11 @@ export class DataApiJournalRepository implements JournalDataRepository {
   private async getMonthlySummaries(userId: string, prefix?: string) {
     const rows = await this.dataApiClient.query<SummaryRow & { month_key: string }>(
       `
-        SELECT month_key, summary, created_at, updated_at
+        SELECT
+          month_key,
+          summary,
+          to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS created_at,
+          to_char(updated_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS updated_at
         FROM monthly_summaries
         WHERE user_id = :userId
           ${prefix ? `AND month_key LIKE :prefix` : ''}
@@ -683,7 +712,11 @@ export class DataApiJournalRepository implements JournalDataRepository {
   private async getYearlySummaries(userId: string) {
     const rows = await this.dataApiClient.query<SummaryRow & { year_key: string }>(
       `
-        SELECT year_key, summary, created_at, updated_at
+        SELECT
+          year_key,
+          summary,
+          to_char(created_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS created_at,
+          to_char(updated_at AT TIME ZONE 'UTC', 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS updated_at
         FROM yearly_summaries
         WHERE user_id = :userId
         ORDER BY year_key
