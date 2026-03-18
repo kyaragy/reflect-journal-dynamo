@@ -5,7 +5,7 @@
 
 import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useEffect } from 'react';
-import { AuthProvider } from './auth/AuthContext';
+import { AuthProvider, useAuth } from './auth/AuthContext';
 import AuthStatus from './components/AuthStatus';
 import CalendarPage from './pages/CalendarPage';
 import DayPage from './pages/DayPage';
@@ -15,14 +15,46 @@ import YearPage from './pages/YearPage';
 import { useJournalStore } from './store/useJournalStore';
 
 function AppShell() {
+  const { isAuthenticated, isLoading: authLoading, isAuthEnabled, login } = useAuth();
   const bootstrap = useJournalStore((state) => state.bootstrap);
   const loading = useJournalStore((state) => state.loading);
   const error = useJournalStore((state) => state.error);
   const bootstrapStatus = useJournalStore((state) => state.bootstrapStatus);
 
   useEffect(() => {
+    if (isAuthEnabled && !isAuthenticated) {
+      return;
+    }
     void bootstrap();
-  }, [bootstrap]);
+  }, [bootstrap, isAuthEnabled, isAuthenticated]);
+
+  useEffect(() => {
+    if (!isAuthEnabled || authLoading || isAuthenticated) {
+      return;
+    }
+
+    void login();
+  }, [authLoading, isAuthEnabled, isAuthenticated, login]);
+
+  if (isAuthEnabled && authLoading) {
+    return (
+      <div className="min-h-screen bg-stone-50 text-stone-900 font-sans">
+        <main className="mx-auto flex min-h-screen max-w-3xl items-center justify-center px-4">
+          <p className="text-sm text-stone-500">認証状態を確認しています...</p>
+        </main>
+      </div>
+    );
+  }
+
+  if (isAuthEnabled && !isAuthenticated) {
+    return (
+      <div className="min-h-screen bg-stone-50 text-stone-900 font-sans">
+        <main className="mx-auto flex min-h-screen max-w-3xl items-center justify-center px-4">
+          <p className="text-sm text-stone-500">ログイン画面に移動しています...</p>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <Router>
