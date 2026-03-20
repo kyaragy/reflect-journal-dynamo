@@ -97,7 +97,7 @@
 
 候補:
 
-- table name: `reflect-journal-dynamo-<env>-main`
+- table name: `reflect-journal-dynamo-prod-main`
 
 主キー:
 

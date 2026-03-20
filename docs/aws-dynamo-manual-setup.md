@@ -11,6 +11,7 @@
 - auth は `Cognito User Pool`
 - frontend は `Amplify Hosting`
 - 既存 `reflect-journal` の AWS 環境は変更しない
+- AWS 上に新規作成する `reflect-journal-dynamo` 環境は `prod` のみとする
 
 この手順は、旧 Aurora 版の手動構築資料と同じく、AWS に不慣れでも追いやすい粒度を維持する方針で書いています。
 
@@ -26,6 +27,7 @@
 - 実際のクレデンシャル、URL、App Client ID、account ID は書かない
 - 代わりに `https://<AMPLIFY_APP_URL>` や `<COGNITO_APP_CLIENT_ID>` のようなプレースホルダで表す
 - 値そのものは個人メモやパスワードマネージャで管理する
+- AWS 環境は `prod` だけを管理対象とし、開発時の事前確認はローカル環境で行う
 
 参照:
 
@@ -277,11 +279,18 @@ https://cognito-idp.ap-northeast-1.amazonaws.com/<USER_POOL_ID>
 - Partition key: `PK` / `String`
 - Sort key: `SK` / `String`
 
-### 4-3. 容量モード
+### 4-3. テーブル設定
 
-設定:
+この画面では、まず `デフォルト設定` を選んだままで問題ありません。
+
+デフォルト設定で確認したい値:
 
 - `On-demand`
+- テーブルクラス: `DynamoDB Standard`
+- 暗号化キー管理: `AWS が所有するキー`
+- 削除保護: `Off`
+- ローカルセカンダリインデックス: なし
+- グローバルセカンダリインデックス: なし
 
 AWS 表示上は `On-demand` ですが、この方針書では `PAY_PER_REQUEST` と同じ意味で扱います。
 
@@ -289,17 +298,44 @@ AWS 表示上は `On-demand` ですが、この方針書では `PAY_PER_REQUEST`
 
 - 初期段階の個人利用で管理しやすい
 - capacity planning を後回しにできる
+- 今回のアプリで初期作成時に高度なテーブル設定は不要
 
-### 4-4. その他の設定
+### 4-4. タグ
 
-最初は次で十分です。
+タグは必須ではありません。最初は未設定のままでも問題ありません。
+
+もし付けるなら、後で AWS コンソール上の絞り込みやコスト確認がしやすいように次の程度で十分です。
+
+- `Project = reflect-journal-dynamo`
+- `Environment = prod`
+- `ManagedBy = manual`
+
+迷う場合は、いったんタグなしで `テーブルの作成` を押して構いません。
+
+### 4-5. 補足設定の考え方
+
+`設定をカスタマイズ` を選ばずに進める場合、追加で触る必要はありません。
+
+画面上の意味としては次の理解で十分です。
 
 - Secondary indexes: なし
+  - 今回の PK / SK 設計では、初期段階で GSI は不要
 - DynamoDB Streams: オフ
-- Point-in-time recovery: 必要なら後で有効化
-- Deletion protection: 必要ならオン
+  - Lambda 連携や変更イベント処理は今回使わない
+- Point-in-time recovery: いったんオフのままでよい
+  - 必要なら本番稼働後に有効化を検討する
+- Deletion protection: オフでよい
+  - 誤削除が不安なら後で有効化してもよい
 
-### 4-5. 作成後にメモする
+つまり、4-2 のキー設定が終わったら、
+
+1. `デフォルト設定` が選ばれていることを確認する
+2. `キャパシティーモード = オンデマンド` であることを確認する
+3. そのまま `Create table` に進む
+
+で問題ありません。
+
+### 4-6. 作成後にメモする
 
 - table name
 - table ARN
@@ -322,6 +358,7 @@ AWS 表示上は `On-demand` ですが、この方針書では `PAY_PER_REQUEST`
 - Function name: `reflect-journal-dynamo-prod-api`
 - Runtime: `Node.js 20.x`
 - Architecture: `x86_64` か `arm64`
+- Handler: いったんデフォルトのままで作成し、作成後に `functions/api/handler.handler` へ変更する
 
 ### 5-3. 実行ロール
 
@@ -342,6 +379,20 @@ zip -r function.zip .
 ```
 
 Lambda の `Code` タブから zip をアップロードします。
+
+重要:
+
+- この build では zip の中に `index.js` は作られません
+- 実際の entry file は `functions/api/handler.js` です
+- そのため、Lambda の handler 設定は `index.handler` ではなく `functions/api/handler.handler` にする必要があります
+
+確認手順:
+
+1. Lambda の `コード` タブを開く
+2. 画面を下へスクロールして `ランタイム設定` を開く
+3. `編集` を押す
+4. Handler を `functions/api/handler.handler` に変更する
+5. 保存する
 
 ### 5-5. 環境変数
 
@@ -364,13 +415,55 @@ BACKEND_REPOSITORY_DRIVER=dynamodb
 API Gateway に進む前に、まず Lambda 単体で `GET /health` を通します。
 
 1. Lambda の `テスト` タブを開く
-2. API Gateway HTTP API 形式に近い event を作る
-3. `GET /health` 相当の event で実行する
+2. 新しいテストイベントを作る
+3. イベント名は `get-health` など分かりやすい名前にする
+4. 次の JSON をそのまま貼る
+
+```json
+{
+  "version": "2.0",
+  "rawPath": "/health",
+  "body": null,
+  "isBase64Encoded": false,
+  "headers": {},
+  "requestContext": {
+    "requestId": "manual-test-health",
+    "http": {
+      "method": "GET",
+      "path": "/health"
+    }
+  }
+}
+```
+
+5. `テスト` を実行する
 
 期待結果:
 
 - statusCode: `200`
 - body に `status: ok`
+- body の `service` は `reflect-journal-dynamo-backend`
+
+期待される response body の例:
+
+```json
+{
+  "data": {
+    "status": "ok",
+    "service": "reflect-journal-dynamo-backend"
+  },
+  "meta": {
+    "requestId": "manual-test-health"
+  }
+}
+```
+
+補足:
+
+- `GET /health` は認証不要なので、authorizer 情報はこのテストイベントに不要
+- ここで 200 が返れば、Lambda コードの基本起動と handler 配線は通っている
+- `Cannot find module 'index'` が出た場合は、zip の中身と Handler 設定が一致していない
+- 今回の構成では Handler は `functions/api/handler.handler` が正しい
 
 ## 6. Lambda の IAM 権限を設定する
 
@@ -379,6 +472,14 @@ API Gateway に進む前に、まず Lambda 単体で `GET /health` を通しま
 1. Lambda の `設定 -> アクセス権限` を開く
 2. 実行ロールをクリックする
 3. `許可を追加` を押す
+4. `インラインポリシーを作成` を選ぶ
+
+補足:
+
+- 既存で付いている `AWSLambdaBasicExecutionRole` はそのまま残して問題ありません
+- これは CloudWatch Logs 出力のための基本権限なので、削除しないでください
+- 今回はこれに加えて、DynamoDB テーブルアクセス権限を追加します
+- 使い回し用の managed policy を新規作成するほどではないため、まずはインラインポリシーで十分です
 
 ### 6-2. 最低限必要な DynamoDB 権限
 
@@ -394,6 +495,33 @@ API Gateway に進む前に、まず Lambda 単体で `GET /health` を通しま
 対象リソース:
 
 - `arn:aws:dynamodb:ap-northeast-1:<ACCOUNT_ID>:table/reflect-journal-dynamo-prod-main`
+
+ポリシーは JSON タブで次を貼ればよいです。
+
+```json
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Sid": "JournalTableAccess",
+      "Effect": "Allow",
+      "Action": [
+        "dynamodb:GetItem",
+        "dynamodb:PutItem",
+        "dynamodb:UpdateItem",
+        "dynamodb:DeleteItem",
+        "dynamodb:Query",
+        "dynamodb:BatchWriteItem"
+      ],
+      "Resource": "arn:aws:dynamodb:ap-northeast-1:<ACCOUNT_ID>:table/reflect-journal-dynamo-prod-main"
+    }
+  ]
+}
+```
+
+ポリシー名の例:
+
+- `reflect-journal-dynamo-prod-main-access`
 
 必要に応じて追加:
 
@@ -449,7 +577,30 @@ Aurora 版のような次の権限は不要です。
 
 - 通常利用の初回表示で `GET /bootstrap` は使わない
 
-### 7-5. JWT authorizer を作る
+### 7-5. ステージを設定する
+
+この画面では、まずデフォルトの `$default` ステージをそのまま使って問題ありません。
+
+設定:
+
+- Stage name: `$default`
+- Auto deploy: `On`
+
+理由:
+
+- 今回は AWS 上に `prod` しか作らない
+- HTTP API では `$default` ステージを使うと URL に stage 名が付きにくく扱いやすい
+- route 変更のたびに手動デプロイしなくて済む
+
+つまり、この画面では
+
+1. `$default` が入っていることを確認する
+2. `自動デプロイ` がオンであることを確認する
+3. `次へ` を押す
+
+で問題ありません。
+
+### 7-6. JWT authorizer を作る
 
 設定:
 
@@ -458,12 +609,12 @@ Aurora 版のような次の権限は不要です。
 - Issuer: `https://cognito-idp.ap-northeast-1.amazonaws.com/<USER_POOL_ID>`
 - Audience: `<COGNITO_APP_CLIENT_ID>`
 
-### 7-6. 認可設定
+### 7-7. 認可設定
 
 - `GET /health` は認証なし
 - それ以外は `cognito-jwt`
 
-### 7-7. CORS を有効化する
+### 7-8. CORS を有効化する
 
 API Gateway の `CORS` 設定で最低限次を入れます。
 
