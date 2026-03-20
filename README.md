@@ -33,6 +33,7 @@
 - デフォルトでは `localStorageRepository` を利用します
 - `VITE_REPOSITORY_DRIVER=api` を指定すると `apiRepository` に切り替えられます
 - API のベース URL は `VITE_API_BASE_URL` で設定できます
+- `VITE_AUTH_MODE=local` を指定すると、`api` モードでも Cognito なしでローカル backend を使えます
 
 ## API Contract
 
@@ -44,13 +45,56 @@
 - `VITE_REPOSITORY_DRIVER=api` のときは Cognito Hosted UI を使った認証を前提に動作します
 - frontend は authorization code flow + PKCE で token を取得し、API リクエストに `Authorization: Bearer ...` を付与します
 - `VITE_REPOSITORY_DRIVER=local-storage` のときはローカル保存モードとして動作します
+- `VITE_AUTH_MODE=local` のときは、`api` モードでも Cognito 認証を無効にしてローカル backend に接続できます
 
 ## Backend
 
-- `backend/` に API Gateway HTTP API + Lambda + Aurora PostgreSQL (RDS Data API) を前提にした backend 実装があります
+- `backend/` に API Gateway HTTP API + Lambda + DynamoDB を前提にした backend 実装があります
 - backend のローカル起動は `npm run backend:dev`
 - 本番反映は `npm run backend:build` 後に Lambda へ zip を手動アップロードします
 - エンドポイント一覧と backend 側の詳細は `backend/README.md` を参照してください
+
+## ローカル起動
+
+追加開発時は、AWS に接続せず `localhost` 上で事前確認してから本番向け作業に進めます。
+
+起動構成:
+
+- frontend: `http://localhost:3000`
+- backend: `http://localhost:4000`
+- backend repository: `memory`
+- auth mode: `local`
+
+ローカル API 確認の例:
+
+```bash
+# terminal 1
+BACKEND_REPOSITORY_DRIVER=memory npm run backend:dev
+
+# terminal 2
+VITE_REPOSITORY_DRIVER=api VITE_AUTH_MODE=local VITE_API_BASE_URL=http://localhost:4000 npm run dev
+```
+
+確認できること:
+
+- frontend から backend API を呼ぶ流れ
+- route / service / repository の基本挙動
+- API 契約変更の影響
+- 月単位取得などの画面表示変更
+
+確認対象外:
+
+- Cognito 実認証
+- API Gateway authorizer
+- Lambda 実行環境差分
+- DynamoDB 実接続
+- AWS 側の CORS / IAM / リソース設定
+
+運用方針:
+
+- 追加開発時は、まず `localhost` で画面と API の挙動を確認する
+- その後に AWS 向け実装や接続確認を行う
+- 既存 `reflect-journal` の AWS 環境はこのローカル確認では変更しない
 
 ## 現在の AWS 構成
 
@@ -58,15 +102,19 @@
 - auth: Cognito User Pool
 - API: API Gateway HTTP API
 - compute: Lambda
-- DB: Aurora PostgreSQL Serverless v2
-- DB access: RDS Data API + Secrets Manager
+- DB: DynamoDB
 
 詳細な手順と運用メモ:
 
-- `docs/aws-manual-setup.md`
-- `docs/aws-migration-plan.md`
+- `docs/aws-dynamo-manual-setup.md`
+- `docs/aws-dynamo-migration-plan.md`
+- `docs/dynamo-migration-project-plan.md`
+- `docs/dynamodb-phase2-design.md`
+- `docs/aws-dynamo-phase3-architecture.md`
+- `docs/old/aws-manual-setup.md`
+- `docs/old/aws-migration-plan.md`
 
 ## デプロイの反映単位
 
 - frontend は Amplify に接続済みブランチへの push で自動 build / deploy されます
-- backend / API Gateway / Cognito / Aurora の変更は自動反映されません
+- backend / API Gateway / Cognito / DynamoDB の変更は自動反映されません

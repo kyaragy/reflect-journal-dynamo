@@ -5,7 +5,6 @@
 ## Path
 
 - `GET /health`
-- `GET /bootstrap`
 - `GET /days/:date`
 - `PUT /days/:date`
 - `PUT /days/:date/summary`
@@ -19,6 +18,25 @@
 - `GET /years/:yearKey`
 - `PUT /years/:yearKey/summary`
 - `POST /migration/local-storage-import`
+
+## Initial Loading Policy
+
+- 初回のカレンダー表示では `GET /months/:monthKey` を使う
+- 月移動時も都度 `GET /months/:monthKey` を使う
+- `GET /weeks/:weekKey` は週画面用
+- `GET /years/:yearKey` は年画面用
+- 全履歴一括取得の `GET /bootstrap` は通常利用の API としては採らない
+
+`GET /months/:monthKey` は次を返す前提で扱う:
+
+- その月の `days`
+- その月に含まれる `weeklySummaries`
+- その月の `monthlySummary`
+
+`GET /years/:yearKey` は次を返す前提で扱う:
+
+- その年の `yearlySummary`
+- その年の `monthlySummaries`
 
 ## Success Response
 

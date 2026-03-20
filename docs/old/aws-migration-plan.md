@@ -2,7 +2,7 @@
 
 Reflect Journal を AWS に移行する際の、低コスト寄りなサーバーレス RDB 構成メモです。
 
-実際の AWS コンソール操作手順は `docs/aws-manual-setup.md` を参照してください。
+実際の AWS コンソール操作手順は `docs/old/aws-manual-setup.md` を参照してください。
 
 2026-03-12 時点では、次の前提で考えるのが妥当です。
 
@@ -53,7 +53,7 @@ Browser
 - `README.md`
 - `backend/README.md`
 - `docs/api-contract.md`
-- `docs/aws-migration-plan.md`
+- `docs/old/aws-migration-plan.md`
 
 修正内容:
 
@@ -152,7 +152,7 @@ Browser
 注意:
 
 - この章は移行設計の経緯を残したものです
-- 実際の現在構成と運用手順は `docs/aws-manual-setup.md` を正とします
+- 実際の現在構成と運用手順は `docs/old/aws-manual-setup.md` を正とします
 
 現状:
 

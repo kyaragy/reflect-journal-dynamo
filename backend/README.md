@@ -1,6 +1,6 @@
 # Backend
 
-Lambda 向けの TypeScript backend です。実装は `API Gateway HTTP API -> Lambda -> RDS Data API -> Aurora PostgreSQL` を前提にしています。
+Lambda 向けの TypeScript backend です。実装は `API Gateway HTTP API -> Lambda -> DynamoDB` を前提にしています。
 
 ## Entry Points
 
@@ -12,7 +12,6 @@ Lambda 向けの TypeScript backend です。実装は `API Gateway HTTP API -> 
 ## Routes
 
 - `GET /health`
-- `GET /bootstrap`
 - `GET /days/:date`
 - `PUT /days/:date`
 - `PUT /days/:date/summary`
@@ -29,10 +28,9 @@ Lambda 向けの TypeScript backend です。実装は `API Gateway HTTP API -> 
 
 ## Environment Variables
 
+- `BACKEND_REPOSITORY_DRIVER`
 - `AWS_REGION`
-- `DATABASE_ARN`
-- `DATABASE_SECRET_ARN`
-- `DATABASE_NAME`
+- `JOURNAL_TABLE_NAME`
 - `CORS_ALLOW_ORIGIN`
 - `PORT`
 
@@ -40,7 +38,21 @@ Lambda 向けの TypeScript backend です。実装は `API Gateway HTTP API -> 
 
 ```bash
 npm install
-npm run backend:dev
+BACKEND_REPOSITORY_DRIVER=memory npm run backend:dev
 ```
 
 ローカル server は `x-dev-user-id` ヘッダを指定しない場合、`local-dev-user` を JWT `sub` 相当として扱います。
+
+ローカルで AWS 非依存に起動したい場合:
+
+```bash
+BACKEND_REPOSITORY_DRIVER=memory npm run backend:dev
+```
+
+`BACKEND_REPOSITORY_DRIVER` を省略した場合、ローカル server では `memory` が既定値です。Lambda handler 側では `dynamodb` が既定値です。
+
+追加開発時の標準フロー:
+
+- まず `localhost` の backend で route / service / repository の挙動を確認する
+- frontend からは `VITE_REPOSITORY_DRIVER=api`, `VITE_AUTH_MODE=local`, `VITE_API_BASE_URL=http://localhost:4000` で接続確認する
+- その後に AWS 実環境向けの接続確認を行う
