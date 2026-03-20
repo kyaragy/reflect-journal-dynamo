@@ -352,6 +352,8 @@ SK = YEAR#<YYYY>
 
 これにより、月単位取得 API の改修や store の変更を AWS 接続前に検証できます。
 
+`dynamodb` driver 自体の確認が必要になったら、DynamoDB Local を使って `DYNAMODB_ENDPOINT=http://localhost:8000` で接続する。
+
 ### 9-4. ローカル確認の標準手順
 
 追加開発時は、次を標準手順とします。

@@ -30,6 +30,7 @@ Lambda 向けの TypeScript backend です。実装は `API Gateway HTTP API -> 
 
 - `BACKEND_REPOSITORY_DRIVER`
 - `AWS_REGION`
+- `DYNAMODB_ENDPOINT`
 - `JOURNAL_TABLE_NAME`
 - `CORS_ALLOW_ORIGIN`
 - `PORT`
@@ -56,3 +57,23 @@ BACKEND_REPOSITORY_DRIVER=memory npm run backend:dev
 - まず `localhost` の backend で route / service / repository の挙動を確認する
 - frontend からは `VITE_REPOSITORY_DRIVER=api`, `VITE_AUTH_MODE=local`, `VITE_API_BASE_URL=http://localhost:4000` で接続確認する
 - その後に AWS 実環境向けの接続確認を行う
+
+## Local DynamoDB
+
+`dynamodb` driver をローカルで試す場合は `compose.yaml` の `dynamodb-local` を使います。
+
+`dynamodb-local` は `-inMemory` で動かしているため、コンテナ再作成でデータは消えます。
+
+起動:
+
+```bash
+npm run dynamodb:local:up
+JOURNAL_TABLE_NAME=reflect-journal-dynamo-local-main DYNAMODB_ENDPOINT=http://127.0.0.1:8000 npm run dynamodb:local:init
+BACKEND_REPOSITORY_DRIVER=dynamodb JOURNAL_TABLE_NAME=reflect-journal-dynamo-local-main DYNAMODB_ENDPOINT=http://127.0.0.1:8000 npm run backend:dev
+```
+
+停止:
+
+```bash
+npm run dynamodb:local:down
+```

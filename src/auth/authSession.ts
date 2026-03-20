@@ -1,4 +1,4 @@
-const AUTH_SESSION_STORAGE_KEY = 'reflect-journal-auth-session';
+const AUTH_SESSION_STORAGE_KEY = 'reflect-journal-dynamo-auth-session';
 
 export type AuthSession = {
   userId: string | null;

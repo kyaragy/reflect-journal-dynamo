@@ -1,5 +1,5 @@
 {
-  "name": "reflect-journal",
+  "name": "reflect-journal-dynamo",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -7,6 +7,9 @@
     "dev": "vite --port=3000 --host=0.0.0.0",
     "backend:dev": "tsx backend/src/server.ts",
     "backend:build": "node backend/build.mjs",
+    "dynamodb:local:up": "docker compose up -d dynamodb-local",
+    "dynamodb:local:down": "docker compose down",
+    "dynamodb:local:init": "node --import tsx backend/scripts/initDynamoLocal.ts",
     "build": "vite build",
     "preview": "vite preview",
     "clean": "rm -rf dist",

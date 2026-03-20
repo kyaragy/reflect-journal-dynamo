@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   format,
@@ -27,6 +27,7 @@ function cn(...inputs: (string | undefined | null | false)[]) {
 export default function CalendarPage() {
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [isQuickEntryOpen, setIsQuickEntryOpen] = useState(false);
+  const hasMountedRef = useRef(false);
   const navigate = useNavigate();
   const journalDays = useJournalStore((state) => state.days);
   const weeklySummaries = useJournalStore((state) => state.weeklySummaries);
@@ -42,6 +43,11 @@ export default function CalendarPage() {
   const closeQuickEntry = () => setIsQuickEntryOpen(false);
 
   useEffect(() => {
+    if (!hasMountedRef.current) {
+      hasMountedRef.current = true;
+      return;
+    }
+
     void refreshMonth(format(currentMonth, 'yyyy-MM'));
   }, [currentMonth, refreshMonth]);
 

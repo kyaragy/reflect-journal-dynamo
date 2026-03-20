@@ -15,7 +15,7 @@ import type {
 } from '../domain/journal';
 import type { JournalRepository } from './journalRepository';
 
-const STORAGE_KEY = 'journal-storage';
+const STORAGE_KEY = 'reflect-journal-dynamo-storage';
 
 const isSnapshot = (value: unknown): value is JournalSnapshot => {
   if (!value || typeof value !== 'object') {

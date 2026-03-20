@@ -96,6 +96,29 @@ VITE_REPOSITORY_DRIVER=api VITE_AUTH_MODE=local VITE_API_BASE_URL=http://localho
 - その後に AWS 向け実装や接続確認を行う
 - 既存 `reflect-journal` の AWS 環境はこのローカル確認では変更しない
 
+### Local DynamoDB で確認したい場合
+
+`memory` ではなく `dynamodb` driver を使って確認する場合は、DynamoDB Local を起動します。
+
+```bash
+# terminal 1
+npm run dynamodb:local:up
+JOURNAL_TABLE_NAME=reflect-journal-dynamo-local-main DYNAMODB_ENDPOINT=http://127.0.0.1:8000 npm run dynamodb:local:init
+
+# terminal 2
+BACKEND_REPOSITORY_DRIVER=dynamodb JOURNAL_TABLE_NAME=reflect-journal-dynamo-local-main DYNAMODB_ENDPOINT=http://127.0.0.1:8000 npm run backend:dev
+
+# terminal 3
+VITE_REPOSITORY_DRIVER=api VITE_AUTH_MODE=local VITE_API_BASE_URL=http://localhost:4000 npm run dev
+```
+
+補足:
+
+- `compose.yaml` は `amazon/dynamodb-local` を `-inMemory` で起動します
+- ローカル DynamoDB のデータはコンテナ再作成で消えます
+- frontend 用の例は `.env.local.example` に置いています
+- ローカル endpoint を指定すると backend はダミー認証情報で DynamoDB Local に接続します
+
 ## 現在の AWS 構成
 
 - frontend: Amplify Hosting

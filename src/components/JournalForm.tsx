@@ -13,6 +13,7 @@ export default function JournalForm({ date, onClose, entryToEdit }: JournalFormP
   const addEntry = useJournalStore((state) => state.addEntry);
   const updateEntry = useJournalStore((state) => state.updateEntry);
   const saving = useJournalStore((state) => state.saving);
+  const error = useJournalStore((state) => state.error);
   
   const [fact, setFact] = useState('');
   const [thought, setThought] = useState('');
@@ -143,6 +144,7 @@ export default function JournalForm({ date, onClose, entryToEdit }: JournalFormP
         </div>
 
         <div className="border-t border-stone-200 bg-white px-4 py-4 pb-[max(1rem,env(safe-area-inset-bottom))] sm:p-6">
+          {error ? <p className="mb-3 text-sm text-rose-700">{error}</p> : null}
           <button
             type="submit"
             form="journal-form"

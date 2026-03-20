@@ -40,7 +40,7 @@ export type ApiSuccessResponse<T> = {
 
 export type HealthResponse = ApiSuccessResponse<{
   status: 'ok';
-  service: 'reflect-journal-backend';
+  service: 'reflect-journal-dynamo-backend';
 }>;
 
 export type GetDayResponse = ApiSuccessResponse<Day | null>;

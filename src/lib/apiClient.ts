@@ -4,6 +4,7 @@ import { getAuthSession } from '../auth/authSession';
 type ApiClientConfig = {
   baseUrl: string;
   defaultHeaders?: HeadersInit;
+  timeoutMs?: number;
 };
 
 export type ApiClientResult<T> =
@@ -25,10 +26,12 @@ export class ApiClientError extends Error {
 export class ApiClient {
   private readonly baseUrl: string;
   private readonly defaultHeaders?: HeadersInit;
+  private readonly timeoutMs: number;
 
   constructor(config: ApiClientConfig) {
     this.baseUrl = config.baseUrl;
     this.defaultHeaders = config.defaultHeaders;
+    this.timeoutMs = config.timeoutMs ?? 10_000;
   }
 
   async request<T>(path: string, init: RequestInit = {}, hasRetried = false): Promise<T> {
@@ -57,14 +60,20 @@ export class ApiClient {
 
   private performRequest(path: string, init: RequestInit = {}) {
     const accessToken = getAuthSession().accessToken;
+    const controller = new AbortController();
+    const timeout = window.setTimeout(() => controller.abort(), this.timeoutMs);
+
     return fetch(new URL(path, this.baseUrl).toString(), {
       ...init,
+      signal: controller.signal,
       headers: {
         'Content-Type': 'application/json',
         ...(accessToken ? { Authorization: `Bearer ${accessToken}` } : {}),
         ...this.defaultHeaders,
         ...init.headers,
       },
+    }).finally(() => {
+      window.clearTimeout(timeout);
     });
   }
 
@@ -122,4 +131,5 @@ export class ApiClient {
 
 export const apiClient = new ApiClient({
   baseUrl: import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:4000',
+  timeoutMs: 10_000,
 });

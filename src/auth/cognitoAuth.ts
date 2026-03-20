@@ -15,10 +15,10 @@ type TokenResponse = {
   token_type: string;
 };
 
-const AUTH_STATE_STORAGE_KEY = 'reflect-journal-cognito-auth-state';
-const PKCE_VERIFIER_STORAGE_KEY = 'reflect-journal-cognito-pkce-verifier';
-const POST_LOGIN_HASH_STORAGE_KEY = 'reflect-journal-post-login-hash';
-const LOGIN_REDIRECT_IN_PROGRESS_STORAGE_KEY = 'reflect-journal-login-redirect-in-progress';
+const AUTH_STATE_STORAGE_KEY = 'reflect-journal-dynamo-cognito-auth-state';
+const PKCE_VERIFIER_STORAGE_KEY = 'reflect-journal-dynamo-cognito-pkce-verifier';
+const POST_LOGIN_HASH_STORAGE_KEY = 'reflect-journal-dynamo-post-login-hash';
+const LOGIN_REDIRECT_IN_PROGRESS_STORAGE_KEY = 'reflect-journal-dynamo-login-redirect-in-progress';
 
 const REPOSITORY_DRIVER = import.meta.env.VITE_REPOSITORY_DRIVER ?? 'localStorage';
 const AUTH_MODE = import.meta.env.VITE_AUTH_MODE ?? 'cognito';

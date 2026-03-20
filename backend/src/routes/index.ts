@@ -104,7 +104,7 @@ export const routeRequest = async (
     return success(
       {
         status: 'ok',
-        service: 'reflect-journal-backend',
+        service: 'reflect-journal-dynamo-backend',
       },
       requestId
     );

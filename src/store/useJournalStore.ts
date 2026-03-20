@@ -90,6 +90,22 @@ const mergeYear = (state: JournalState, year: { yearKey: string; summary?: Yearl
 
 const toErrorMessage = (error: unknown) => (error instanceof Error ? error.message : 'Unexpected error');
 
+const withLoading = async (set: (fn: (state: JournalState) => Partial<JournalState>) => void, work: () => Promise<void>) => {
+  set(() => ({ loading: true, error: null }));
+
+  try {
+    await work();
+    set(() => ({ loading: false }));
+  } catch (error) {
+    set(() => ({
+      loading: false,
+      error: toErrorMessage(error),
+      initialLoadStatus: 'error',
+    }));
+    throw error;
+  }
+};
+
 const withSaving = async (set: (fn: (state: JournalState) => Partial<JournalState>) => void, work: () => Promise<void>) => {
   set(() => ({ saving: true, error: null }));
 
@@ -151,7 +167,7 @@ export const useJournalStore = create<JournalState>()((set, get) => ({
   },
 
   async refreshDay(date) {
-    await withSaving(set, async () => {
+    await withLoading(set, async () => {
       const day = await journalRepository.getDay(date);
       if (!day) {
         set((state) => ({
@@ -167,7 +183,7 @@ export const useJournalStore = create<JournalState>()((set, get) => ({
   },
 
   async refreshWeek(weekKey) {
-    await withSaving(set, async () => {
+    await withLoading(set, async () => {
       const week = await journalRepository.getWeek(weekKey);
       set((state) => ({
         ...mergeWeek(state, week),
@@ -176,7 +192,7 @@ export const useJournalStore = create<JournalState>()((set, get) => ({
   },
 
   async refreshMonth(monthKey) {
-    await withSaving(set, async () => {
+    await withLoading(set, async () => {
       const month = await journalRepository.getMonth(monthKey);
       set((state) => ({
         ...mergeMonth(state, month),
@@ -185,7 +201,7 @@ export const useJournalStore = create<JournalState>()((set, get) => ({
   },
 
   async refreshYear(yearKey) {
-    await withSaving(set, async () => {
+    await withLoading(set, async () => {
       const year = await journalRepository.getYear(yearKey);
       set((state) => ({
         ...mergeYear(state, year),

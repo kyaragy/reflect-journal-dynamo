@@ -119,6 +119,7 @@
 - backend のローカル起動は、少なくとも `memory` か `local file` などの AWS 非依存 repository で成立させる
 - frontend の `api` モード確認時も、Cognito 実接続を必須にせず、ローカル開発用の認証バイパスまたは開発用ユーザー注入を用意する
 - AWS 接続確認はローカル検証完了後の段階で実施する
+- 必要に応じて DynamoDB Local を使い、`dynamodb` driver 自体も AWS 反映前にローカルで確認する
 
 ローカル検証の基準:
 

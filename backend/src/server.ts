@@ -25,6 +25,8 @@ const server = createServer(async (req, res) => {
 
   const url = new URL(req.url, `http://${req.headers.host ?? 'localhost'}`);
   const body = await readBody(req);
+  const startedAt = Date.now();
+  console.log(`[local-api] ${req.method} ${url.pathname} start`);
 
   const event: ApiGatewayHttpEvent = {
     version: '2.0',
@@ -55,8 +57,11 @@ const server = createServer(async (req, res) => {
   const response = await handler(event);
   res.writeHead(response.statusCode, response.headers);
   res.end(response.body);
+  console.log(`[local-api] ${req.method} ${url.pathname} -> ${response.statusCode} ${Date.now() - startedAt}ms`);
 });
 
 server.listen(PORT, () => {
-  console.log(`reflect-journal backend listening on http://localhost:${PORT} (driver: ${driver})`);
+  console.log(
+    `reflect-journal-dynamo backend listening on http://localhost:${PORT} (driver: ${driver}, table: ${process.env.JOURNAL_TABLE_NAME ?? '-'}, endpoint: ${process.env.DYNAMODB_ENDPOINT ?? '-'})`
+  );
 });

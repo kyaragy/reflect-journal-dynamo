@@ -7,6 +7,15 @@ import {
   QueryCommand,
 } from '@aws-sdk/lib-dynamodb';
 import { DynamoDBClient } from '@aws-sdk/client-dynamodb';
+import { NodeHttpHandler } from '@smithy/node-http-handler';
+
+const normalizeEndpoint = (endpoint?: string) => {
+  if (!endpoint) {
+    return undefined;
+  }
+
+  return endpoint.replace('http://localhost:', 'http://127.0.0.1:').replace('https://localhost:', 'https://127.0.0.1:');
+};
 
 export class DynamoDbClient {
   constructor(
@@ -145,12 +154,32 @@ export const createDynamoDbClientFromEnv = () => {
   }
 
   const region = process.env.AWS_REGION ?? process.env.AWS_DEFAULT_REGION ?? 'ap-northeast-1';
+  const endpoint = normalizeEndpoint(process.env.DYNAMODB_ENDPOINT);
   return new DynamoDbClient(
     tableName,
-    DynamoDBDocumentClient.from(new DynamoDBClient({ region }), {
-      marshallOptions: {
-        removeUndefinedValues: true,
-      },
-    })
+    DynamoDBDocumentClient.from(
+      new DynamoDBClient({
+        region,
+        endpoint,
+        maxAttempts: 1,
+        requestHandler: new NodeHttpHandler({
+          connectionTimeout: 2_000,
+          requestTimeout: 5_000,
+        }),
+        ...(endpoint
+          ? {
+              credentials: {
+                accessKeyId: process.env.AWS_ACCESS_KEY_ID ?? 'dummy',
+                secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY ?? 'dummy',
+              },
+            }
+          : {}),
+      }),
+      {
+        marshallOptions: {
+          removeUndefinedValues: true,
+        },
+      }
+    )
   );
 };
