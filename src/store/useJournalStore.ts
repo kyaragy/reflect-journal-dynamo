@@ -1,9 +1,9 @@
 import { create } from 'zustand';
+import { format } from 'date-fns';
 import type {
   Card,
   CreateCardInput,
   Day,
-  JournalSnapshot,
   MonthlySummary,
   WeeklySummary,
   YearlySummary,
@@ -21,9 +21,9 @@ interface JournalState {
   yearlySummaries: YearlySummary[];
   loading: boolean;
   saving: boolean;
-  bootstrapStatus: AsyncStatus;
+  initialLoadStatus: AsyncStatus;
   error: string | null;
-  bootstrap: () => Promise<void>;
+  initializeMonth: (monthKey?: string) => Promise<void>;
   refreshDay: (date: string) => Promise<void>;
   refreshWeek: (weekKey: string) => Promise<void>;
   refreshMonth: (monthKey: string) => Promise<void>;
@@ -44,13 +44,6 @@ const emptyState = {
   yearlySummaries: [],
 };
 
-const snapshotToState = (snapshot: JournalSnapshot) => ({
-  days: snapshot.days,
-  weeklySummaries: snapshot.weeklySummaries,
-  monthlySummaries: snapshot.monthlySummaries,
-  yearlySummaries: snapshot.yearlySummaries,
-});
-
 const replaceDay = (days: Day[], day: Day) =>
   [...days.filter((item) => item.date !== day.date), day].sort((left, right) => left.date.localeCompare(right.date));
 
@@ -65,18 +58,23 @@ const mergeWeek = (state: JournalState, week: { weekKey: string; days: Day[]; su
     : state.weeklySummaries.filter((item) => item.weekKey !== week.weekKey),
 });
 
-const mergeMonth = (state: JournalState, month: { monthKey: string; days: Day[]; summary?: MonthlySummary; weeklySummaries: WeeklySummary[] }) => ({
-  days: [...state.days.filter((day) => !day.date.startsWith(month.monthKey)), ...month.days].sort((left, right) => left.date.localeCompare(right.date)),
-  weeklySummaries: [
-    ...state.weeklySummaries.filter((item) => !item.weekKey.startsWith(month.monthKey)),
-    ...month.weeklySummaries,
-  ].sort((left, right) => left.weekKey.localeCompare(right.weekKey)),
-  monthlySummaries: month.summary
-    ? [...state.monthlySummaries.filter((item) => item.monthKey !== month.monthKey), month.summary].sort((left, right) =>
-        left.monthKey.localeCompare(right.monthKey)
-      )
-    : state.monthlySummaries.filter((item) => item.monthKey !== month.monthKey),
-});
+const mergeMonth = (state: JournalState, month: { monthKey: string; days: Day[]; summary?: MonthlySummary; weeklySummaries: WeeklySummary[] }) => {
+  const weekKeys = new Set(month.weeklySummaries.map((item) => item.weekKey));
+  return {
+    days: [...state.days.filter((day) => !day.date.startsWith(month.monthKey)), ...month.days].sort((left, right) =>
+      left.date.localeCompare(right.date)
+    ),
+    weeklySummaries: [
+      ...state.weeklySummaries.filter((item) => !weekKeys.has(item.weekKey)),
+      ...month.weeklySummaries,
+    ].sort((left, right) => left.weekKey.localeCompare(right.weekKey)),
+    monthlySummaries: month.summary
+      ? [...state.monthlySummaries.filter((item) => item.monthKey !== month.monthKey), month.summary].sort((left, right) =>
+          left.monthKey.localeCompare(right.monthKey)
+        )
+      : state.monthlySummaries.filter((item) => item.monthKey !== month.monthKey),
+  };
+};
 
 const mergeYear = (state: JournalState, year: { yearKey: string; summary?: YearlySummary; monthlySummaries: MonthlySummary[] }) => ({
   monthlySummaries: [
@@ -102,7 +100,7 @@ const withSaving = async (set: (fn: (state: JournalState) => Partial<JournalStat
     set(() => ({
       saving: false,
       error: toErrorMessage(error),
-      bootstrapStatus: 'error',
+      initialLoadStatus: 'error',
     }));
     throw error;
   }
@@ -112,32 +110,41 @@ export const useJournalStore = create<JournalState>()((set, get) => ({
   ...emptyState,
   loading: false,
   saving: false,
-  bootstrapStatus: 'idle',
+  initialLoadStatus: 'idle',
   error: null,
 
-  async bootstrap() {
-    if (get().bootstrapStatus === 'loading') {
+  async initializeMonth(monthKey = format(new Date(), 'yyyy-MM')) {
+    if (get().initialLoadStatus === 'loading') {
       return;
     }
 
     set(() => ({
       loading: true,
       error: null,
-      bootstrapStatus: 'loading',
+      initialLoadStatus: 'loading',
     }));
 
     try {
-      const snapshot = await journalRepository.bootstrap();
+      const month = await journalRepository.getMonth(monthKey);
       set(() => ({
-        ...snapshotToState(snapshot),
+        ...mergeMonth(
+          {
+            ...get(),
+            loading: false,
+            saving: false,
+            error: null,
+            initialLoadStatus: 'loading',
+          },
+          month
+        ),
         loading: false,
-        bootstrapStatus: 'ready',
+        initialLoadStatus: 'ready',
         error: null,
       }));
     } catch (error) {
       set(() => ({
         loading: false,
-        bootstrapStatus: 'error',
+        initialLoadStatus: 'error',
         error: toErrorMessage(error),
       }));
     }

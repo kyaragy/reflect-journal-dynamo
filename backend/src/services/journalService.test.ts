@@ -13,9 +13,6 @@ const dayFixture: Day = {
 };
 
 const createRepositoryStub = (): JournalDataRepository => ({
-  async getBootstrap() {
-    return createEmptyJournalSnapshot();
-  },
   async getDay() {
     return dayFixture;
   },

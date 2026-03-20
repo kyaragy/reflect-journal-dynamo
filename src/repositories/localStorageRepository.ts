@@ -248,10 +248,6 @@ const sortSnapshot = (snapshot: JournalSnapshot): JournalSnapshot => ({
 });
 
 export const localStorageRepository: JournalRepository = {
-  async bootstrap() {
-    return readSnapshot();
-  },
-
   async getDay(date) {
     return getDay(await readSnapshot(), date);
   },

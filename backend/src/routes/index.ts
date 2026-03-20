@@ -112,14 +112,6 @@ export const routeRequest = async (
 
   const { userId } = getCurrentUser(event);
 
-  if (path === '/bootstrap') {
-    if (method !== 'GET') {
-      throw methodNotAllowedError(method, path);
-    }
-
-    return success(await dependencies.journalService.bootstrap(userId), requestId);
-  }
-
   if (path === '/migration/local-storage-import') {
     if (method !== 'POST') {
       throw methodNotAllowedError(method, path);

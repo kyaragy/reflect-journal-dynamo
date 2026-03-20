@@ -43,8 +43,6 @@ export type HealthResponse = ApiSuccessResponse<{
   service: 'reflect-journal-backend';
 }>;
 
-export type BootstrapResponse = ApiSuccessResponse<JournalSnapshot>;
-
 export type GetDayResponse = ApiSuccessResponse<Day | null>;
 export type PutDayRequest = Day;
 export type PutDayResponse = ApiSuccessResponse<Day>;
@@ -113,7 +111,6 @@ export const assertCardId = (cardId: string) => {
 
 export const journalApiPaths = {
   health: () => '/health',
-  bootstrap: () => '/bootstrap',
   day: (date: string) => `/days/${date}`,
   daySummary: (date: string) => `/days/${date}/summary`,
   dayCards: (date: string) => `/days/${date}/cards`,

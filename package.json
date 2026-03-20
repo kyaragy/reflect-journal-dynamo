@@ -14,7 +14,9 @@
     "test": "node --import tsx --test backend/src/**/*.test.ts"
   },
   "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.1013.0",
     "@aws-sdk/client-rds-data": "^3.1009.0",
+    "@aws-sdk/lib-dynamodb": "^3.1013.0",
     "@tailwindcss/vite": "^4.1.14",
     "@vitejs/plugin-react": "^5.0.4",
     "clsx": "^2.1.1",

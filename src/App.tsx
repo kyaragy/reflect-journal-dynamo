@@ -5,6 +5,7 @@
 
 import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useEffect } from 'react';
+import { format } from 'date-fns';
 import { AuthProvider, useAuth } from './auth/AuthContext';
 import AuthStatus from './components/AuthStatus';
 import CalendarPage from './pages/CalendarPage';
@@ -16,17 +17,17 @@ import { useJournalStore } from './store/useJournalStore';
 
 function AppShell() {
   const { isAuthenticated, isLoading: authLoading, isAuthEnabled, login } = useAuth();
-  const bootstrap = useJournalStore((state) => state.bootstrap);
+  const initializeMonth = useJournalStore((state) => state.initializeMonth);
   const loading = useJournalStore((state) => state.loading);
   const error = useJournalStore((state) => state.error);
-  const bootstrapStatus = useJournalStore((state) => state.bootstrapStatus);
+  const initialLoadStatus = useJournalStore((state) => state.initialLoadStatus);
 
   useEffect(() => {
     if (isAuthEnabled && !isAuthenticated) {
       return;
     }
-    void bootstrap();
-  }, [bootstrap, isAuthEnabled, isAuthenticated]);
+    void initializeMonth(format(new Date(), 'yyyy-MM'));
+  }, [initializeMonth, isAuthEnabled, isAuthenticated]);
 
   useEffect(() => {
     if (!isAuthEnabled || authLoading || isAuthenticated) {
@@ -68,7 +69,7 @@ function AppShell() {
           </div>
         </header>
         <main className="max-w-3xl mx-auto px-4 py-8">
-          {loading && bootstrapStatus !== 'ready' ? <p className="text-sm text-stone-500">Loading journal...</p> : null}
+          {loading && initialLoadStatus !== 'ready' ? <p className="text-sm text-stone-500">Loading journal...</p> : null}
           {error ? <p className="mb-4 rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</p> : null}
           <Routes>
             <Route path="/" element={<Navigate to="/calendar" replace />} />

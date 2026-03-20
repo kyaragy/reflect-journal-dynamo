@@ -17,6 +17,7 @@ export default function YearPage() {
   const monthlySummaries = useJournalStore((state) => state.monthlySummaries);
   const yearlySummaries = useJournalStore((state) => state.yearlySummaries);
   const setYearlyReflection = useJournalStore((state) => state.setYearlyReflection);
+  const refreshYear = useJournalStore((state) => state.refreshYear);
   const saving = useJournalStore((state) => state.saving);
 
   const yearKey = year || '';
@@ -25,6 +26,13 @@ export default function YearPage() {
   useEffect(() => {
     setReflectionText(currentReflection);
   }, [currentReflection]);
+
+  useEffect(() => {
+    if (!year) {
+      return;
+    }
+    void refreshYear(year);
+  }, [refreshYear, year]);
 
   if (!year) return null;
 

@@ -17,6 +17,7 @@ export default function WeekPage() {
   const allDays = useJournalStore((state) => state.days);
   const weeklySummaries = useJournalStore((state) => state.weeklySummaries);
   const setWeeklyReflection = useJournalStore((state) => state.setWeeklyReflection);
+  const refreshWeek = useJournalStore((state) => state.refreshWeek);
   const saving = useJournalStore((state) => state.saving);
 
   const weekKey = weekStart || '';
@@ -25,6 +26,13 @@ export default function WeekPage() {
   useEffect(() => {
     setReflectionText(currentReflection);
   }, [currentReflection]);
+
+  useEffect(() => {
+    if (!weekStart) {
+      return;
+    }
+    void refreshWeek(weekStart);
+  }, [refreshWeek, weekStart]);
 
   if (!weekStart) return null;
 

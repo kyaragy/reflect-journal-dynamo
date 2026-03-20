@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
   format,
@@ -30,6 +30,7 @@ export default function CalendarPage() {
   const navigate = useNavigate();
   const journalDays = useJournalStore((state) => state.days);
   const weeklySummaries = useJournalStore((state) => state.weeklySummaries);
+  const refreshMonth = useJournalStore((state) => state.refreshMonth);
   const today = new Date();
   const todayKey = format(today, 'yyyy-MM-dd');
   const todayRecord = journalDays.find((day) => day.date === todayKey);
@@ -39,6 +40,10 @@ export default function CalendarPage() {
   const nextMonth = () => setCurrentMonth(addMonths(currentMonth, 1));
   const prevMonth = () => setCurrentMonth(subMonths(currentMonth, 1));
   const closeQuickEntry = () => setIsQuickEntryOpen(false);
+
+  useEffect(() => {
+    void refreshMonth(format(currentMonth, 'yyyy-MM'));
+  }, [currentMonth, refreshMonth]);
 
   const onDateClick = (day: Date) => {
     navigate(`/day/${format(day, 'yyyy-MM-dd')}`);

@@ -4,10 +4,6 @@ import type { JournalDataRepository } from '../repositories/journalRepository';
 export class JournalService {
   constructor(private readonly repository: JournalDataRepository) {}
 
-  bootstrap(userId: string) {
-    return this.repository.getBootstrap(userId);
-  }
-
   getDay(userId: string, date: string) {
     return this.repository.getDay(userId, date);
   }

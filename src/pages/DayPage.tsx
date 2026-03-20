@@ -20,6 +20,7 @@ export default function DayPage() {
   const days = useJournalStore((state) => state.days);
   const saving = useJournalStore((state) => state.saving);
   const deleteEntry = useJournalStore((state) => state.deleteEntry);
+  const refreshDay = useJournalStore((state) => state.refreshDay);
   const day = useMemo(
     () => days.find((currentDay) => currentDay.date === date) ?? null,
     [days, date]
@@ -30,6 +31,13 @@ export default function DayPage() {
   useEffect(() => {
     setReflectionText(day?.dailySummary || '');
   }, [day]);
+
+  useEffect(() => {
+    if (!date) {
+      return;
+    }
+    void refreshDay(date);
+  }, [date, refreshDay]);
 
   if (!date) return null;
 

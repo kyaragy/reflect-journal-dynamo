@@ -9,7 +9,6 @@ import type {
 } from '../domain/journal';
 
 export interface JournalRepository {
-  bootstrap(): Promise<JournalSnapshot>;
   getDay(date: string): Promise<Day | null>;
   saveDay(day: Day): Promise<Day>;
   getWeek(weekKey: string): Promise<WeekRecord>;

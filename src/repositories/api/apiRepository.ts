@@ -5,7 +5,6 @@ import {
   assertWeekKey,
   assertYearKey,
   journalApiPaths,
-  type BootstrapResponse,
   type DeleteCardResponse,
   type GetDayResponse,
   type GetMonthResponse,
@@ -33,11 +32,6 @@ import type { JournalSnapshot } from '../../domain/journal';
 import type { JournalRepository } from '../journalRepository';
 
 export const apiRepository: JournalRepository = {
-  async bootstrap() {
-    const response = await apiClient.get<BootstrapResponse>(journalApiPaths.bootstrap());
-    return response.data;
-  },
-
   async getDay(date) {
     assertDateString(date);
     const response = await apiClient.get<GetDayResponse>(journalApiPaths.day(date));

@@ -1,20 +1,14 @@
-import { createDataApiClientFromEnv } from '../../db/dataApiClient';
-import { DataApiJournalRepository } from '../../repositories/journalRepository';
 import { routeRequest } from '../../routes';
 import { errorResponse } from '../../libs/response';
+import { createJournalServiceFromEnv } from '../../repositories/factory';
 import { JournalService } from '../../services/journalService';
 import type { ApiGatewayHttpEvent, ApiGatewayHttpResponse } from './types';
-
-const createJournalService = () => {
-  const repository = new DataApiJournalRepository(createDataApiClientFromEnv());
-  return new JournalService(repository);
-};
 
 let sharedJournalService: JournalService | null = null;
 
 const getJournalService = () => {
   if (!sharedJournalService) {
-    sharedJournalService = createJournalService();
+    sharedJournalService = createJournalServiceFromEnv('dynamodb').journalService;
   }
 
   return sharedJournalService;

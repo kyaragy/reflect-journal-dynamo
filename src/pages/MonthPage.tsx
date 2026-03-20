@@ -18,6 +18,7 @@ export default function MonthPage() {
   const weeklySummaries = useJournalStore((state) => state.weeklySummaries);
   const monthlySummaries = useJournalStore((state) => state.monthlySummaries);
   const setMonthlyReflection = useJournalStore((state) => state.setMonthlyReflection);
+  const refreshMonth = useJournalStore((state) => state.refreshMonth);
   const saving = useJournalStore((state) => state.saving);
 
   const monthKey = yearMonth || '';
@@ -26,6 +27,13 @@ export default function MonthPage() {
   useEffect(() => {
     setReflectionText(currentReflection);
   }, [currentReflection]);
+
+  useEffect(() => {
+    if (!yearMonth) {
+      return;
+    }
+    void refreshMonth(yearMonth);
+  }, [refreshMonth, yearMonth]);
 
   if (!yearMonth) return null;
 

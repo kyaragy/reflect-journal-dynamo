@@ -21,7 +21,8 @@ const POST_LOGIN_HASH_STORAGE_KEY = 'reflect-journal-post-login-hash';
 const LOGIN_REDIRECT_IN_PROGRESS_STORAGE_KEY = 'reflect-journal-login-redirect-in-progress';
 
 const REPOSITORY_DRIVER = import.meta.env.VITE_REPOSITORY_DRIVER ?? 'localStorage';
-export const IS_AUTH_ENABLED = REPOSITORY_DRIVER === 'api';
+const AUTH_MODE = import.meta.env.VITE_AUTH_MODE ?? 'cognito';
+export const IS_AUTH_ENABLED = REPOSITORY_DRIVER === 'api' && AUTH_MODE !== 'local';
 export const COGNITO_DOMAIN = (import.meta.env.VITE_COGNITO_DOMAIN ?? '').replace(/\/$/, '');
 export const COGNITO_APP_CLIENT_ID = import.meta.env.VITE_COGNITO_APP_CLIENT_ID ?? '';
 

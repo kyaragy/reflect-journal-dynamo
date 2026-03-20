@@ -1,8 +1,11 @@
 import { createServer, type IncomingMessage } from 'node:http';
-import { handler } from './functions/api/handler';
+import { createHandler } from './functions/api/handler';
 import type { ApiGatewayHttpEvent } from './functions/api/types';
+import { createJournalServiceFromEnv } from './repositories/factory';
 
 const PORT = Number(process.env.PORT ?? 4000);
+const { driver, journalService } = createJournalServiceFromEnv('memory');
+const handler = createHandler(journalService);
 
 const readBody = async (req: IncomingMessage) => {
   const chunks: Buffer[] = [];
@@ -28,7 +31,11 @@ const server = createServer(async (req, res) => {
     rawPath: url.pathname,
     body,
     isBase64Encoded: false,
-    headers: Object.fromEntries(Object.entries(req.headers).map(([key, value]) => [key, Array.isArray(value) ? value.join(',') : value])),
+    headers: Object.fromEntries(
+      Object.entries(req.headers)
+        .map(([key, value]) => [key, Array.isArray(value) ? value.join(',') : value] as const)
+        .filter((entry): entry is readonly [string, string] => typeof entry[1] === 'string')
+    ),
     requestContext: {
       requestId: crypto.randomUUID(),
       http: {
@@ -51,5 +58,5 @@ const server = createServer(async (req, res) => {
 });
 
 server.listen(PORT, () => {
-  console.log(`reflect-journal backend listening on http://localhost:${PORT}`);
+  console.log(`reflect-journal backend listening on http://localhost:${PORT} (driver: ${driver})`);
 });
