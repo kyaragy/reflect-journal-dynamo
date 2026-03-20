@@ -19,6 +19,12 @@ export const createHandler = (journalService: JournalService) => {
     try {
       return await routeRequest(event, { journalService });
     } catch (error) {
+      console.error('API handler failed', {
+        requestId: event.requestContext.requestId,
+        method: event.requestContext.http.method,
+        path: event.rawPath,
+        error,
+      });
       return errorResponse(error, event.requestContext.requestId);
     }
   };

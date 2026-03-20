@@ -37,7 +37,7 @@ export const toAppError = (error: unknown) => {
   }
 
   if (error instanceof Error) {
-    return internalServerError(error.message);
+    return internalServerError();
   }
 
   return internalServerError();
