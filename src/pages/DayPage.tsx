@@ -8,6 +8,7 @@ import JournalCard from '../components/JournalCard';
 import JournalForm from '../components/JournalForm';
 import { motion, AnimatePresence } from 'motion/react';
 import { generateCardMarkdown } from '../lib/cardMarkdown';
+import { getReflectionPlaceholder } from '../lib/reflectionPlaceholders';
 
 export default function DayPage() {
   const { date } = useParams<{ date: string }>();
@@ -125,7 +126,7 @@ export default function DayPage() {
               <textarea
                 value={reflectionText}
                 onChange={(e) => setReflectionText(e.target.value)}
-                placeholder="AIとのやり取り結果や、今日の振り返りを記入してください..."
+                placeholder={getReflectionPlaceholder('day')}
                 className="w-full p-3 bg-white border border-stone-200 rounded-xl focus:ring-2 focus:ring-stone-400 focus:border-stone-400 outline-none transition-all resize-none min-h-[120px] text-sm text-stone-800 placeholder:text-stone-400"
               />
               <div className="flex justify-end mt-3">

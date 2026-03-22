@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { generateCardMarkdown } from '../../../src/lib/cardMarkdown';
 import { getStepTypeLabel, getTriggerTypeLabel, normalizeCard } from '../../../src/domain/journal';
+import { getReflectionPlaceholder, getTriggerPlaceholder, reflectionPlaceholderMap, triggerPlaceholderMap } from '../../../src/lib/reflectionPlaceholders';
 
 test('label helpers expose user-facing Japanese labels', () => {
   assert.equal(getTriggerTypeLabel('external'), '外部出来事');
@@ -58,4 +59,18 @@ test('generateCardMarkdown outputs trigger, tag and ordered steps', () => {
   assert.match(markdown, /種別: 外部出来事/);
   assert.match(markdown, /1\.\n- 種別: 思考\n- 内容: 自分の進め方を否定された気がした/);
   assert.match(markdown, /2\.\n- 種別: 感情\n- 内容: イライラした/);
+});
+
+test('reflection placeholders are defined per mode', () => {
+  assert.match(getReflectionPlaceholder('day'), /今日のサマリ：/);
+  assert.match(getReflectionPlaceholder('week'), /繰り返していたパターン：/);
+  assert.match(getReflectionPlaceholder('month'), /長期的な問い：/);
+  assert.equal(Object.keys(reflectionPlaceholderMap).length, 3);
+});
+
+test('trigger placeholders follow trigger type selection', () => {
+  assert.match(getTriggerPlaceholder('external'), /Slackで指摘された/);
+  assert.match(getTriggerPlaceholder('internal'), /急に不安になった/);
+  assert.match(getTriggerPlaceholder('physical'), /胸がざわついた/);
+  assert.equal(Object.keys(triggerPlaceholderMap).length, 3);
 });

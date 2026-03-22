@@ -1,4 +1,4 @@
-import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { motion } from 'motion/react';
 import { Activity, ArrowRight, Brain, Check, Heart, Plus, Save, Sparkles, Trash2, X } from 'lucide-react';
 import { useJournalStore, type Card } from '../store/useJournalStore';
@@ -15,6 +15,7 @@ import {
   type StepType,
   type TriggerType,
 } from '../domain/journal';
+import { getTriggerPlaceholder } from '../lib/reflectionPlaceholders';
 
 interface JournalFormProps {
   date: string;
@@ -373,7 +374,7 @@ export default function JournalForm({ date, onClose, entryToEdit }: JournalFormP
                   scrollFieldIntoView(e.currentTarget);
                 }}
                 onBlur={handleFieldBlur}
-                placeholder="その出来事の発端や、最初に起きたことを書いてください"
+                placeholder={getTriggerPlaceholder(triggerType)}
                 className="w-full rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3.5 text-[15px] leading-6 text-stone-800 placeholder:text-stone-400 outline-none transition-all duration-200 resize-none focus:ring-2 focus:ring-sky-200 focus:border-sky-400 min-h-[96px]"
                 style={{ maxHeight: `${maxTextareaHeight}px` }}
               />

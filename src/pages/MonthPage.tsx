@@ -6,6 +6,7 @@ import { ArrowLeft, Sparkles, Save, Copy, FileText, Check } from 'lucide-react';
 import { useJournalStore } from '../store/useJournalStore';
 import JournalCard from '../components/JournalCard';
 import { generateCardMarkdown } from '../lib/cardMarkdown';
+import { getReflectionPlaceholder } from '../lib/reflectionPlaceholders';
 
 export default function MonthPage() {
   const { yearMonth } = useParams<{ yearMonth: string }>();
@@ -140,7 +141,7 @@ export default function MonthPage() {
               <textarea
                 value={reflectionText}
                 onChange={(e) => setReflectionText(e.target.value)}
-                placeholder="今月の振り返りや気づきを記入してください..."
+                placeholder={getReflectionPlaceholder('month')}
                 className="w-full p-3 bg-white border border-stone-200 rounded-xl focus:ring-2 focus:ring-stone-400 focus:border-stone-400 outline-none transition-all resize-none min-h-[120px] text-sm text-stone-800 placeholder:text-stone-400"
               />
               <div className="flex justify-end mt-3">
