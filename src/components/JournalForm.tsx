@@ -6,16 +6,14 @@ import {
   createCardStep,
   createEmptyTrigger,
   getStepTypeLabel,
-  getTriggerTypeLabel,
   journalCardTags,
   stepTypes,
-  triggerTypes,
   type CardStep,
   type JournalCardTag,
   type StepType,
   type TriggerType,
 } from '../domain/journal';
-import { getTriggerPlaceholder } from '../lib/reflectionPlaceholders';
+import { triggerPlaceholder } from '../lib/reflectionPlaceholders';
 
 interface JournalFormProps {
   date: string;
@@ -336,28 +334,6 @@ export default function JournalForm({ date, onClose, entryToEdit }: JournalFormP
                 <span>きっかけ</span>
               </div>
 
-              <div className="flex flex-wrap gap-2">
-                {triggerTypes.map((type) => {
-                  const isSelected = triggerType === type;
-
-                  return (
-                    <button
-                      key={type}
-                      type="button"
-                      onClick={() => setTriggerType(type)}
-                      className={[
-                        'rounded-full border px-3.5 py-2 text-sm font-medium transition-all',
-                        isSelected
-                          ? 'border-sky-600 bg-sky-600 text-white shadow-sm'
-                          : 'border-stone-200 bg-stone-50 text-stone-700 hover:border-stone-300',
-                      ].join(' ')}
-                    >
-                      {getTriggerTypeLabel(type)}
-                    </button>
-                  );
-                })}
-              </div>
-
               <textarea
                 ref={(element) => {
                   textareaRefs.current.trigger = element;
@@ -374,7 +350,7 @@ export default function JournalForm({ date, onClose, entryToEdit }: JournalFormP
                   scrollFieldIntoView(e.currentTarget);
                 }}
                 onBlur={handleFieldBlur}
-                placeholder={getTriggerPlaceholder(triggerType)}
+                placeholder={triggerPlaceholder}
                 className="w-full rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3.5 text-[15px] leading-6 text-stone-800 placeholder:text-stone-400 outline-none transition-all duration-200 resize-none focus:ring-2 focus:ring-sky-200 focus:border-sky-400 min-h-[96px]"
                 style={{ maxHeight: `${maxTextareaHeight}px` }}
               />

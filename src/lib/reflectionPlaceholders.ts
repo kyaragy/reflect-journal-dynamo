@@ -1,5 +1,3 @@
-import type { TriggerType } from '../domain/journal';
-
 export const reflectionModes = ['day', 'week', 'month'] as const;
 export type ReflectionMode = (typeof reflectionModes)[number];
 
@@ -57,18 +55,10 @@ export const reflectionPlaceholderMap: Record<ReflectionMode, string> = {
 （答えが出ていない問い）`,
 };
 
-export const triggerPlaceholderMap: Record<TriggerType, string> = {
-  external: `例：会議で〇〇と言われた
-例：Slackで指摘された
-例：誰かの行動を見た`,
-  internal: `例：急に不安になった
-例：〇〇かもしれないと思った
-例：過去の出来事を思い出した`,
-  physical: `例：疲れていた
-例：眠かった
-例：胸がざわついた`,
-};
+export const triggerPlaceholder = `きっかけになった出来事や、最初に起きたことを書いてください
+
+例：会議で厳しい指摘を受けた
+例：急に不安になった
+例：胸がざわついた`;
 
 export const getReflectionPlaceholder = (mode: ReflectionMode) => reflectionPlaceholderMap[mode];
-
-export const getTriggerPlaceholder = (type: TriggerType) => triggerPlaceholderMap[type];
