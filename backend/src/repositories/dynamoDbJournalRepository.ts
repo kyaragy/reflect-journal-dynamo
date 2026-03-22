@@ -11,9 +11,9 @@ import type {
   YearRecord,
   YearlySummary,
 } from '../../../src/domain/journal';
-import { createCardStep, createEmptyTrigger, normalizeCard, normalizeDay, normalizeSnapshot } from '../../../src/domain/journal';
+import { createCardStep, createEmptyTrigger, hasMeaningfulCardContent, normalizeCard, normalizeDay, normalizeSnapshot } from '../../../src/domain/journal';
 import { DynamoDbClient } from '../db/dynamoDbClient';
-import { notFoundError } from '../libs/errors';
+import { notFoundError, validationError } from '../libs/errors';
 import type { JournalDataRepository } from './journalRepository';
 
 type DayItem = {
@@ -153,6 +153,10 @@ export class DynamoDbJournalRepository implements JournalDataRepository {
   }
 
   async createCard(userId: string, date: string, input: CreateCardInput) {
+    if (!hasMeaningfulCardContent(input)) {
+      throw validationError('INVALID_REQUEST_BODY', 'Card must include trigger content or at least one step');
+    }
+
     const now = new Date().toISOString();
     const day = (await this.getDay(userId, date)) ?? createEmptyDay(date, now);
     const card: Card = {
@@ -206,6 +210,10 @@ export class DynamoDbJournalRepository implements JournalDataRepository {
         : existing.steps,
       updatedAt: new Date().toISOString(),
     };
+
+    if (!hasMeaningfulCardContent(updatedCard)) {
+      throw validationError('INVALID_REQUEST_BODY', 'Card must include trigger content or at least one step');
+    }
 
     const nextDay: Day = {
       ...day,

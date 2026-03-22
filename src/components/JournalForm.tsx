@@ -5,6 +5,7 @@ import { useJournalStore, type Card } from '../store/useJournalStore';
 import {
   createCardStep,
   createEmptyTrigger,
+  hasMeaningfulCardContent,
   getStepTypeLabel,
   journalCardTags,
   stepTypes,
@@ -241,7 +242,12 @@ export default function JournalForm({ date, onClose, entryToEdit }: JournalFormP
       }))
       .filter((step) => step.content.trim().length > 0);
 
-    const hasContent = triggerContent.trim() || normalizedSteps.length > 0;
+    const hasContent = hasMeaningfulCardContent({
+      trigger: {
+        content: triggerContent,
+      },
+      steps: normalizedSteps,
+    });
     if (!hasContent) {
       onClose();
       return;

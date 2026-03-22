@@ -4,6 +4,7 @@ import {
   createCardStep,
   createEmptyTrigger,
   createEmptyJournalSnapshot,
+  hasMeaningfulCardContent,
   normalizeCard,
   normalizeDay,
   normalizeSnapshot,
@@ -20,6 +21,7 @@ import {
 } from '../../../src/domain/journal';
 import { notFoundError } from '../libs/errors';
 import type { JournalDataRepository } from './journalRepository';
+import { validationError } from '../libs/errors';
 
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value)) as T;
 
@@ -119,6 +121,10 @@ export class MemoryJournalRepository implements JournalDataRepository {
   }
 
   async createCard(userId: string, date: string, input: CreateCardInput) {
+    if (!hasMeaningfulCardContent(input)) {
+      throw validationError('INVALID_REQUEST_BODY', 'Card must include trigger content or at least one step');
+    }
+
     const snapshot = this.getSnapshot(userId);
     const timestamp = new Date().toISOString();
     const card: Card = {
@@ -187,6 +193,10 @@ export class MemoryJournalRepository implements JournalDataRepository {
         : existing.steps,
       updatedAt: timestamp,
     };
+
+    if (!hasMeaningfulCardContent(updatedCard)) {
+      throw validationError('INVALID_REQUEST_BODY', 'Card must include trigger content or at least one step');
+    }
 
     const nextDay: Day = {
       ...currentDay,

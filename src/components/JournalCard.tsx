@@ -3,7 +3,7 @@ import { format } from 'date-fns';
 import { motion } from 'motion/react';
 import { Activity, ArrowRight, Brain, Heart, Edit2, Sparkles, Trash2 } from 'lucide-react';
 import type { Card } from '../store/useJournalStore';
-import { getStepTypeLabel, getTriggerTypeLabel, type StepType } from '../domain/journal';
+import { getStepTypeLabel, type StepType } from '../domain/journal';
 
 interface JournalCardProps {
   entry: Card;
@@ -82,11 +82,6 @@ const JournalCard: React.FC<JournalCardProps> = ({ entry, onEdit, onDelete }) =>
           <div className="flex items-center gap-2 text-sm font-semibold text-stone-600 mb-2">
             <Sparkles className="w-4 h-4" />
             <span>きっかけ</span>
-          </div>
-          <div className="mb-2">
-            <span className="rounded-full border border-stone-200 bg-white px-2.5 py-1 text-[11px] font-semibold text-stone-600">
-              {getTriggerTypeLabel(entry.trigger.type)}
-            </span>
           </div>
           <p className="text-stone-800 leading-relaxed text-[15px] whitespace-pre-wrap">
             {entry.trigger.content || '未入力'}

@@ -97,6 +97,15 @@ export type JournalSnapshot = {
 
 export type CreateCardInput = Omit<Card, 'id' | 'createdAt' | 'updatedAt'>;
 
+type CardContentLike = {
+  trigger?: {
+    content?: string;
+  };
+  steps?: Array<{
+    content?: string;
+  }>;
+};
+
 export const triggerTypeLabels: Record<TriggerType, string> = {
   external: '外部出来事',
   internal: '内部発生',
@@ -141,6 +150,9 @@ export const isStepType = (value: unknown): value is StepType =>
 export const getTriggerTypeLabel = (type: TriggerType) => triggerTypeLabels[type];
 
 export const getStepTypeLabel = (type: StepType) => stepTypeLabels[type];
+
+export const hasMeaningfulCardContent = (card: CardContentLike) =>
+  Boolean(card.trigger?.content?.trim()) || Boolean(card.steps?.some((step) => step.content?.trim()));
 
 export const normalizeCardSteps = (steps: CardStep[]): CardStep[] =>
   [...steps]

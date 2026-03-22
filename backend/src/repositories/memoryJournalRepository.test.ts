@@ -31,3 +31,18 @@ test('memory repository returns month-scoped data for getMonth', async () => {
   );
   assert.equal(month.summary?.summary, 'month summary');
 });
+
+test('memory repository rejects empty cards', async () => {
+  const repository = new MemoryJournalRepository();
+
+  await assert.rejects(
+    repository.createCard('user-a', '2026-03-20', {
+      trigger: {
+        type: 'external',
+        content: '   ',
+      },
+      steps: [],
+    }),
+    /Card must include trigger content or at least one step/
+  );
+});

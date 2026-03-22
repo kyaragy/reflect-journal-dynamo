@@ -125,3 +125,19 @@ test('createCard stores a new card in the day item', async () => {
   assert.equal(day?.cards[0]?.trigger.content, 'fact');
   assert.equal(day?.cards[0]?.steps.length, 3);
 });
+
+test('createCard rejects empty cards', async () => {
+  const client = createClientStub();
+  const repository = new DynamoDbJournalRepository(client as never);
+
+  await assert.rejects(
+    repository.createCard('user-1', '2026-03-20', {
+      trigger: {
+        type: 'external',
+        content: '   ',
+      },
+      steps: [],
+    }),
+    /Card must include trigger content or at least one step/
+  );
+});
