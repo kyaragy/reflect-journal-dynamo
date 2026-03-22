@@ -161,7 +161,7 @@ export const createDynamoDbClientFromEnv = () => {
       new DynamoDBClient({
         region,
         endpoint,
-        maxAttempts: 1,
+        maxAttempts: 3,
         requestHandler: new NodeHttpHandler({
           connectionTimeout: 2_000,
           requestTimeout: 5_000,
