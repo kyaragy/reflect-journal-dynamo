@@ -5,6 +5,7 @@ import { ja } from 'date-fns/locale';
 import { ArrowLeft, Sparkles, Save, Copy, FileText, Check } from 'lucide-react';
 import { useJournalStore } from '../store/useJournalStore';
 import JournalCard from '../components/JournalCard';
+import { generateCardMarkdown } from '../lib/cardMarkdown';
 
 export default function MonthPage() {
   const { yearMonth } = useParams<{ yearMonth: string }>();
@@ -86,11 +87,7 @@ export default function MonthPage() {
         }
 
         dayEntries.forEach((entry, index) => {
-          md += `### カード ${index + 1}\n`;
-          if (entry.fact) md += `#### 事実\n${entry.fact}\n\n`;
-          if (entry.thought) md += `#### 思考\n${entry.thought}\n\n`;
-          if (entry.emotion) md += `#### 感情\n${entry.emotion}\n\n`;
-          if (entry.bodySensation) md += `#### 身体感覚\n${entry.bodySensation}\n\n`;
+          md += `${generateCardMarkdown(entry, `### カード ${index + 1}`)}\n\n`;
         });
       }
     });

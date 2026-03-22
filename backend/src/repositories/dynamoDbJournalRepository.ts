@@ -11,6 +11,7 @@ import type {
   YearRecord,
   YearlySummary,
 } from '../../../src/domain/journal';
+import { createCardStep, createEmptyTrigger, normalizeCard, normalizeDay, normalizeSnapshot } from '../../../src/domain/journal';
 import { DynamoDbClient } from '../db/dynamoDbClient';
 import { notFoundError } from '../libs/errors';
 import type { JournalDataRepository } from './journalRepository';
@@ -78,7 +79,7 @@ const toDayItem = (userId: string, day: Day): DayItem => ({
 const toDay = (item: DayItem): Day => ({
   date: item.date,
   dailySummary: item.dailySummary,
-  cards: item.cards ?? [],
+  cards: (item.cards ?? []).map((card) => normalizeCard(card)),
   createdAt: item.createdAt,
   updatedAt: item.updatedAt,
 });
@@ -133,8 +134,9 @@ export class DynamoDbJournalRepository implements JournalDataRepository {
   }
 
   async saveDay(userId: string, day: Day) {
-    await this.client.putItem(toDayItem(userId, day));
-    return day;
+    const normalizedDay = normalizeDay(day);
+    await this.client.putItem(toDayItem(userId, normalizedDay));
+    return normalizedDay;
   }
 
   async saveDailySummary(userId: string, date: string, summary: string) {
@@ -155,10 +157,16 @@ export class DynamoDbJournalRepository implements JournalDataRepository {
     const day = (await this.getDay(userId, date)) ?? createEmptyDay(date, now);
     const card: Card = {
       id: crypto.randomUUID(),
-      fact: input.fact,
-      thought: input.thought,
-      emotion: input.emotion,
-      bodySensation: input.bodySensation,
+      tag: input.tag,
+      trigger: {
+        type: input.trigger?.type ?? createEmptyTrigger().type,
+        content: input.trigger?.content ?? '',
+      },
+      steps: (input.steps ?? []).map((step, index) => ({
+        ...step,
+        id: step.id || createCardStep(index + 1).id,
+        order: index + 1,
+      })),
       createdAt: now,
       updatedAt: now,
     };
@@ -182,10 +190,20 @@ export class DynamoDbJournalRepository implements JournalDataRepository {
 
     const updatedCard: Card = {
       ...existing,
-      fact: input.fact ?? existing.fact,
-      thought: input.thought ?? existing.thought,
-      emotion: input.emotion ?? existing.emotion,
-      bodySensation: input.bodySensation ?? existing.bodySensation,
+      tag: input.tag ?? existing.tag,
+      trigger: input.trigger
+        ? {
+            type: input.trigger.type,
+            content: input.trigger.content,
+          }
+        : existing.trigger,
+      steps: input.steps
+        ? input.steps.map((step, index) => ({
+            ...step,
+            id: step.id || existing.steps[index]?.id || createCardStep(index + 1).id,
+            order: index + 1,
+          }))
+        : existing.steps,
       updatedAt: new Date().toISOString(),
     };
 
@@ -349,6 +367,7 @@ export class DynamoDbJournalRepository implements JournalDataRepository {
 
   async importSnapshot(userId: string, snapshot: JournalSnapshot) {
     const pk = toUserPk(userId);
+    const normalizedSnapshot = normalizeSnapshot(snapshot);
     const existingItems = await this.client.queryByPartition<JournalItem>(pk);
 
     await Promise.all(
@@ -360,9 +379,9 @@ export class DynamoDbJournalRepository implements JournalDataRepository {
       )
     );
 
-    await Promise.all(snapshot.days.map((day) => this.client.putItem(toDayItem(userId, day))));
+    await Promise.all(normalizedSnapshot.days.map((day) => this.client.putItem(toDayItem(userId, day))));
     await Promise.all(
-      snapshot.weeklySummaries.map((summary) =>
+      normalizedSnapshot.weeklySummaries.map((summary) =>
         this.client.putItem({
           PK: pk,
           SK: toWeekSk(summary.weekKey),
@@ -375,7 +394,7 @@ export class DynamoDbJournalRepository implements JournalDataRepository {
       )
     );
     await Promise.all(
-      snapshot.monthlySummaries.map((summary) =>
+      normalizedSnapshot.monthlySummaries.map((summary) =>
         this.client.putItem({
           PK: pk,
           SK: toMonthSk(summary.monthKey),
@@ -388,7 +407,7 @@ export class DynamoDbJournalRepository implements JournalDataRepository {
       )
     );
     await Promise.all(
-      snapshot.yearlySummaries.map((summary) =>
+      normalizedSnapshot.yearlySummaries.map((summary) =>
         this.client.putItem({
           PK: pk,
           SK: toYearSk(summary.yearKey),
@@ -402,10 +421,10 @@ export class DynamoDbJournalRepository implements JournalDataRepository {
     );
 
     return {
-      days: snapshot.days.sort((left, right) => left.date.localeCompare(right.date)),
-      weeklySummaries: snapshot.weeklySummaries.sort((left, right) => left.weekKey.localeCompare(right.weekKey)),
-      monthlySummaries: snapshot.monthlySummaries.sort((left, right) => left.monthKey.localeCompare(right.monthKey)),
-      yearlySummaries: snapshot.yearlySummaries.sort((left, right) => left.yearKey.localeCompare(right.yearKey)),
+      days: normalizedSnapshot.days.sort((left, right) => left.date.localeCompare(right.date)),
+      weeklySummaries: normalizedSnapshot.weeklySummaries.sort((left, right) => left.weekKey.localeCompare(right.weekKey)),
+      monthlySummaries: normalizedSnapshot.monthlySummaries.sort((left, right) => left.monthKey.localeCompare(right.monthKey)),
+      yearlySummaries: normalizedSnapshot.yearlySummaries.sort((left, right) => left.yearKey.localeCompare(right.yearKey)),
     };
   }
 }
