@@ -1,8 +1,9 @@
 import { addDays, format, parseISO } from 'date-fns';
 import { v4 as uuidv4 } from 'uuid';
-import { createEmptyJournalSnapshot } from '../domain/journal';
+import { createEmptyJournalSnapshot, createEmptyTrigger, normalizeCard, normalizeSnapshot } from '../domain/journal';
 import type {
   Card,
+  CardStep,
   CreateCardInput,
   Day,
   JournalSnapshot,
@@ -67,12 +68,42 @@ const toDayMap = (snapshot: LegacySnapshot) => {
 
   for (const entry of snapshot.entries) {
     const cardCreatedAt = getTimestamp(entry.createdAt, new Date().toISOString());
+    const steps: CardStep[] = [];
+
+    if (entry.thought) {
+      steps.push({
+        id: `${entry.id}-thought-1`,
+        order: steps.length + 1,
+        type: 'thought',
+        content: entry.thought,
+      });
+    }
+
+    if (entry.emotion) {
+      steps.push({
+        id: `${entry.id}-emotion-1`,
+        order: steps.length + 1,
+        type: 'emotion',
+        content: entry.emotion,
+      });
+    }
+
+    if (entry.sensation) {
+      steps.push({
+        id: `${entry.id}-body-1`,
+        order: steps.length + 1,
+        type: 'body',
+        content: entry.sensation,
+      });
+    }
+
     const card: Card = {
       id: entry.id,
-      fact: entry.fact,
-      thought: entry.thought,
-      emotion: entry.emotion,
-      bodySensation: entry.sensation,
+      trigger: {
+        type: 'external',
+        content: entry.fact,
+      },
+      steps,
       createdAt: cardCreatedAt,
       updatedAt: cardCreatedAt,
     };
@@ -171,7 +202,7 @@ const readSnapshot = async (): Promise<JournalSnapshot> => {
   try {
     const parsed = JSON.parse(raw) as unknown;
     if (isSnapshot(parsed)) {
-      return parsed;
+      return normalizeSnapshot(parsed);
     }
 
     if (isLegacySnapshot(parsed)) {
@@ -181,7 +212,7 @@ const readSnapshot = async (): Promise<JournalSnapshot> => {
     if (parsed && typeof parsed === 'object' && 'state' in parsed) {
       const state = (parsed as { state: unknown }).state;
       if (isSnapshot(state)) {
-        return state;
+        return normalizeSnapshot(state);
       }
       if (isLegacySnapshot(state)) {
         return migrateLegacySnapshot(state);
@@ -346,6 +377,15 @@ export const localStorageRepository: JournalRepository = {
     const now = new Date().toISOString();
     const nextCard: Card = {
       ...card,
+      trigger: {
+        type: card.trigger?.type ?? createEmptyTrigger().type,
+        content: card.trigger?.content ?? '',
+      },
+      steps: (card.steps ?? []).map((step, index) => ({
+        ...step,
+        id: step.id || uuidv4(),
+        order: index + 1,
+      })),
       id: uuidv4(),
       createdAt: now,
       updatedAt: now,
@@ -410,6 +450,19 @@ export const localStorageRepository: JournalRepository = {
             updatedCard = {
               ...currentCard,
               ...card,
+              trigger: card.trigger
+                ? {
+                    type: card.trigger.type,
+                    content: card.trigger.content,
+                  }
+                : currentCard.trigger,
+              steps: card.steps
+                ? card.steps.map((step, index) => ({
+                    ...step,
+                    id: step.id || currentCard.steps[index]?.id || uuidv4(),
+                    order: index + 1,
+                  }))
+                : currentCard.steps,
               id: currentCard.id,
               createdAt: currentCard.createdAt,
               updatedAt: now,
@@ -469,7 +522,7 @@ export const localStorageRepository: JournalRepository = {
   },
 
   async importSnapshot(snapshot) {
-    const nextSnapshot = sortSnapshot(snapshot);
+    const nextSnapshot = sortSnapshot(normalizeSnapshot(snapshot));
     await writeSnapshot(nextSnapshot);
     return nextSnapshot;
   },

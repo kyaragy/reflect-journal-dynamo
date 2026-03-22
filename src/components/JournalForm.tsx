@@ -1,7 +1,20 @@
-import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
-import { useJournalStore, Card } from '../store/useJournalStore';
+import React, { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { motion } from 'motion/react';
-import { X, Brain, Activity, Heart, Eye, ChevronLeft, ChevronRight, Check, Save } from 'lucide-react';
+import { Activity, ArrowRight, Brain, Check, Heart, Plus, Save, Sparkles, Trash2, X } from 'lucide-react';
+import { useJournalStore, type Card } from '../store/useJournalStore';
+import {
+  createCardStep,
+  createEmptyTrigger,
+  getStepTypeLabel,
+  getTriggerTypeLabel,
+  journalCardTags,
+  stepTypes,
+  triggerTypes,
+  type CardStep,
+  type JournalCardTag,
+  type StepType,
+  type TriggerType,
+} from '../domain/journal';
 
 interface JournalFormProps {
   date: string;
@@ -9,33 +22,84 @@ interface JournalFormProps {
   entryToEdit?: Card | null;
 }
 
+const stepIconMap: Record<StepType, typeof Brain> = {
+  thought: Brain,
+  emotion: Heart,
+  action: ArrowRight,
+  body: Activity,
+};
+
+const stepSectionClassMap: Record<StepType, string> = {
+  thought: 'border-indigo-100 bg-indigo-50/55',
+  emotion: 'border-rose-100 bg-rose-50/55',
+  action: 'border-amber-100 bg-amber-50/60',
+  body: 'border-emerald-100 bg-emerald-50/55',
+};
+
+const stepHeaderClassMap: Record<StepType, string> = {
+  thought: 'text-indigo-700',
+  emotion: 'text-rose-700',
+  action: 'text-amber-700',
+  body: 'text-emerald-700',
+};
+
+const stepNumberClassMap: Record<StepType, string> = {
+  thought: 'bg-indigo-100 text-indigo-700',
+  emotion: 'bg-rose-100 text-rose-700',
+  action: 'bg-amber-100 text-amber-700',
+  body: 'bg-emerald-100 text-emerald-700',
+};
+
+const stepOptionClassMap: Record<StepType, string> = {
+  thought: 'border-indigo-200 bg-indigo-100 text-indigo-800 hover:bg-indigo-200',
+  emotion: 'border-rose-200 bg-rose-100 text-rose-800 hover:bg-rose-200',
+  action: 'border-amber-200 bg-amber-100 text-amber-800 hover:bg-amber-200',
+  body: 'border-emerald-200 bg-emerald-100 text-emerald-800 hover:bg-emerald-200',
+};
+
+const stepTextareaClassMap: Record<StepType, string> = {
+  thought: 'border-indigo-100 bg-white focus:ring-indigo-200 focus:border-indigo-400',
+  emotion: 'border-rose-100 bg-white focus:ring-rose-200 focus:border-rose-400',
+  action: 'border-amber-100 bg-white focus:ring-amber-200 focus:border-amber-400',
+  body: 'border-emerald-100 bg-white focus:ring-emerald-200 focus:border-emerald-400',
+};
+
 export default function JournalForm({ date, onClose, entryToEdit }: JournalFormProps) {
   const addEntry = useJournalStore((state) => state.addEntry);
   const updateEntry = useJournalStore((state) => state.updateEntry);
   const saving = useJournalStore((state) => state.saving);
   const error = useJournalStore((state) => state.error);
 
-  const [fact, setFact] = useState('');
-  const [thought, setThought] = useState('');
-  const [emotion, setEmotion] = useState('');
-  const [bodySensation, setBodySensation] = useState('');
-  const [activeFieldIndex, setActiveFieldIndex] = useState<number | null>(null);
+  const [tag, setTag] = useState<JournalCardTag | undefined>(undefined);
+  const [triggerType, setTriggerType] = useState<TriggerType>('external');
+  const [triggerContent, setTriggerContent] = useState('');
+  const [steps, setSteps] = useState<CardStep[]>([createCardStep(1)]);
+  const [activeFieldKey, setActiveFieldKey] = useState<string | null>(null);
   const [keyboardInset, setKeyboardInset] = useState(0);
+  const [isCompactViewport, setIsCompactViewport] = useState(false);
 
   const formScrollRef = useRef<HTMLDivElement | null>(null);
   const toolbarRef = useRef<HTMLDivElement | null>(null);
-  const textareaRefs = useRef<Array<HTMLTextAreaElement | null>>([]);
+  const textareaRefs = useRef<Record<string, HTMLTextAreaElement | null>>({});
+  const stepSectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const pendingScrollStepIdRef = useRef<string | null>(null);
 
   const maxTextareaHeight = 240;
   const toolbarBaseHeight = 92;
 
   useEffect(() => {
     if (entryToEdit) {
-      setFact(entryToEdit.fact || '');
-      setThought(entryToEdit.thought || '');
-      setEmotion(entryToEdit.emotion || '');
-      setBodySensation(entryToEdit.bodySensation || '');
+      setTag(entryToEdit.tag);
+      setTriggerType(entryToEdit.trigger.type);
+      setTriggerContent(entryToEdit.trigger.content);
+      setSteps(entryToEdit.steps.length > 0 ? entryToEdit.steps : [createCardStep(1)]);
+      return;
     }
+
+    setTag(undefined);
+    setTriggerType(createEmptyTrigger().type);
+    setTriggerContent('');
+    setSteps([createCardStep(1)]);
   }, [entryToEdit]);
 
   useEffect(() => {
@@ -71,8 +135,36 @@ export default function JournalForm({ date, onClose, entryToEdit }: JournalFormP
   };
 
   useLayoutEffect(() => {
-    textareaRefs.current.forEach((element) => adjustTextareaHeight(element));
-  }, [fact, thought, emotion, bodySensation]);
+    (Object.values(textareaRefs.current) as Array<HTMLTextAreaElement | null>).forEach((element) => adjustTextareaHeight(element));
+  }, [triggerContent, steps]);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(max-width: 639px)');
+    const updateViewportMode = () => setIsCompactViewport(mediaQuery.matches);
+
+    updateViewportMode();
+    mediaQuery.addEventListener('change', updateViewportMode);
+
+    return () => {
+      mediaQuery.removeEventListener('change', updateViewportMode);
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!pendingScrollStepIdRef.current) {
+      return;
+    }
+
+    const stepElement = stepSectionRefs.current[pendingScrollStepIdRef.current];
+    pendingScrollStepIdRef.current = null;
+    if (!stepElement) {
+      return;
+    }
+
+    window.setTimeout(() => {
+      stepElement.scrollIntoView({ block: 'nearest', behavior: 'smooth' });
+    }, 120);
+  }, [steps]);
 
   const scrollFieldIntoView = (element: HTMLTextAreaElement) => {
     window.setTimeout(() => {
@@ -80,133 +172,110 @@ export default function JournalForm({ date, onClose, entryToEdit }: JournalFormP
     }, 120);
   };
 
-  const focusField = (index: number) => {
-    const nextField = textareaRefs.current[index];
-    if (!nextField) {
-      return;
-    }
-
-    nextField.focus();
-    scrollFieldIntoView(nextField);
-    setActiveFieldIndex(index);
-  };
-
   const handleFieldBlur = () => {
     window.setTimeout(() => {
       const activeElement = document.activeElement;
       const isToolbarTarget = toolbarRef.current?.contains(activeElement);
-      const isTextareaTarget = textareaRefs.current.some((element) => element === activeElement);
+      const isTextareaTarget = Object.values(textareaRefs.current).some((element) => element === activeElement);
       if (!isToolbarTarget && !isTextareaTarget) {
-        setActiveFieldIndex(null);
+        setActiveFieldKey(null);
       }
     }, 0);
   };
 
   const blurActiveField = () => {
-    if (activeFieldIndex === null) {
+    if (!activeFieldKey) {
       return;
     }
 
-    textareaRefs.current[activeFieldIndex]?.blur();
-    setActiveFieldIndex(null);
+    textareaRefs.current[activeFieldKey]?.blur();
+    setActiveFieldKey(null);
+  };
+
+  const setStepValue = (stepId: string, patch: Partial<CardStep>) => {
+    setSteps((currentSteps) =>
+      currentSteps.map((step, index) =>
+        step.id === stepId
+          ? {
+              ...step,
+              ...patch,
+              order: index + 1,
+            }
+          : {
+              ...step,
+              order: index + 1,
+            }
+      )
+    );
+  };
+
+  const addStep = () => {
+    setSteps((currentSteps) => {
+      const nextStep = createCardStep(currentSteps.length + 1);
+      pendingScrollStepIdRef.current = nextStep.id;
+      return [...currentSteps, nextStep];
+    });
+  };
+
+  const removeStep = (stepId: string) => {
+    setSteps((currentSteps) => {
+      const filtered = currentSteps.filter((step) => step.id !== stepId);
+      const nextSteps = filtered.length > 0 ? filtered : [createCardStep(1)];
+      return nextSteps.map((step, index) => ({
+        ...step,
+        order: index + 1,
+      }));
+    });
+
+    if (activeFieldKey === stepId) {
+      setActiveFieldKey(null);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!fact && !thought && !emotion && !bodySensation) {
+
+    const normalizedSteps = steps
+      .map((step, index) => ({
+        ...step,
+        order: index + 1,
+      }))
+      .filter((step) => step.content.trim().length > 0);
+
+    const hasContent = triggerContent.trim() || normalizedSteps.length > 0;
+    if (!hasContent) {
       onClose();
       return;
     }
-    
+
+    const payload = {
+      tag,
+      trigger: {
+        type: triggerType,
+        content: triggerContent,
+      },
+      steps: normalizedSteps,
+    };
+
     if (entryToEdit) {
-      await updateEntry(date, entryToEdit.id, {
-        fact,
-        thought,
-        emotion,
-        bodySensation,
-      });
+      await updateEntry(date, entryToEdit.id, payload);
     } else {
       await addEntry({
         date,
-        fact,
-        thought,
-        emotion,
-        bodySensation,
+        ...payload,
       });
     }
+
     onClose();
   };
-
-  const fields = [
-    {
-      key: 'fact',
-      labelJa: '事実',
-      labelEn: 'Fact',
-      icon: Eye,
-      color: 'stone',
-      value: fact,
-      setValue: setFact,
-      placeholder: '何がありましたか？何をしましたか？',
-    },
-    {
-      key: 'thought',
-      labelJa: '思考',
-      labelEn: 'Thought',
-      icon: Brain,
-      color: 'indigo',
-      value: thought,
-      setValue: setThought,
-      placeholder: 'どんなことが頭に浮かびましたか？',
-    },
-    {
-      key: 'emotion',
-      labelJa: '感情',
-      labelEn: 'Emotion',
-      icon: Heart,
-      color: 'rose',
-      value: emotion,
-      setValue: setEmotion,
-      placeholder: 'どんな気持ちでしたか？',
-    },
-    {
-      key: 'bodySensation',
-      labelJa: '身体感覚',
-      labelEn: 'Sensation',
-      icon: Activity,
-      color: 'emerald',
-      value: bodySensation,
-      setValue: setBodySensation,
-      placeholder: '体にどんな感覚がありましたか？',
-    },
-  ] as const;
-
-  const labelToneClassMap = {
-    stone: 'text-stone-600',
-    indigo: 'text-indigo-600',
-    rose: 'text-rose-600',
-    emerald: 'text-emerald-600',
-  } as const;
-
-  const borderClassMap = {
-    stone: 'border-stone-200 focus:border-stone-400 focus:ring-stone-300/60',
-    indigo: 'border-indigo-100 focus:border-indigo-400 focus:ring-indigo-300/60',
-    rose: 'border-rose-100 focus:border-rose-400 focus:ring-rose-300/60',
-    emerald: 'border-emerald-100 focus:border-emerald-400 focus:ring-emerald-300/60',
-  } as const;
-
-  const activeFieldClassMap = {
-    stone: 'border-stone-500 bg-stone-50/80 shadow-[0_10px_30px_-18px_rgba(41,37,36,0.45)] ring-2 ring-stone-200/80',
-    indigo: 'border-indigo-500 bg-indigo-50/70 shadow-[0_10px_30px_-18px_rgba(99,102,241,0.35)] ring-2 ring-indigo-200/80',
-    rose: 'border-rose-500 bg-rose-50/70 shadow-[0_10px_30px_-18px_rgba(244,63,94,0.35)] ring-2 ring-rose-200/80',
-    emerald: 'border-emerald-500 bg-emerald-50/70 shadow-[0_10px_30px_-18px_rgba(16,185,129,0.35)] ring-2 ring-emerald-200/80',
-  } as const;
 
   const toolbarBottom = keyboardInset > 0
     ? `calc(${keyboardInset}px + env(safe-area-inset-bottom))`
     : 'env(safe-area-inset-bottom)';
-  const formBottomPadding = activeFieldIndex !== null
+  const formBottomPadding = activeFieldKey !== null
     ? `calc(${toolbarBaseHeight}px + ${keyboardInset}px + env(safe-area-inset-bottom) + 1rem)`
     : '1.5rem';
+  const shouldShowMobileToolbar = isCompactViewport && activeFieldKey !== null && keyboardInset > 0;
 
   return (
     <motion.div
@@ -220,16 +289,11 @@ export default function JournalForm({ date, onClose, entryToEdit }: JournalFormP
         animate={{ y: 0, opacity: 1 }}
         exit={{ y: '100%', opacity: 0 }}
         transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-        className="bg-stone-50 w-full max-w-lg rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden max-h-[100dvh] sm:max-h-[90vh] flex flex-col"
+        className="bg-stone-50 w-full max-w-4xl rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden max-h-[100dvh] sm:max-h-[90vh] flex flex-col"
       >
         <div className="flex justify-between items-center px-4 py-4 sm:p-6 border-b border-stone-200 bg-white">
-          <h3 className="text-xl font-serif font-medium text-stone-800">
-            {entryToEdit ? '記録を編集' : '新しい記録'}
-          </h3>
-          <button
-            onClick={onClose}
-            className="p-2 rounded-full hover:bg-stone-100 transition-colors text-stone-500"
-          >
+          <h3 className="text-xl font-serif font-medium text-stone-800">{entryToEdit ? '記録を編集' : '新しい記録'}</h3>
+          <button onClick={onClose} className="p-2 rounded-full hover:bg-stone-100 transition-colors text-stone-500">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -239,49 +303,185 @@ export default function JournalForm({ date, onClose, entryToEdit }: JournalFormP
           className="flex-1 overflow-y-auto overscroll-contain px-4 py-4 sm:p-6"
           style={{ paddingBottom: formBottomPadding }}
         >
-          <form id="journal-form" onSubmit={handleSubmit} className="space-y-4 sm:space-y-6">
-            {fields.map((field, index) => {
-              const Icon = field.icon;
-              const isActive = activeFieldIndex === index;
+          <form id="journal-form" onSubmit={handleSubmit} className="space-y-6">
+            <section className="space-y-2">
+              <div className="text-sm font-semibold tracking-[0.08em] text-stone-600">カテゴリ</div>
+              <div className="flex flex-wrap gap-2">
+                {journalCardTags.map((option) => {
+                  const isSelected = tag === option;
 
-              return (
-                <div key={field.key} className="space-y-2">
-                  <label className={`flex items-center gap-2 text-sm font-semibold tracking-[0.08em] ${labelToneClassMap[field.color]}`}>
-                    <Icon className="w-4 h-4" />
-                    <span>{field.labelJa}</span>
-                    <span className="text-[11px] font-medium uppercase tracking-[0.18em] text-stone-400">
-                      {field.labelEn}
-                    </span>
-                  </label>
-                  <textarea
-                    ref={(element) => {
-                      textareaRefs.current[index] = element;
-                    }}
-                    rows={3}
-                    value={field.value}
-                    onChange={(e) => {
-                      field.setValue(e.target.value);
-                      adjustTextareaHeight(e.target);
-                    }}
-                    onFocus={(e) => {
-                      setActiveFieldIndex(index);
-                      adjustTextareaHeight(e.currentTarget);
-                      scrollFieldIntoView(e.currentTarget);
-                    }}
-                    onBlur={handleFieldBlur}
-                    placeholder={field.placeholder}
-                    className={[
-                      'w-full rounded-2xl border bg-white px-4 py-3.5 text-[15px] leading-6 text-stone-800 placeholder:text-stone-400',
-                      'outline-none transition-all duration-200 resize-none focus:ring-2',
-                      'min-h-[88px] touch-manipulation',
-                      borderClassMap[field.color],
-                      isActive ? activeFieldClassMap[field.color] : '',
-                    ].join(' ')}
-                    style={{ maxHeight: `${maxTextareaHeight}px` }}
-                  />
-                </div>
-              );
-            })}
+                  return (
+                    <button
+                      key={option}
+                      type="button"
+                      onClick={() => setTag(isSelected ? undefined : option)}
+                      className={[
+                        'rounded-full border px-4 py-2 text-sm font-medium transition-all',
+                        isSelected
+                          ? 'border-stone-800 bg-stone-800 text-stone-50 shadow-sm'
+                          : 'border-stone-200 bg-white text-stone-700 hover:border-stone-300 hover:bg-stone-50',
+                      ].join(' ')}
+                    >
+                      {option}
+                    </button>
+                  );
+                })}
+              </div>
+            </section>
+
+            <section className="rounded-3xl border border-stone-200 bg-white p-4 sm:p-5 space-y-4">
+              <div className="flex items-center gap-2 text-sm font-semibold tracking-[0.08em] text-stone-600">
+                <Sparkles className="w-4 h-4" />
+                <span>きっかけ</span>
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                {triggerTypes.map((type) => {
+                  const isSelected = triggerType === type;
+
+                  return (
+                    <button
+                      key={type}
+                      type="button"
+                      onClick={() => setTriggerType(type)}
+                      className={[
+                        'rounded-full border px-3.5 py-2 text-sm font-medium transition-all',
+                        isSelected
+                          ? 'border-sky-600 bg-sky-600 text-white shadow-sm'
+                          : 'border-stone-200 bg-stone-50 text-stone-700 hover:border-stone-300',
+                      ].join(' ')}
+                    >
+                      {getTriggerTypeLabel(type)}
+                    </button>
+                  );
+                })}
+              </div>
+
+              <textarea
+                ref={(element) => {
+                  textareaRefs.current.trigger = element;
+                }}
+                rows={3}
+                value={triggerContent}
+                onChange={(e) => {
+                  setTriggerContent(e.target.value);
+                  adjustTextareaHeight(e.target);
+                }}
+                onFocus={(e) => {
+                  setActiveFieldKey('trigger');
+                  adjustTextareaHeight(e.currentTarget);
+                  scrollFieldIntoView(e.currentTarget);
+                }}
+                onBlur={handleFieldBlur}
+                placeholder="その出来事の発端や、最初に起きたことを書いてください"
+                className="w-full rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3.5 text-[15px] leading-6 text-stone-800 placeholder:text-stone-400 outline-none transition-all duration-200 resize-none focus:ring-2 focus:ring-sky-200 focus:border-sky-400 min-h-[96px]"
+                style={{ maxHeight: `${maxTextareaHeight}px` }}
+              />
+            </section>
+
+            <section className="space-y-4">
+              <div className="text-sm font-semibold tracking-[0.08em] text-stone-600">ステップ</div>
+
+              <div className="grid gap-4">
+                {steps.map((step, index) => {
+                  const Icon = stepIconMap[step.type];
+
+                  return (
+                    <div
+                      key={step.id}
+                      ref={(element) => {
+                        stepSectionRefs.current[step.id] = element;
+                      }}
+                      className={[
+                        'rounded-3xl border p-4 sm:p-5 space-y-4 transition-colors',
+                        stepSectionClassMap[step.type],
+                      ].join(' ')}
+                    >
+                      <div className="flex items-center justify-between gap-3">
+                        <div className="flex items-center gap-3">
+                          <div
+                            className={[
+                              'flex h-8 w-8 items-center justify-center rounded-full text-xs font-semibold',
+                              stepNumberClassMap[step.type],
+                            ].join(' ')}
+                          >
+                            {index + 1}
+                          </div>
+                          <div className={['flex items-center gap-2 text-sm font-semibold', stepHeaderClassMap[step.type]].join(' ')}>
+                            <Icon className="w-4 h-4" />
+                            <span>{getStepTypeLabel(step.type)}</span>
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => removeStep(step.id)}
+                          className="inline-flex items-center gap-1 rounded-full border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-700 hover:bg-rose-100 transition-colors"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                          削除
+                        </button>
+                      </div>
+
+                      <div className="flex flex-wrap gap-2">
+                        {stepTypes.map((type) => {
+                          const isSelected = step.type === type;
+                          return (
+                            <button
+                              key={type}
+                              type="button"
+                              onClick={() => setStepValue(step.id, { type })}
+                              className={[
+                                'rounded-full border px-3.5 py-2 text-sm font-medium transition-all',
+                                isSelected
+                                  ? stepOptionClassMap[type]
+                                  : 'border-stone-200 bg-stone-50 text-stone-700 hover:border-stone-300',
+                              ].join(' ')}
+                            >
+                              {getStepTypeLabel(type)}
+                            </button>
+                          );
+                        })}
+                      </div>
+
+                      <textarea
+                        ref={(element) => {
+                          textareaRefs.current[step.id] = element;
+                        }}
+                        rows={3}
+                        value={step.content}
+                        onChange={(e) => {
+                          setStepValue(step.id, { content: e.target.value });
+                          adjustTextareaHeight(e.target);
+                        }}
+                        onFocus={(e) => {
+                          setActiveFieldKey(step.id);
+                          adjustTextareaHeight(e.currentTarget);
+                          scrollFieldIntoView(e.currentTarget);
+                        }}
+                        onBlur={handleFieldBlur}
+                        placeholder={`${getStepTypeLabel(step.type)}として記録したい内容を書いてください`}
+                        className={[
+                          'w-full rounded-2xl border px-4 py-3.5 text-[15px] leading-6 text-stone-800 placeholder:text-stone-400 outline-none transition-all duration-200 resize-none focus:ring-2 min-h-[96px]',
+                          stepTextareaClassMap[step.type],
+                        ].join(' ')}
+                        style={{ maxHeight: `${maxTextareaHeight}px` }}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+
+              <div className="flex justify-start pt-1">
+                <button
+                  type="button"
+                  onClick={addStep}
+                  className="inline-flex items-center gap-2 rounded-full border border-stone-200 bg-white px-4 py-2 text-sm font-medium text-stone-700 hover:border-stone-300 hover:bg-stone-50 transition-colors shadow-sm"
+                >
+                  <Plus className="w-4 h-4" />
+                  ステップを追加
+                </button>
+              </div>
+            </section>
           </form>
         </div>
 
@@ -297,48 +497,37 @@ export default function JournalForm({ date, onClose, entryToEdit }: JournalFormP
           </button>
         </div>
 
-        {activeFieldIndex !== null ? (
+        {shouldShowMobileToolbar ? (
           <div
             ref={toolbarRef}
-            className="fixed inset-x-0 z-[60] mx-auto w-full max-w-lg border-t border-stone-200/80 bg-white/95 px-3 py-3 shadow-[0_-12px_32px_-24px_rgba(15,23,42,0.45)] backdrop-blur supports-[backdrop-filter]:bg-white/80"
+            className="fixed inset-x-0 z-[60] mx-auto w-full max-w-4xl border-t border-stone-200/80 bg-white/95 px-3 py-3 shadow-[0_-12px_32px_-24px_rgba(15,23,42,0.45)] backdrop-blur supports-[backdrop-filter]:bg-white/80"
             style={{ bottom: toolbarBottom }}
           >
             <div className="flex items-center gap-2">
               <button
                 type="button"
                 onMouseDown={(e) => e.preventDefault()}
-                onClick={() => focusField(Math.max(0, activeFieldIndex - 1))}
-                disabled={activeFieldIndex === 0}
+                onClick={addStep}
                 className="flex h-11 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-xl border border-stone-200 bg-stone-50 px-3 text-sm font-medium text-stone-700 transition-colors disabled:cursor-not-allowed disabled:opacity-40"
               >
-                <ChevronLeft className="h-4 w-4" />
-                前へ
-              </button>
-              <button
-                type="button"
-                onMouseDown={(e) => e.preventDefault()}
-                onClick={() => focusField(Math.min(fields.length - 1, activeFieldIndex + 1))}
-                disabled={activeFieldIndex === fields.length - 1}
-                className="flex h-11 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-xl border border-stone-200 bg-stone-50 px-3 text-sm font-medium text-stone-700 transition-colors disabled:cursor-not-allowed disabled:opacity-40"
-              >
-                次へ
-                <ChevronRight className="h-4 w-4" />
+                <Plus className="h-4 w-4" />
+                追加
               </button>
               <button
                 type="button"
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={blurActiveField}
-                className="flex h-11 min-w-0 flex-[1.15] items-center justify-center gap-1.5 rounded-xl border border-stone-200 bg-white px-3 text-sm font-medium text-stone-700 transition-colors"
+                className="flex h-11 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-xl border border-stone-200 bg-white px-3 text-sm font-medium text-stone-700 transition-colors"
               >
                 <Check className="h-4 w-4" />
-                入力完了
+                完了
               </button>
               <button
                 type="submit"
                 form="journal-form"
                 onMouseDown={(e) => e.preventDefault()}
                 disabled={saving}
-                className="flex h-11 min-w-0 flex-[1.3] items-center justify-center gap-1.5 rounded-xl bg-stone-800 px-4 text-sm font-semibold text-stone-50 shadow-sm transition-colors hover:bg-stone-700 disabled:opacity-60"
+                className="flex h-11 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-xl bg-stone-800 px-4 text-sm font-semibold text-stone-50 shadow-sm transition-colors hover:bg-stone-700 disabled:opacity-60"
               >
                 <Save className="h-4 w-4" />
                 {saving ? '保存中...' : '保存'}

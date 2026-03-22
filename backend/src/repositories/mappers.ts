@@ -1,5 +1,6 @@
 import type {
   Card,
+  CardStep,
   Day,
   JournalSnapshot,
   MonthlySummary,
@@ -32,12 +33,39 @@ const toCard = (row: DayWithCardsRow): Card | null => {
     return null;
   }
 
+  const steps: CardStep[] = [];
+  if (row.thought) {
+    steps.push({
+      id: `${row.card_id}-thought-1`,
+      order: steps.length + 1,
+      type: 'thought',
+      content: row.thought,
+    });
+  }
+  if (row.emotion) {
+    steps.push({
+      id: `${row.card_id}-emotion-1`,
+      order: steps.length + 1,
+      type: 'emotion',
+      content: row.emotion,
+    });
+  }
+  if (row.body_sensation) {
+    steps.push({
+      id: `${row.card_id}-body-1`,
+      order: steps.length + 1,
+      type: 'body',
+      content: row.body_sensation,
+    });
+  }
+
   return {
     id: row.card_id,
-    fact: row.fact ?? '',
-    thought: row.thought ?? '',
-    emotion: row.emotion ?? '',
-    bodySensation: row.body_sensation ?? '',
+    trigger: {
+      type: 'external',
+      content: row.fact ?? '',
+    },
+    steps,
     createdAt: row.card_created_at,
     updatedAt: row.card_updated_at,
   };

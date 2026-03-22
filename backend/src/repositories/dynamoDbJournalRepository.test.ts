@@ -91,13 +91,37 @@ test('createCard stores a new card in the day item', async () => {
   const repository = new DynamoDbJournalRepository(client as never);
 
   const created = await repository.createCard('user-1', '2026-03-20', {
-    fact: 'fact',
-    thought: 'thought',
-    emotion: 'emotion',
-    bodySensation: 'body',
+    tag: '仕事',
+    trigger: {
+      type: 'external',
+      content: 'fact',
+    },
+    steps: [
+      {
+        id: 'step-1',
+        order: 1,
+        type: 'thought',
+        content: 'thought',
+      },
+      {
+        id: 'step-2',
+        order: 2,
+        type: 'emotion',
+        content: 'emotion',
+      },
+      {
+        id: 'step-3',
+        order: 3,
+        type: 'body',
+        content: 'body',
+      },
+    ],
   });
   const day = await repository.getDay('user-1', '2026-03-20');
 
   assert.equal(day?.cards.length, 1);
   assert.equal(day?.cards[0]?.id, created.id);
+  assert.equal(day?.cards[0]?.tag, '仕事');
+  assert.equal(day?.cards[0]?.trigger.content, 'fact');
+  assert.equal(day?.cards[0]?.steps.length, 3);
 });

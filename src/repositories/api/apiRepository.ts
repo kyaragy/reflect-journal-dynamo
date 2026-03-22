@@ -94,12 +94,7 @@ export const apiRepository: JournalRepository = {
   async updateCard(date, cardId, card) {
     assertDateString(date);
     assertCardId(cardId);
-    const payload: PutCardRequest = {
-      fact: card.fact,
-      thought: card.thought,
-      emotion: card.emotion,
-      bodySensation: card.bodySensation,
-    };
+    const payload: PutCardRequest = { ...card };
     const response = await apiClient.put<PutCardResponse>(journalApiPaths.dayCard(date, cardId), payload);
     return response.data;
   },

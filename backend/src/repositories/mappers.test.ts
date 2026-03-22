@@ -36,6 +36,9 @@ test('mapDayRows groups cards under a single day', () => {
   assert.equal(day.date, '2026-03-10');
   assert.equal(day.cards.length, 2);
   assert.equal(day.cards[1].id, 'card-2');
+  assert.equal(day.cards[0].trigger.content, 'fact-1');
+  assert.equal(day.cards[0].steps[0].type, 'thought');
+  assert.equal(day.cards[1].steps[1].type, 'emotion');
 });
 
 test('summary mappers attach the correct keys', () => {

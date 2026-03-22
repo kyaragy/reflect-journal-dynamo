@@ -7,6 +7,7 @@ import { useJournalStore, Card } from '../store/useJournalStore';
 import JournalCard from '../components/JournalCard';
 import JournalForm from '../components/JournalForm';
 import { motion, AnimatePresence } from 'motion/react';
+import { generateCardMarkdown } from '../lib/cardMarkdown';
 
 export default function DayPage() {
   const { date } = useParams<{ date: string }>();
@@ -74,19 +75,7 @@ export default function DayPage() {
   const generateMarkdown = () => {
     let md = `# ${formattedDate}\n\n`;
     entries.forEach((entry, index) => {
-      md += `## カード ${index + 1}\n`;
-      if (entry.fact) {
-        md += `### 事実\n${entry.fact}\n\n`;
-      }
-      if (entry.thought) {
-        md += `### 思考\n${entry.thought}\n\n`;
-      }
-      if (entry.emotion) {
-        md += `### 感情\n${entry.emotion}\n\n`;
-      }
-      if (entry.bodySensation) {
-        md += `### 身体感覚\n${entry.bodySensation}\n\n`;
-      }
+      md += `${generateCardMarkdown(entry, `## カード ${index + 1}`)}\n\n`;
     });
     return md;
   };

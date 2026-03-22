@@ -1,7 +1,12 @@
 import { randomUUID } from 'node:crypto';
 import { addDays, format, parseISO } from 'date-fns';
 import {
+  createCardStep,
+  createEmptyTrigger,
   createEmptyJournalSnapshot,
+  normalizeCard,
+  normalizeDay,
+  normalizeSnapshot,
   type Card,
   type CreateCardInput,
   type Day,
@@ -70,12 +75,12 @@ export class MemoryJournalRepository implements JournalDataRepository {
   }
 
   private setSnapshot(userId: string, snapshot: JournalSnapshot) {
-    this.snapshots.set(userId, sortSnapshot(snapshot));
+    this.snapshots.set(userId, sortSnapshot(normalizeSnapshot(snapshot)));
   }
 
   async getDay(userId: string, date: string) {
     const day = this.getSnapshot(userId).days.find((item) => item.date === date) ?? null;
-    return clone(day);
+    return day ? clone(normalizeDay(day)) : null;
   }
 
   async saveDay(userId: string, day: Day) {
@@ -118,10 +123,16 @@ export class MemoryJournalRepository implements JournalDataRepository {
     const timestamp = new Date().toISOString();
     const card: Card = {
       id: randomUUID(),
-      fact: input.fact,
-      thought: input.thought,
-      emotion: input.emotion,
-      bodySensation: input.bodySensation,
+      tag: input.tag,
+      trigger: {
+        type: input.trigger?.type ?? createEmptyTrigger().type,
+        content: input.trigger?.content ?? '',
+      },
+      steps: (input.steps ?? []).map((step, index) => ({
+        ...step,
+        id: step.id || createCardStep(index + 1).id,
+        order: index + 1,
+      })),
       createdAt: timestamp,
       updatedAt: timestamp,
     };
@@ -160,10 +171,20 @@ export class MemoryJournalRepository implements JournalDataRepository {
     const timestamp = new Date().toISOString();
     const updatedCard: Card = {
       ...existing,
-      fact: input.fact ?? existing.fact,
-      thought: input.thought ?? existing.thought,
-      emotion: input.emotion ?? existing.emotion,
-      bodySensation: input.bodySensation ?? existing.bodySensation,
+      tag: input.tag ?? existing.tag,
+      trigger: input.trigger
+        ? {
+            type: input.trigger.type,
+            content: input.trigger.content,
+          }
+        : existing.trigger,
+      steps: input.steps
+        ? input.steps.map((step, index) => ({
+            ...step,
+            id: step.id || existing.steps[index]?.id || createCardStep(index + 1).id,
+            order: index + 1,
+          }))
+        : existing.steps,
       updatedAt: timestamp,
     };
 
@@ -178,7 +199,7 @@ export class MemoryJournalRepository implements JournalDataRepository {
       days: replaceDay(snapshot.days, nextDay),
     });
 
-    return clone(updatedCard);
+    return clone(normalizeCard(updatedCard));
   }
 
   async deleteCard(userId: string, date: string, cardId: string) {
@@ -265,7 +286,7 @@ export class MemoryJournalRepository implements JournalDataRepository {
   }
 
   async importSnapshot(userId: string, snapshot: JournalSnapshot) {
-    this.setSnapshot(userId, clone(snapshot));
+    this.setSnapshot(userId, clone(normalizeSnapshot(snapshot)));
     return clone(this.getSnapshot(userId));
   }
 }
