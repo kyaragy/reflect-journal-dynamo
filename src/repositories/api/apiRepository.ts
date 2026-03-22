@@ -28,14 +28,19 @@ import {
   type PutYearSummaryResponse,
 } from '../../contracts/journalApi';
 import { apiClient } from '../../lib/apiClient';
-import type { JournalSnapshot } from '../../domain/journal';
+import {
+  normalizeCard,
+  normalizeDay,
+  normalizeSnapshot,
+  type JournalSnapshot,
+} from '../../domain/journal';
 import type { JournalRepository } from '../journalRepository';
 
 export const apiRepository: JournalRepository = {
   async getDay(date) {
     assertDateString(date);
     const response = await apiClient.get<GetDayResponse>(journalApiPaths.day(date));
-    return response.data;
+    return response.data ? normalizeDay(response.data) : null;
   },
 
   async saveDay(day) {
@@ -48,27 +53,39 @@ export const apiRepository: JournalRepository = {
   async getWeek(weekKey) {
     assertWeekKey(weekKey);
     const response = await apiClient.get<GetWeekResponse>(journalApiPaths.week(weekKey));
-    return response.data;
+    return {
+      ...response.data,
+      days: response.data.days.map(normalizeDay),
+    };
   },
 
   async saveWeekSummary(weekKey, summary) {
     assertWeekKey(weekKey);
     const payload: PutWeekSummaryRequest = { summary };
     const response = await apiClient.put<PutWeekSummaryResponse>(journalApiPaths.weekSummary(weekKey), payload);
-    return response.data;
+    return {
+      ...response.data,
+      days: response.data.days.map(normalizeDay),
+    };
   },
 
   async getMonth(monthKey) {
     assertMonthKey(monthKey);
     const response = await apiClient.get<GetMonthResponse>(journalApiPaths.month(monthKey));
-    return response.data;
+    return {
+      ...response.data,
+      days: response.data.days.map(normalizeDay),
+    };
   },
 
   async saveMonthSummary(monthKey, summary) {
     assertMonthKey(monthKey);
     const payload: PutMonthSummaryRequest = { summary };
     const response = await apiClient.put<PutMonthSummaryResponse>(journalApiPaths.monthSummary(monthKey), payload);
-    return response.data;
+    return {
+      ...response.data,
+      days: response.data.days.map(normalizeDay),
+    };
   },
 
   async getYear(yearKey) {
@@ -88,7 +105,7 @@ export const apiRepository: JournalRepository = {
     assertDateString(date);
     const payload: PostCardRequest = { ...card };
     const response = await apiClient.post<PostCardResponse>(journalApiPaths.dayCards(date), payload);
-    return response.data;
+    return normalizeCard(response.data);
   },
 
   async updateCard(date, cardId, card) {
@@ -96,7 +113,7 @@ export const apiRepository: JournalRepository = {
     assertCardId(cardId);
     const payload: PutCardRequest = { ...card };
     const response = await apiClient.put<PutCardResponse>(journalApiPaths.dayCard(date, cardId), payload);
-    return response.data;
+    return response.data ? normalizeCard(response.data) : null;
   },
 
   async deleteCard(date, cardId) {
@@ -109,12 +126,12 @@ export const apiRepository: JournalRepository = {
     assertDateString(date);
     const payload: PutDaySummaryRequest = { dailySummary: summary };
     const response = await apiClient.put<PutDaySummaryResponse>(journalApiPaths.daySummary(date), payload);
-    return response.data;
+    return normalizeDay(response.data);
   },
 
   async importSnapshot(snapshot: JournalSnapshot) {
     const payload: ImportLocalStorageSnapshotRequest = { snapshot };
     const response = await apiClient.post<ImportLocalStorageSnapshotResponse>(journalApiPaths.importLocalStorage(), payload);
-    return response.data;
+    return normalizeSnapshot(response.data);
   },
 };
