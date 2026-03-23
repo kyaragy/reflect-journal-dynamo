@@ -192,6 +192,11 @@ export default function JournalForm({ date, onClose, entryToEdit }: JournalFormP
     setActiveFieldKey(null);
   };
 
+  const preventToolbarPointerBlur = (e: React.PointerEvent<HTMLButtonElement>) => {
+    // Keep the focused textarea active until the toolbar action completes.
+    e.preventDefault();
+  };
+
   const setStepValue = (stepId: string, patch: Partial<CardStep>) => {
     setSteps((currentSteps) =>
       currentSteps.map((step, index) =>
@@ -473,6 +478,7 @@ export default function JournalForm({ date, onClose, entryToEdit }: JournalFormP
           <button
             type="submit"
             form="journal-form"
+            onPointerDown={preventToolbarPointerBlur}
             disabled={saving}
             className="w-full py-4 bg-stone-800 text-stone-50 rounded-xl font-medium hover:bg-stone-700 transition-colors shadow-sm"
           >
@@ -489,7 +495,7 @@ export default function JournalForm({ date, onClose, entryToEdit }: JournalFormP
             <div className="flex items-center gap-2">
               <button
                 type="button"
-                onMouseDown={(e) => e.preventDefault()}
+                onPointerDown={preventToolbarPointerBlur}
                 onClick={addStep}
                 className="flex h-11 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-xl border border-stone-200 bg-stone-50 px-3 text-sm font-medium text-stone-700 transition-colors disabled:cursor-not-allowed disabled:opacity-40"
               >
@@ -498,7 +504,7 @@ export default function JournalForm({ date, onClose, entryToEdit }: JournalFormP
               </button>
               <button
                 type="button"
-                onMouseDown={(e) => e.preventDefault()}
+                onPointerDown={preventToolbarPointerBlur}
                 onClick={blurActiveField}
                 className="flex h-11 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-xl border border-stone-200 bg-white px-3 text-sm font-medium text-stone-700 transition-colors"
               >
@@ -508,7 +514,7 @@ export default function JournalForm({ date, onClose, entryToEdit }: JournalFormP
               <button
                 type="submit"
                 form="journal-form"
-                onMouseDown={(e) => e.preventDefault()}
+                onPointerDown={preventToolbarPointerBlur}
                 disabled={saving}
                 className="flex h-11 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-xl bg-stone-800 px-4 text-sm font-semibold text-stone-50 shadow-sm transition-colors hover:bg-stone-700 disabled:opacity-60"
               >

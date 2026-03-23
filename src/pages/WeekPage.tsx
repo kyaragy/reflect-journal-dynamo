@@ -93,6 +93,10 @@ export default function WeekPage() {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  const preventTextareaBlurOnPointerDown = (e: React.PointerEvent<HTMLButtonElement>) => {
+    e.preventDefault();
+  };
+
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
       <button 
@@ -138,6 +142,7 @@ export default function WeekPage() {
               <div className="flex justify-end mt-3">
                 <button
                   onClick={handleSaveReflection}
+                  onPointerDown={preventTextareaBlurOnPointerDown}
                   disabled={saving}
                   className="flex items-center gap-2 px-4 py-2 text-sm font-medium bg-stone-800 text-stone-50 hover:bg-stone-700 rounded-lg transition-colors"
                 >
