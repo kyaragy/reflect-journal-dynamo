@@ -403,6 +403,7 @@ export default function JournalForm({ date, onClose, entryToEdit }: JournalFormP
                         </div>
                         <button
                           type="button"
+                          onPointerDown={preventPointerFocusChange}
                           onClick={() => removeStep(step.id)}
                           className="inline-flex items-center gap-1 rounded-full border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-700 hover:bg-rose-100 transition-colors"
                         >
