@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { format, parseISO, addDays, endOfWeek } from 'date-fns';
 import { ja } from 'date-fns/locale';
-import { ArrowLeft, Sparkles, Save, Copy, FileText, Check } from 'lucide-react';
+import { ArrowLeft, Sparkles, Save, Copy, FileText, Check, ChevronDown } from 'lucide-react';
 import { useJournalStore } from '../store/useJournalStore';
 import JournalCard from '../components/JournalCard';
 import { generateCardMarkdown } from '../lib/cardMarkdown';
@@ -15,6 +15,7 @@ export default function WeekPage() {
   const [reflectionText, setReflectionText] = useState('');
   const [showMarkdown, setShowMarkdown] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [expandedDays, setExpandedDays] = useState<Record<string, boolean>>({});
 
   const allDays = useJournalStore((state) => state.days);
   const weeklySummaries = useJournalStore((state) => state.weeklySummaries);
@@ -97,6 +98,13 @@ export default function WeekPage() {
     e.preventDefault();
   };
 
+  const toggleDayCards = (date: string) => {
+    setExpandedDays((current) => ({
+      ...current,
+      [date]: !current[date],
+    }));
+  };
+
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
       <button 
@@ -173,6 +181,7 @@ export default function WeekPage() {
           {daysInWeek.map((dateStr) => {
             const dayRecord = weekDays.find((day) => day.date === dateStr);
             const dayEntries = dayRecord?.cards ?? [];
+            const isExpanded = expandedDays[dateStr] ?? false;
             
             if (dayEntries.length === 0 && !dayRecord?.dailySummary) return null;
 
@@ -189,11 +198,28 @@ export default function WeekPage() {
                   </div>
                 )}
 
-                <div className="space-y-4 pl-4 border-l-2 border-stone-100">
-                  {dayEntries.map((entry) => (
-                    <JournalCard key={entry.id} entry={entry} />
-                  ))}
-                </div>
+                {dayEntries.length > 0 ? (
+                  <div className="space-y-4">
+                    <button
+                      type="button"
+                      onClick={() => toggleDayCards(dateStr)}
+                      className="flex w-full items-center justify-between rounded-xl border border-stone-200 bg-white px-4 py-3 text-left text-sm font-medium text-stone-700 transition-colors hover:border-stone-300 hover:bg-stone-50"
+                    >
+                      <span>{isExpanded ? `カード ${dayEntries.length}件を閉じる` : `カード ${dayEntries.length}件を表示`}</span>
+                      <ChevronDown
+                        className={['h-4 w-4 text-stone-400 transition-transform', isExpanded ? 'rotate-180' : 'rotate-0'].join(' ')}
+                      />
+                    </button>
+
+                    {isExpanded ? (
+                      <div className="space-y-4 pl-4 border-l-2 border-stone-100">
+                        {dayEntries.map((entry) => (
+                          <JournalCard key={entry.id} entry={entry} />
+                        ))}
+                      </div>
+                    ) : null}
+                  </div>
+                ) : null}
               </div>
             );
           })}
