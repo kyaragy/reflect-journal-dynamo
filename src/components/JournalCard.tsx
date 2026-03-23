@@ -22,7 +22,21 @@ const stepColorMap: Record<StepType, string> = {
   thought: 'border-indigo-200 bg-indigo-50 text-indigo-700',
   emotion: 'border-rose-200 bg-rose-50 text-rose-700',
   action: 'border-amber-200 bg-amber-50 text-amber-700',
-  body: 'border-amber-200 bg-amber-50 text-amber-700',
+  body: 'border-emerald-200 bg-emerald-50 text-emerald-700',
+};
+
+const stepSectionClassMap: Record<StepType, string> = {
+  thought: 'border-indigo-100 bg-indigo-50/55',
+  emotion: 'border-rose-100 bg-rose-50/55',
+  action: 'border-amber-100 bg-amber-50/60',
+  body: 'border-emerald-100 bg-emerald-50/55',
+};
+
+const stepNumberClassMap: Record<StepType, string> = {
+  thought: 'bg-indigo-100 text-indigo-700',
+  emotion: 'bg-rose-100 text-rose-700',
+  action: 'bg-amber-100 text-amber-700',
+  body: 'bg-emerald-100 text-emerald-700',
 };
 
 const JournalCard: React.FC<JournalCardProps> = ({ entry, onEdit, onDelete }) => {
@@ -98,8 +112,16 @@ const JournalCard: React.FC<JournalCardProps> = ({ entry, onEdit, onDelete }) =>
             entry.steps.map((step, index) => {
               const Icon = stepIconMap[step.type];
               return (
-                <div key={step.id} className="flex gap-3 rounded-2xl border border-stone-200 p-4">
-                  <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full bg-stone-100 text-xs font-semibold text-stone-500">
+                <div
+                  key={step.id}
+                  className={['flex gap-3 rounded-2xl border p-4', stepSectionClassMap[step.type]].join(' ')}
+                >
+                  <div
+                    className={[
+                      'flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-full text-xs font-semibold',
+                      stepNumberClassMap[step.type],
+                    ].join(' ')}
+                  >
                     {index + 1}
                   </div>
                   <div className="min-w-0 flex-1">

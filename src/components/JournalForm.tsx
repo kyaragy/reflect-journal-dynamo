@@ -192,8 +192,8 @@ export default function JournalForm({ date, onClose, entryToEdit }: JournalFormP
     setActiveFieldKey(null);
   };
 
-  const preventToolbarPointerBlur = (e: React.PointerEvent<HTMLButtonElement>) => {
-    // Keep the focused textarea active until the toolbar action completes.
+  const preventPointerFocusChange = (e: React.PointerEvent<HTMLButtonElement>) => {
+    // Keep the focused textarea active until the action completes.
     e.preventDefault();
   };
 
@@ -324,6 +324,7 @@ export default function JournalForm({ date, onClose, entryToEdit }: JournalFormP
                     <button
                       key={option}
                       type="button"
+                      onPointerDown={preventPointerFocusChange}
                       onClick={() => setTag(isSelected ? undefined : option)}
                       className={[
                         'rounded-full border px-4 py-2 text-sm font-medium transition-all',
@@ -417,6 +418,7 @@ export default function JournalForm({ date, onClose, entryToEdit }: JournalFormP
                             <button
                               key={type}
                               type="button"
+                              onPointerDown={preventPointerFocusChange}
                               onClick={() => setStepValue(step.id, { type })}
                               className={[
                                 'rounded-full border px-3.5 py-2 text-sm font-medium transition-all',
@@ -462,6 +464,7 @@ export default function JournalForm({ date, onClose, entryToEdit }: JournalFormP
               <div className="flex justify-start pt-1">
                 <button
                   type="button"
+                  onPointerDown={preventPointerFocusChange}
                   onClick={addStep}
                   className="inline-flex items-center gap-2 rounded-full border border-stone-200 bg-white px-4 py-2 text-sm font-medium text-stone-700 hover:border-stone-300 hover:bg-stone-50 transition-colors shadow-sm"
                 >
@@ -478,7 +481,7 @@ export default function JournalForm({ date, onClose, entryToEdit }: JournalFormP
           <button
             type="submit"
             form="journal-form"
-            onPointerDown={preventToolbarPointerBlur}
+            onPointerDown={preventPointerFocusChange}
             disabled={saving}
             className="w-full py-4 bg-stone-800 text-stone-50 rounded-xl font-medium hover:bg-stone-700 transition-colors shadow-sm"
           >
@@ -495,7 +498,7 @@ export default function JournalForm({ date, onClose, entryToEdit }: JournalFormP
             <div className="flex items-center gap-2">
               <button
                 type="button"
-                onPointerDown={preventToolbarPointerBlur}
+                onPointerDown={preventPointerFocusChange}
                 onClick={addStep}
                 className="flex h-11 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-xl border border-stone-200 bg-stone-50 px-3 text-sm font-medium text-stone-700 transition-colors disabled:cursor-not-allowed disabled:opacity-40"
               >
@@ -504,7 +507,7 @@ export default function JournalForm({ date, onClose, entryToEdit }: JournalFormP
               </button>
               <button
                 type="button"
-                onPointerDown={preventToolbarPointerBlur}
+                onPointerDown={preventPointerFocusChange}
                 onClick={blurActiveField}
                 className="flex h-11 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-xl border border-stone-200 bg-white px-3 text-sm font-medium text-stone-700 transition-colors"
               >
@@ -514,7 +517,7 @@ export default function JournalForm({ date, onClose, entryToEdit }: JournalFormP
               <button
                 type="submit"
                 form="journal-form"
-                onPointerDown={preventToolbarPointerBlur}
+                onPointerDown={preventPointerFocusChange}
                 disabled={saving}
                 className="flex h-11 min-w-0 flex-1 items-center justify-center gap-1.5 rounded-xl bg-stone-800 px-4 text-sm font-semibold text-stone-50 shadow-sm transition-colors hover:bg-stone-700 disabled:opacity-60"
               >
