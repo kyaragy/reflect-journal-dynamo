@@ -29,16 +29,12 @@ export type Card = {
   updatedAt: string;
 };
 
-export const dayActivityKinds = ['event', 'todo'] as const;
-export type DayActivityKind = (typeof dayActivityKinds)[number];
-
 export const dayActivityStatuses = ['pending', 'done'] as const;
 export type DayActivityStatus = (typeof dayActivityStatuses)[number];
 
 export type DayActivity = {
   id: string;
   title: string;
-  kind: DayActivityKind;
   status: DayActivityStatus;
   createdAt: string;
   updatedAt: string;
@@ -136,11 +132,6 @@ export const stepTypeLabels: Record<StepType, string> = {
   body: '身体反応',
 };
 
-export const dayActivityKindLabels: Record<DayActivityKind, string> = {
-  event: 'イベント',
-  todo: 'TODO',
-};
-
 export const dayActivityStatusLabels: Record<DayActivityStatus, string> = {
   pending: '未完',
   done: '完了',
@@ -164,7 +155,6 @@ export const createDayActivity = (input: CreateDayActivityInput): DayActivity =>
   return {
     id: globalThis.crypto?.randomUUID?.() ?? `activity-${Date.now()}`,
     title: input.title.trim(),
-    kind: input.kind,
     status: input.status,
     createdAt: now,
     updatedAt: now,
@@ -187,16 +177,12 @@ export const isTriggerType = (value: unknown): value is TriggerType =>
 export const isStepType = (value: unknown): value is StepType =>
   typeof value === 'string' && stepTypes.includes(value as StepType);
 
-export const isDayActivityKind = (value: unknown): value is DayActivityKind =>
-  typeof value === 'string' && dayActivityKinds.includes(value as DayActivityKind);
-
 export const isDayActivityStatus = (value: unknown): value is DayActivityStatus =>
   typeof value === 'string' && dayActivityStatuses.includes(value as DayActivityStatus);
 
 export const getTriggerTypeLabel = (type: TriggerType) => triggerTypeLabels[type];
 
 export const getStepTypeLabel = (type: StepType) => stepTypeLabels[type];
-export const getDayActivityKindLabel = (kind: DayActivityKind) => dayActivityKindLabels[kind];
 export const getDayActivityStatusLabel = (status: DayActivityStatus) => dayActivityStatusLabels[status];
 
 export const hasMeaningfulCardContent = (card: CardContentLike) =>
@@ -218,7 +204,6 @@ export const normalizeDayActivities = (activities: DayActivity[]): DayActivity[]
     .map((activity, index) => ({
       id: activity.id || `activity-${index + 1}`,
       title: activity.title.trim(),
-      kind: isDayActivityKind(activity.kind) ? activity.kind : 'todo',
       status: isDayActivityStatus(activity.status) ? activity.status : 'pending',
       createdAt: activity.createdAt ?? new Date().toISOString(),
       updatedAt: activity.updatedAt ?? activity.createdAt ?? new Date().toISOString(),

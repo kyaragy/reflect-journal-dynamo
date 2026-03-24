@@ -156,7 +156,6 @@ test('saveDay persists day activities in the day item', async () => {
       {
         id: 'activity-1',
         title: '振り返り資料をまとめる',
-        kind: 'todo',
         status: 'pending',
         createdAt: '2026-03-24T00:00:00.000Z',
         updatedAt: '2026-03-24T00:00:00.000Z',
