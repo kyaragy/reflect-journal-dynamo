@@ -10,13 +10,10 @@ import { motion, AnimatePresence } from 'motion/react';
 import { generateCardMarkdown } from '../lib/cardMarkdown';
 import { getReflectionPlaceholder } from '../lib/reflectionPlaceholders';
 import {
-  dayActivityKinds,
   dayActivityStatuses,
-  getDayActivityKindLabel,
   getDayActivityStatusLabel,
   type CreateCardInput,
   type DayActivity,
-  type DayActivityKind,
   type DayActivityStatus,
 } from '../domain/journal';
 
@@ -30,7 +27,6 @@ export default function DayPage() {
   const [showMarkdown, setShowMarkdown] = useState(false);
   const [copied, setCopied] = useState(false);
   const [activityTitle, setActivityTitle] = useState('');
-  const [activityKind, setActivityKind] = useState<DayActivityKind>('event');
   const [activityStatus, setActivityStatus] = useState<DayActivityStatus>('pending');
   const [continuedActivityId, setContinuedActivityId] = useState<string | null>(null);
   
@@ -126,12 +122,10 @@ export default function DayPage() {
 
     await addActivity(date, {
       title: trimmedTitle,
-      kind: activityKind,
       status: activityStatus,
     });
 
     setActivityTitle('');
-    setActivityKind('event');
     setActivityStatus('pending');
   };
 
@@ -251,24 +245,13 @@ export default function DayPage() {
           </div>
         </div>
 
-        <form onSubmit={handleAddActivity} className="grid gap-3 rounded-2xl border border-stone-200 bg-stone-50/70 p-4 sm:grid-cols-[1fr_auto_auto_auto] sm:items-center">
+        <form onSubmit={handleAddActivity} className="grid gap-3 rounded-2xl border border-stone-200 bg-stone-50/70 p-4 sm:grid-cols-[1fr_auto_auto] sm:items-center">
           <input
             value={activityTitle}
             onChange={(e) => setActivityTitle(e.target.value)}
             placeholder="イベント名 / TODO名を入力"
             className="w-full rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-800 outline-none transition-colors focus:border-stone-400 focus:ring-2 focus:ring-stone-200"
           />
-          <select
-            value={activityKind}
-            onChange={(e) => setActivityKind(e.target.value as DayActivityKind)}
-            className="rounded-xl border border-stone-200 bg-white px-3 py-3 text-sm text-stone-700 outline-none transition-colors focus:border-stone-400 focus:ring-2 focus:ring-stone-200"
-          >
-            {dayActivityKinds.map((kind) => (
-              <option key={kind} value={kind}>
-                {getDayActivityKindLabel(kind)}
-              </option>
-            ))}
-          </select>
           <select
             value={activityStatus}
             onChange={(e) => setActivityStatus(e.target.value as DayActivityStatus)}
@@ -303,9 +286,6 @@ export default function DayPage() {
               >
                 <div className="min-w-0 flex-1">
                   <div className="mb-2 flex flex-wrap items-center gap-2">
-                    <span className="rounded-full border border-stone-200 bg-stone-50 px-2.5 py-1 text-[11px] font-semibold text-stone-600">
-                      {getDayActivityKindLabel(activity.kind)}
-                    </span>
                     <span
                       className={[
                         'rounded-full px-2.5 py-1 text-[11px] font-semibold',

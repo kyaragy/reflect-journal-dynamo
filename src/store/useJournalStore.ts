@@ -313,7 +313,6 @@ export const useJournalStore = create<JournalState>()((set, get) => ({
       const nextActivity: DayActivity = {
         id: globalThis.crypto?.randomUUID?.() ?? `activity-${Date.now()}`,
         title: normalizedTitle,
-        kind: activity.kind,
         status: activity.status,
         createdAt: now,
         updatedAt: now,
@@ -381,7 +380,6 @@ export const useJournalStore = create<JournalState>()((set, get) => ({
       const continuedActivity: DayActivity = {
         id: globalThis.crypto?.randomUUID?.() ?? `activity-${Date.now()}`,
         title: sourceActivity.title,
-        kind: sourceActivity.kind,
         status: 'pending',
         createdAt: now,
         updatedAt: now,
