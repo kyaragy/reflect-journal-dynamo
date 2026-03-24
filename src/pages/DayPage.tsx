@@ -2,32 +2,51 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { format, parseISO } from 'date-fns';
 import { ja } from 'date-fns/locale';
-import { ArrowLeft, Plus, Sparkles, Save, Copy, FileText, Check } from 'lucide-react';
+import { ArrowLeft, Plus, Sparkles, Save, Copy, FileText, Check, ListTodo } from 'lucide-react';
 import { useJournalStore, Card } from '../store/useJournalStore';
 import JournalCard from '../components/JournalCard';
 import JournalForm from '../components/JournalForm';
 import { motion, AnimatePresence } from 'motion/react';
 import { generateCardMarkdown } from '../lib/cardMarkdown';
 import { getReflectionPlaceholder } from '../lib/reflectionPlaceholders';
+import {
+  dayActivityKinds,
+  dayActivityStatuses,
+  getDayActivityKindLabel,
+  getDayActivityStatusLabel,
+  type CreateCardInput,
+  type DayActivity,
+  type DayActivityKind,
+  type DayActivityStatus,
+} from '../domain/journal';
 
 export default function DayPage() {
   const { date } = useParams<{ date: string }>();
   const navigate = useNavigate();
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [entryToEdit, setEntryToEdit] = useState<Card | null>(null);
+  const [cardDraft, setCardDraft] = useState<CreateCardInput | null>(null);
   const [reflectionText, setReflectionText] = useState('');
   const [showMarkdown, setShowMarkdown] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [activityTitle, setActivityTitle] = useState('');
+  const [activityKind, setActivityKind] = useState<DayActivityKind>('event');
+  const [activityStatus, setActivityStatus] = useState<DayActivityStatus>('pending');
+  const [continuedActivityId, setContinuedActivityId] = useState<string | null>(null);
   
   const days = useJournalStore((state) => state.days);
   const saving = useJournalStore((state) => state.saving);
   const deleteEntry = useJournalStore((state) => state.deleteEntry);
+  const addActivity = useJournalStore((state) => state.addActivity);
+  const updateActivityStatus = useJournalStore((state) => state.updateActivityStatus);
+  const continueActivity = useJournalStore((state) => state.continueActivity);
   const refreshDay = useJournalStore((state) => state.refreshDay);
   const day = useMemo(
     () => days.find((currentDay) => currentDay.date === date) ?? null,
     [days, date]
   );
   const entries = day?.cards ?? [];
+  const activities = day?.activities ?? [];
   const setSummary = useJournalStore((state) => state.setSummary);
   
   useEffect(() => {
@@ -41,12 +60,27 @@ export default function DayPage() {
     void refreshDay(date);
   }, [date, refreshDay]);
 
+  useEffect(() => {
+    if (!continuedActivityId) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      setContinuedActivityId(null);
+    }, 5000);
+
+    return () => {
+      window.clearTimeout(timeoutId);
+    };
+  }, [continuedActivityId]);
+
   if (!date) return null;
 
   const parsedDate = parseISO(date);
   const formattedDate = format(parsedDate, 'yyyy年M月d日', { locale: ja });
 
   const handleEdit = (entry: Card) => {
+    setCardDraft(null);
     setEntryToEdit(entry);
     setIsFormOpen(true);
   };
@@ -66,11 +100,68 @@ export default function DayPage() {
 
   const handleCloseForm = () => {
     setIsFormOpen(false);
-    setTimeout(() => setEntryToEdit(null), 300); // Wait for animation to finish
+    setTimeout(() => {
+      setEntryToEdit(null);
+      setCardDraft(null);
+    }, 300);
+  };
+
+  const handleOpenNewCard = (initialDraft?: CreateCardInput) => {
+    setEntryToEdit(null);
+    setCardDraft(initialDraft ?? null);
+    setIsFormOpen(true);
   };
 
   const handleSaveReflection = async () => {
     await setSummary(date, reflectionText);
+  };
+
+  const handleAddActivity = async (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+
+    const trimmedTitle = activityTitle.trim();
+    if (!trimmedTitle) {
+      return;
+    }
+
+    await addActivity(date, {
+      title: trimmedTitle,
+      kind: activityKind,
+      status: activityStatus,
+    });
+
+    setActivityTitle('');
+    setActivityKind('event');
+    setActivityStatus('pending');
+  };
+
+  const handleActivityStatusChange = async (activity: DayActivity, status: DayActivityStatus) => {
+    await updateActivityStatus(date, activity.id, status);
+  };
+
+  const handleContinueActivity = async (activity: DayActivity) => {
+    await continueActivity(date, activity.id);
+    setContinuedActivityId(activity.id);
+  };
+
+  const handleCreateCardFromActivity = (activity: DayActivity) => {
+    handleOpenNewCard({
+      trigger: {
+        type: 'external',
+        content: `${activity.title}（${getDayActivityStatusLabel(activity.status)}）`,
+      },
+      steps:
+        activity.status === 'pending'
+          ? [
+              {
+                id: `activity-${activity.id}-thought`,
+                order: 1,
+                type: 'thought',
+                content: '何故出来なかった？',
+              },
+            ]
+          : [],
+    });
   };
 
   const generateMarkdown = () => {
@@ -149,6 +240,122 @@ export default function DayPage() {
         </div>
       </div>
 
+      <section className="mb-8 rounded-2xl border border-stone-200/60 bg-white p-6 shadow-sm">
+        <div className="mb-5 flex items-center gap-3">
+          <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-stone-100 text-stone-600">
+            <ListTodo className="h-5 w-5" />
+          </div>
+          <div>
+            <h3 className="text-lg font-medium text-stone-800">イベント・TODO</h3>
+            <p className="text-sm text-stone-500">日ごとの予定やタスクを保存し、必要ならそのまま記録カード化できます。</p>
+          </div>
+        </div>
+
+        <form onSubmit={handleAddActivity} className="grid gap-3 rounded-2xl border border-stone-200 bg-stone-50/70 p-4 sm:grid-cols-[1fr_auto_auto_auto] sm:items-center">
+          <input
+            value={activityTitle}
+            onChange={(e) => setActivityTitle(e.target.value)}
+            placeholder="イベント名 / TODO名を入力"
+            className="w-full rounded-xl border border-stone-200 bg-white px-4 py-3 text-sm text-stone-800 outline-none transition-colors focus:border-stone-400 focus:ring-2 focus:ring-stone-200"
+          />
+          <select
+            value={activityKind}
+            onChange={(e) => setActivityKind(e.target.value as DayActivityKind)}
+            className="rounded-xl border border-stone-200 bg-white px-3 py-3 text-sm text-stone-700 outline-none transition-colors focus:border-stone-400 focus:ring-2 focus:ring-stone-200"
+          >
+            {dayActivityKinds.map((kind) => (
+              <option key={kind} value={kind}>
+                {getDayActivityKindLabel(kind)}
+              </option>
+            ))}
+          </select>
+          <select
+            value={activityStatus}
+            onChange={(e) => setActivityStatus(e.target.value as DayActivityStatus)}
+            className="rounded-xl border border-stone-200 bg-white px-3 py-3 text-sm text-stone-700 outline-none transition-colors focus:border-stone-400 focus:ring-2 focus:ring-stone-200"
+          >
+            {dayActivityStatuses.map((status) => (
+              <option key={status} value={status}>
+                {getDayActivityStatusLabel(status)}
+              </option>
+            ))}
+          </select>
+          <button
+            type="submit"
+            disabled={saving}
+            className="inline-flex items-center justify-center gap-2 rounded-xl bg-stone-800 px-4 py-3 text-sm font-medium text-stone-50 transition-colors hover:bg-stone-700 disabled:opacity-60"
+          >
+            <Plus className="h-4 w-4" />
+            追加
+          </button>
+        </form>
+
+        <div className="mt-4 space-y-3">
+          {activities.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-stone-200 px-4 py-6 text-center text-sm text-stone-400">
+              この日のイベント・TODOはまだありません。
+            </div>
+          ) : (
+            activities.map((activity) => (
+              <div
+                key={activity.id}
+                className="flex flex-col gap-3 rounded-2xl border border-stone-200 bg-white px-4 py-4 sm:flex-row sm:items-center sm:justify-between"
+              >
+                <div className="min-w-0 flex-1">
+                  <div className="mb-2 flex flex-wrap items-center gap-2">
+                    <span className="rounded-full border border-stone-200 bg-stone-50 px-2.5 py-1 text-[11px] font-semibold text-stone-600">
+                      {getDayActivityKindLabel(activity.kind)}
+                    </span>
+                    <span
+                      className={[
+                        'rounded-full px-2.5 py-1 text-[11px] font-semibold',
+                        activity.status === 'done' ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700',
+                      ].join(' ')}
+                    >
+                      {getDayActivityStatusLabel(activity.status)}
+                    </span>
+                  </div>
+                  <p className="text-sm font-medium text-stone-800 whitespace-pre-wrap">{activity.title}</p>
+                  {continuedActivityId === activity.id ? (
+                    <p className="mt-3 text-sm text-emerald-700">翌日へ追加しました。</p>
+                  ) : null}
+                </div>
+
+                <div className="flex flex-col gap-2 sm:min-w-[220px] sm:items-end">
+                  <select
+                    value={activity.status}
+                    onChange={(e) => handleActivityStatusChange(activity, e.target.value as DayActivityStatus)}
+                    className="rounded-xl border border-stone-200 bg-white px-3 py-2 text-sm text-stone-700 outline-none transition-colors focus:border-stone-400 focus:ring-2 focus:ring-stone-200"
+                  >
+                    {dayActivityStatuses.map((status) => (
+                      <option key={status} value={status}>
+                        {getDayActivityStatusLabel(status)}
+                      </option>
+                    ))}
+                  </select>
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleContinueActivity(activity)}
+                      className="inline-flex items-center justify-center rounded-xl border border-stone-300 bg-white px-4 py-2 text-sm font-medium text-stone-700 transition-colors hover:bg-stone-50"
+                    >
+                      継続
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => handleCreateCardFromActivity(activity)}
+                      className="inline-flex items-center justify-center rounded-xl border border-stone-300 bg-stone-50 px-4 py-2 text-sm font-medium text-stone-700 transition-colors hover:bg-stone-100"
+                    >
+                      記録の追加
+                    </button>
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </section>
+
       {showMarkdown ? (
         <div className="mb-24 bg-stone-800 rounded-2xl p-6 relative group">
           <button
@@ -173,7 +380,7 @@ export default function DayPage() {
           {entries.length === 0 && !isFormOpen && (
             <div className="text-center py-12 text-stone-400 border-2 border-dashed border-stone-200 rounded-2xl">
               <p>この日の記録はまだありません。</p>
-              <p className="text-sm mt-1">＋ボタンをタップしてジャーナリングを始めましょう。</p>
+              <p className="text-sm mt-1">＋ボタンまたは「記録の追加」からジャーナリングを始めましょう。</p>
             </div>
           )}
         </div>
@@ -186,7 +393,7 @@ export default function DayPage() {
             initial={{ scale: 0, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
             exit={{ scale: 0, opacity: 0 }}
-            onClick={() => setIsFormOpen(true)}
+            onClick={() => handleOpenNewCard()}
             className="fixed bottom-8 right-8 w-14 h-14 bg-stone-800 text-stone-50 rounded-full shadow-lg flex items-center justify-center hover:bg-stone-700 hover:scale-105 transition-all z-20"
           >
             <Plus className="w-6 h-6" />
@@ -201,6 +408,7 @@ export default function DayPage() {
             date={date} 
             onClose={handleCloseForm} 
             entryToEdit={entryToEdit}
+            initialEntry={cardDraft}
           />
         )}
       </AnimatePresence>

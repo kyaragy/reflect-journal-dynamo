@@ -47,7 +47,7 @@ export const apiRepository: JournalRepository = {
     assertDateString(day.date);
     const payload: PutDayRequest = { ...day };
     const response = await apiClient.put<PutDayResponse>(journalApiPaths.day(day.date), payload);
-    return response.data;
+    return normalizeDay(response.data);
   },
 
   async getWeek(weekKey) {

@@ -91,6 +91,7 @@ export const mapDayRows = (rows: DayWithCardsRow[]): Day[] => {
       createdAt: row.day_created_at,
       updatedAt: row.day_updated_at,
       cards: card ? [card] : [],
+      activities: [],
     });
   }
 

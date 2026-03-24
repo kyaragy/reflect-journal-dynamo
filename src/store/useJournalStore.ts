@@ -1,16 +1,19 @@
 import { create } from 'zustand';
-import { format } from 'date-fns';
+import { addDays, format, parseISO } from 'date-fns';
 import type {
   Card,
+  CreateDayActivityInput,
   CreateCardInput,
   Day,
+  DayActivity,
+  DayActivityStatus,
   MonthlySummary,
   WeeklySummary,
   YearlySummary,
 } from '../domain/journal';
 import { journalRepository } from '../repositories';
 
-export type { Card, Day, MonthlySummary, WeeklySummary, YearlySummary } from '../domain/journal';
+export type { Card, Day, DayActivity, MonthlySummary, WeeklySummary, YearlySummary } from '../domain/journal';
 
 type AsyncStatus = 'idle' | 'loading' | 'ready' | 'error';
 
@@ -31,6 +34,9 @@ interface JournalState {
   addEntry: (entry: CreateCardInput & { date: string }) => Promise<void>;
   updateEntry: (date: string, id: string, entry: Partial<Card>) => Promise<void>;
   deleteEntry: (date: string, id: string) => Promise<void>;
+  addActivity: (date: string, activity: CreateDayActivityInput) => Promise<void>;
+  updateActivityStatus: (date: string, id: string, status: DayActivityStatus) => Promise<void>;
+  continueActivity: (date: string, id: string) => Promise<void>;
   setSummary: (date: string, summary: string) => Promise<void>;
   setWeeklyReflection: (weekKey: string, reflection: string) => Promise<void>;
   setMonthlyReflection: (monthKey: string, reflection: string) => Promise<void>;
@@ -46,6 +52,15 @@ const emptyState = {
 
 const replaceDay = (days: Day[], day: Day) =>
   [...days.filter((item) => item.date !== day.date), day].sort((left, right) => left.date.localeCompare(right.date));
+
+const createEmptyDayRecord = (date: string, now: string): Day => ({
+  date,
+  cards: [],
+  activities: [],
+  dailySummary: '',
+  createdAt: now,
+  updatedAt: now,
+});
 
 const mergeWeek = (state: JournalState, week: { weekKey: string; days: Day[]; summary?: WeeklySummary }) => ({
   days: [...state.days.filter((day) => !week.days.some((weekDay) => weekDay.date === day.date)), ...week.days].sort((left, right) =>
@@ -223,6 +238,7 @@ export const useJournalStore = create<JournalState>()((set, get) => ({
           : {
               date: entry.date,
               cards: [createdCard],
+              activities: [],
               dailySummary: '',
               createdAt: createdCard.createdAt,
               updatedAt: createdCard.updatedAt,
@@ -280,6 +296,112 @@ export const useJournalStore = create<JournalState>()((set, get) => ({
               }
             : day
         ),
+      }));
+    });
+  },
+
+  async addActivity(date, activity) {
+    await withSaving(set, async () => {
+      const normalizedTitle = activity.title.trim();
+      if (!normalizedTitle) {
+        return;
+      }
+
+      const state = get();
+      const currentDay = state.days.find((day) => day.date === date);
+      const now = new Date().toISOString();
+      const nextActivity: DayActivity = {
+        id: globalThis.crypto?.randomUUID?.() ?? `activity-${Date.now()}`,
+        title: normalizedTitle,
+        kind: activity.kind,
+        status: activity.status,
+        createdAt: now,
+        updatedAt: now,
+      };
+      const nextDay: Day = currentDay
+        ? {
+            ...currentDay,
+            activities: [...currentDay.activities, nextActivity],
+            updatedAt: now,
+          }
+        : {
+            ...createEmptyDayRecord(date, now),
+            activities: [nextActivity],
+          };
+
+      const savedDay = await journalRepository.saveDay(nextDay);
+      set((currentState) => ({
+        days: replaceDay(currentState.days, savedDay),
+      }));
+    });
+  },
+
+  async updateActivityStatus(date, id, status) {
+    await withSaving(set, async () => {
+      const state = get();
+      const currentDay = state.days.find((day) => day.date === date);
+      const targetActivity = currentDay?.activities.find((activity) => activity.id === id);
+      if (!currentDay || !targetActivity || targetActivity.status === status) {
+        return;
+      }
+
+      const now = new Date().toISOString();
+      const savedDay = await journalRepository.saveDay({
+        ...currentDay,
+        updatedAt: now,
+        activities: currentDay.activities.map((activity) =>
+          activity.id === id
+            ? {
+                ...activity,
+                status,
+                updatedAt: now,
+              }
+            : activity
+        ),
+      });
+
+      set((currentState) => ({
+        days: replaceDay(currentState.days, savedDay),
+      }));
+    });
+  },
+
+  async continueActivity(date, id) {
+    await withSaving(set, async () => {
+      const state = get();
+      const currentDay = state.days.find((day) => day.date === date);
+      const sourceActivity = currentDay?.activities.find((activity) => activity.id === id);
+      if (!sourceActivity) {
+        return;
+      }
+
+      const nextDate = format(addDays(parseISO(date), 1), 'yyyy-MM-dd');
+      const nextDay = state.days.find((day) => day.date === nextDate);
+      const now = new Date().toISOString();
+      const continuedActivity: DayActivity = {
+        id: globalThis.crypto?.randomUUID?.() ?? `activity-${Date.now()}`,
+        title: sourceActivity.title,
+        kind: sourceActivity.kind,
+        status: 'pending',
+        createdAt: now,
+        updatedAt: now,
+      };
+
+      const savedNextDay = await journalRepository.saveDay(
+        nextDay
+          ? {
+              ...nextDay,
+              activities: [...nextDay.activities, continuedActivity],
+              updatedAt: now,
+            }
+          : {
+              ...createEmptyDayRecord(nextDate, now),
+              activities: [continuedActivity],
+            }
+      );
+
+      set((currentState) => ({
+        days: replaceDay(currentState.days, savedNextDay),
       }));
     });
   },

@@ -13,6 +13,7 @@ import {
   type JournalCardTag,
   type StepType,
   type TriggerType,
+  type CreateCardInput,
 } from '../domain/journal';
 import { triggerPlaceholder } from '../lib/reflectionPlaceholders';
 
@@ -20,6 +21,7 @@ interface JournalFormProps {
   date: string;
   onClose: () => void;
   entryToEdit?: Card | null;
+  initialEntry?: CreateCardInput | null;
 }
 
 const stepIconMap: Record<StepType, typeof Brain> = {
@@ -64,7 +66,7 @@ const stepTextareaClassMap: Record<StepType, string> = {
   body: 'border-emerald-100 bg-white focus:ring-emerald-200 focus:border-emerald-400',
 };
 
-export default function JournalForm({ date, onClose, entryToEdit }: JournalFormProps) {
+export default function JournalForm({ date, onClose, entryToEdit, initialEntry }: JournalFormProps) {
   const addEntry = useJournalStore((state) => state.addEntry);
   const updateEntry = useJournalStore((state) => state.updateEntry);
   const saving = useJournalStore((state) => state.saving);
@@ -96,11 +98,27 @@ export default function JournalForm({ date, onClose, entryToEdit }: JournalFormP
       return;
     }
 
+    if (initialEntry) {
+      setTag(initialEntry.tag);
+      setTriggerType(initialEntry.trigger?.type ?? createEmptyTrigger().type);
+      setTriggerContent(initialEntry.trigger?.content ?? '');
+      setSteps(
+        initialEntry.steps && initialEntry.steps.length > 0
+          ? initialEntry.steps.map((step, index) => ({
+              ...step,
+              id: step.id || createCardStep(index + 1).id,
+              order: index + 1,
+            }))
+          : [createCardStep(1)]
+      );
+      return;
+    }
+
     setTag(undefined);
     setTriggerType(createEmptyTrigger().type);
     setTriggerContent('');
     setSteps([createCardStep(1)]);
-  }, [entryToEdit]);
+  }, [entryToEdit, initialEntry]);
 
   useEffect(() => {
     const viewport = window.visualViewport;
