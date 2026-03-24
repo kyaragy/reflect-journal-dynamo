@@ -3,6 +3,7 @@ import type {
   Card,
   CreateCardInput,
   Day,
+  DayActivity,
   JournalSnapshot,
   MonthRecord,
   MonthlySummary,
@@ -23,6 +24,7 @@ type DayItem = {
   date: string;
   dailySummary: string;
   cards: Card[];
+  activities: DayActivity[];
   createdAt: string;
   updatedAt: string;
 };
@@ -72,17 +74,20 @@ const toDayItem = (userId: string, day: Day): DayItem => ({
   date: day.date,
   dailySummary: day.dailySummary,
   cards: day.cards,
+  activities: day.activities,
   createdAt: day.createdAt,
   updatedAt: day.updatedAt,
 });
 
-const toDay = (item: DayItem): Day => ({
-  date: item.date,
-  dailySummary: item.dailySummary,
-  cards: (item.cards ?? []).map((card) => normalizeCard(card)),
-  createdAt: item.createdAt,
-  updatedAt: item.updatedAt,
-});
+const toDay = (item: DayItem): Day =>
+  normalizeDay({
+    date: item.date,
+    dailySummary: item.dailySummary,
+    cards: (item.cards ?? []).map((card) => normalizeCard(card)),
+    activities: item.activities ?? [],
+    createdAt: item.createdAt,
+    updatedAt: item.updatedAt,
+  });
 
 const toWeeklySummary = (item?: WeeklySummaryItem): WeeklySummary | undefined =>
   item
@@ -118,6 +123,7 @@ const createEmptyDay = (date: string, now: string): Day => ({
   date,
   dailySummary: '',
   cards: [],
+  activities: [],
   createdAt: now,
   updatedAt: now,
 });

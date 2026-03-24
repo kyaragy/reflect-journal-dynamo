@@ -108,6 +108,7 @@ export class MemoryJournalRepository implements JournalDataRepository {
       : {
           date,
           cards: [],
+          activities: [],
           dailySummary: summary,
           createdAt: timestamp,
           updatedAt: timestamp,
@@ -153,6 +154,7 @@ export class MemoryJournalRepository implements JournalDataRepository {
       : {
           date,
           cards: [card],
+          activities: [],
           dailySummary: '',
           createdAt: timestamp,
           updatedAt: timestamp,

@@ -57,6 +57,7 @@ test('getMonth returns month days and overlapping weekly summaries', async () =>
     date: '2026-03-01',
     dailySummary: '',
     cards: [],
+    activities: [],
     createdAt: '2026-03-01T00:00:00.000Z',
     updatedAt: '2026-03-01T00:00:00.000Z',
   });
@@ -124,6 +125,7 @@ test('createCard stores a new card in the day item', async () => {
   assert.equal(day?.cards[0]?.tag, '仕事');
   assert.equal(day?.cards[0]?.trigger.content, 'fact');
   assert.equal(day?.cards[0]?.steps.length, 3);
+  assert.deepEqual(day?.activities, []);
 });
 
 test('createCard rejects empty cards', async () => {
@@ -140,4 +142,33 @@ test('createCard rejects empty cards', async () => {
     }),
     /Card must include trigger content or at least one step/
   );
+});
+
+test('saveDay persists day activities in the day item', async () => {
+  const client = createClientStub();
+  const repository = new DynamoDbJournalRepository(client as never);
+
+  await repository.saveDay('user-1', {
+    date: '2026-03-24',
+    dailySummary: '',
+    cards: [],
+    activities: [
+      {
+        id: 'activity-1',
+        title: '振り返り資料をまとめる',
+        kind: 'todo',
+        status: 'pending',
+        createdAt: '2026-03-24T00:00:00.000Z',
+        updatedAt: '2026-03-24T00:00:00.000Z',
+      },
+    ],
+    createdAt: '2026-03-24T00:00:00.000Z',
+    updatedAt: '2026-03-24T00:00:00.000Z',
+  });
+
+  const saved = await repository.getDay('user-1', '2026-03-24');
+
+  assert.equal(saved?.activities.length, 1);
+  assert.equal(saved?.activities[0]?.title, '振り返り資料をまとめる');
+  assert.equal(saved?.activities[0]?.status, 'pending');
 });

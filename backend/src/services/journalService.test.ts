@@ -10,6 +10,7 @@ const dayFixture: Day = {
   createdAt: '2026-03-10T00:00:00.000Z',
   updatedAt: '2026-03-10T00:00:00.000Z',
   cards: [],
+  activities: [],
 };
 
 const createRepositoryStub = (): JournalDataRepository => ({

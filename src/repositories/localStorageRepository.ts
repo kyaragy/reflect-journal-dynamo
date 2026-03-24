@@ -1,6 +1,6 @@
 import { addDays, format, parseISO } from 'date-fns';
 import { v4 as uuidv4 } from 'uuid';
-import { createEmptyJournalSnapshot, createEmptyTrigger, normalizeCard, normalizeSnapshot } from '../domain/journal';
+import { createEmptyJournalSnapshot, createEmptyTrigger, normalizeCard, normalizeDay, normalizeSnapshot } from '../domain/journal';
 import type {
   Card,
   CardStep,
@@ -118,6 +118,7 @@ const toDayMap = (snapshot: LegacySnapshot) => {
     dayMap.set(entry.date, {
       date: entry.date,
       cards: [card],
+      activities: [],
       dailySummary: snapshot.summaries[entry.date]?.reflection ?? '',
       createdAt: card.createdAt,
       updatedAt: card.updatedAt,
@@ -136,6 +137,7 @@ const toDayMap = (snapshot: LegacySnapshot) => {
     dayMap.set(date, {
       date,
       cards: [],
+      activities: [],
       dailySummary: summary.reflection,
       createdAt: now,
       updatedAt: now,
@@ -285,12 +287,13 @@ export const localStorageRepository: JournalRepository = {
 
   async saveDay(day) {
     const snapshot = await readSnapshot();
+    const normalizedDay = normalizeDay(day);
     const nextSnapshot = sortSnapshot({
       ...snapshot,
-      days: [...snapshot.days.filter((item) => item.date !== day.date), day],
+      days: [...snapshot.days.filter((item) => item.date !== normalizedDay.date), normalizedDay],
     });
     await writeSnapshot(nextSnapshot);
-    return day;
+    return normalizedDay;
   },
 
   async getWeek(weekKey) {
@@ -401,6 +404,7 @@ export const localStorageRepository: JournalRepository = {
             {
               date,
               cards: [nextCard],
+              activities: [],
               dailySummary: '',
               createdAt: now,
               updatedAt: now,
@@ -499,7 +503,7 @@ export const localStorageRepository: JournalRepository = {
     const now = new Date().toISOString();
     const currentDay = getDay(snapshot, date);
 
-    const nextDay = currentDay
+        const nextDay = currentDay
       ? {
           ...currentDay,
           dailySummary: summary,
@@ -508,6 +512,7 @@ export const localStorageRepository: JournalRepository = {
       : {
           date,
           cards: [],
+          activities: [],
           dailySummary: summary,
           createdAt: now,
           updatedAt: now,
