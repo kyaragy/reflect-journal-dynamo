@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { format, parseISO } from 'date-fns';
 import { ja } from 'date-fns/locale';
-import { ArrowLeft, Plus, Sparkles, Save, Copy, FileText, Check, ListTodo } from 'lucide-react';
+import { ArrowLeft, Plus, Sparkles, Save, Copy, FileText, Check, ListTodo, Trash2 } from 'lucide-react';
 import { useJournalStore, Card } from '../store/useJournalStore';
 import JournalCard from '../components/JournalCard';
 import JournalForm from '../components/JournalForm';
@@ -35,6 +35,7 @@ export default function DayPage() {
   const deleteEntry = useJournalStore((state) => state.deleteEntry);
   const addActivity = useJournalStore((state) => state.addActivity);
   const updateActivityStatus = useJournalStore((state) => state.updateActivityStatus);
+  const deleteActivity = useJournalStore((state) => state.deleteActivity);
   const continueActivity = useJournalStore((state) => state.continueActivity);
   const refreshDay = useJournalStore((state) => state.refreshDay);
   const day = useMemo(
@@ -136,6 +137,18 @@ export default function DayPage() {
   const handleContinueActivity = async (activity: DayActivity) => {
     await continueActivity(date, activity.id);
     setContinuedActivityId(activity.id);
+  };
+
+  const handleDeleteActivity = async (activity: DayActivity) => {
+    const shouldDelete = window.confirm('このTODOを削除しますか？');
+    if (!shouldDelete) {
+      return;
+    }
+
+    await deleteActivity(date, activity.id);
+    if (continuedActivityId === activity.id) {
+      setContinuedActivityId(null);
+    }
   };
 
   const handleCreateCardFromActivity = (activity: DayActivity) => {
@@ -314,6 +327,14 @@ export default function DayPage() {
                     ))}
                   </select>
                   <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleDeleteActivity(activity)}
+                      className="inline-flex items-center justify-center rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm font-medium text-rose-700 transition-colors hover:bg-rose-100"
+                      aria-label="TODOを削除"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
                     <button
                       type="button"
                       onClick={() => handleContinueActivity(activity)}

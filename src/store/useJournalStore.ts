@@ -36,6 +36,7 @@ interface JournalState {
   deleteEntry: (date: string, id: string) => Promise<void>;
   addActivity: (date: string, activity: CreateDayActivityInput) => Promise<void>;
   updateActivityStatus: (date: string, id: string, status: DayActivityStatus) => Promise<void>;
+  deleteActivity: (date: string, id: string) => Promise<void>;
   continueActivity: (date: string, id: string) => Promise<void>;
   setSummary: (date: string, summary: string) => Promise<void>;
   setWeeklyReflection: (weekKey: string, reflection: string) => Promise<void>;
@@ -357,6 +358,27 @@ export const useJournalStore = create<JournalState>()((set, get) => ({
               }
             : activity
         ),
+      });
+
+      set((currentState) => ({
+        days: replaceDay(currentState.days, savedDay),
+      }));
+    });
+  },
+
+  async deleteActivity(date, id) {
+    await withSaving(set, async () => {
+      const state = get();
+      const currentDay = state.days.find((day) => day.date === date);
+      if (!currentDay?.activities.some((activity) => activity.id === id)) {
+        return;
+      }
+
+      const now = new Date().toISOString();
+      const savedDay = await journalRepository.saveDay({
+        ...currentDay,
+        updatedAt: now,
+        activities: currentDay.activities.filter((activity) => activity.id !== id),
       });
 
       set((currentState) => ({
