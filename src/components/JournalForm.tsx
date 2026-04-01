@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { motion } from 'motion/react';
 import { Activity, ArrowRight, Brain, Check, Heart, Plus, Save, Sparkles, Trash2, X } from 'lucide-react';
 import { useJournalStore, type Card } from '../store/useJournalStore';
@@ -199,10 +199,11 @@ export default function JournalForm({ date, onClose, entryToEdit, initialEntry }
   const textareaRefs = useRef<Record<string, HTMLTextAreaElement | null>>({});
   const stepSectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const pendingScrollStepIdRef = useRef<string | null>(null);
-  const previousStepsRef = useRef<CardStep[]>([]);
+  const resizeFrameRef = useRef<number | null>(null);
 
   const maxTextareaHeight = 240;
   const toolbarBaseHeight = 92;
+  const stepCount = steps.length;
 
   useEffect(() => {
     if (entryToEdit) {
@@ -267,22 +268,33 @@ export default function JournalForm({ date, onClose, entryToEdit, initialEntry }
     element.style.overflowY = element.scrollHeight > maxTextareaHeight ? 'auto' : 'hidden';
   }, []);
 
-  useLayoutEffect(() => {
-    adjustTextareaHeight(textareaRefs.current.trigger);
-  }, [triggerContent]);
+  const scheduleAdjustTextareaHeight = useCallback((element: HTMLTextAreaElement | null) => {
+    if (!element) {
+      return;
+    }
 
-  useLayoutEffect(() => {
-    const previousSteps = previousStepsRef.current;
-    const previousStepContentMap = new Map(previousSteps.map((step) => [step.id, step.content]));
+    if (resizeFrameRef.current !== null) {
+      window.cancelAnimationFrame(resizeFrameRef.current);
+    }
 
-    steps.forEach((step) => {
-      if (previousStepContentMap.get(step.id) !== step.content) {
-        adjustTextareaHeight(textareaRefs.current[step.id]);
-      }
+    resizeFrameRef.current = window.requestAnimationFrame(() => {
+      adjustTextareaHeight(element);
+      resizeFrameRef.current = null;
     });
+  }, [adjustTextareaHeight]);
 
-    previousStepsRef.current = steps;
-  }, [steps]);
+  useEffect(() => {
+    scheduleAdjustTextareaHeight(textareaRefs.current.trigger);
+    steps.forEach((step) => {
+      scheduleAdjustTextareaHeight(textareaRefs.current[step.id]);
+    });
+  }, [entryToEdit, initialEntry, scheduleAdjustTextareaHeight, stepCount]);
+
+  useEffect(() => () => {
+    if (resizeFrameRef.current !== null) {
+      window.cancelAnimationFrame(resizeFrameRef.current);
+    }
+  }, []);
 
   useEffect(() => {
     const mediaQuery = window.matchMedia('(max-width: 639px)');
@@ -407,14 +419,14 @@ export default function JournalForm({ date, onClose, entryToEdit, initialEntry }
 
   const handleStepContentChange = useCallback((stepId: string, content: string, element: HTMLTextAreaElement) => {
     setStepValue(stepId, { content });
-    adjustTextareaHeight(element);
-  }, [adjustTextareaHeight, setStepValue]);
+    scheduleAdjustTextareaHeight(element);
+  }, [scheduleAdjustTextareaHeight, setStepValue]);
 
   const handleStepFocus = useCallback((stepId: string, element: HTMLTextAreaElement) => {
     setActiveFieldKey(stepId);
-    adjustTextareaHeight(element);
+    scheduleAdjustTextareaHeight(element);
     scrollFieldIntoView(element);
-  }, [adjustTextareaHeight, scrollFieldIntoView]);
+  }, [scheduleAdjustTextareaHeight, scrollFieldIntoView]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -471,14 +483,15 @@ export default function JournalForm({ date, onClose, entryToEdit, initialEntry }
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-stone-900/40 backdrop-blur-sm p-0 sm:p-4"
+      transition={{ duration: 0.16, ease: 'easeOut' }}
+      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center bg-stone-900/35 p-0 sm:p-4"
     >
       <motion.div
-        initial={{ y: '100%', opacity: 0 }}
-        animate={{ y: 0, opacity: 1 }}
-        exit={{ y: '100%', opacity: 0 }}
-        transition={{ type: 'spring', damping: 25, stiffness: 200 }}
-        className="bg-stone-50 w-full max-w-4xl rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden max-h-[100dvh] sm:max-h-[90vh] flex flex-col"
+        initial={{ y: 24, opacity: 0, scale: 0.985 }}
+        animate={{ y: 0, opacity: 1, scale: 1 }}
+        exit={{ y: 16, opacity: 0, scale: 0.99 }}
+        transition={{ duration: 0.18, ease: 'easeOut' }}
+        className="bg-stone-50 w-full max-w-4xl rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden max-h-[100dvh] sm:max-h-[90vh] flex flex-col will-change-transform"
       >
         <div className="flex justify-between items-center px-4 py-4 sm:p-6 border-b border-stone-200 bg-white">
           <h3 className="text-xl font-serif font-medium text-stone-800">{entryToEdit ? '記録を編集' : '新しい記録'}</h3>
@@ -533,11 +546,11 @@ export default function JournalForm({ date, onClose, entryToEdit, initialEntry }
                 value={triggerContent}
                 onChange={(e) => {
                   setTriggerContent(e.target.value);
-                  adjustTextareaHeight(e.target);
+                  scheduleAdjustTextareaHeight(e.target);
                 }}
                 onFocus={(e) => {
                   setActiveFieldKey('trigger');
-                  adjustTextareaHeight(e.currentTarget);
+                  scheduleAdjustTextareaHeight(e.currentTarget);
                   scrollFieldIntoView(e.currentTarget);
                 }}
                 onBlur={handleFieldBlur}
