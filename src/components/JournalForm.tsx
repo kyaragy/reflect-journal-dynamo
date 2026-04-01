@@ -85,6 +85,7 @@ export default function JournalForm({ date, onClose, entryToEdit, initialEntry }
   const textareaRefs = useRef<Record<string, HTMLTextAreaElement | null>>({});
   const stepSectionRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const pendingScrollStepIdRef = useRef<string | null>(null);
+  const previousStepsRef = useRef<CardStep[]>([]);
 
   const maxTextareaHeight = 240;
   const toolbarBaseHeight = 92;
@@ -153,8 +154,21 @@ export default function JournalForm({ date, onClose, entryToEdit, initialEntry }
   };
 
   useLayoutEffect(() => {
-    (Object.values(textareaRefs.current) as Array<HTMLTextAreaElement | null>).forEach((element) => adjustTextareaHeight(element));
-  }, [triggerContent, steps]);
+    adjustTextareaHeight(textareaRefs.current.trigger);
+  }, [triggerContent]);
+
+  useLayoutEffect(() => {
+    const previousSteps = previousStepsRef.current;
+    const previousStepContentMap = new Map(previousSteps.map((step) => [step.id, step.content]));
+
+    steps.forEach((step) => {
+      if (previousStepContentMap.get(step.id) !== step.content) {
+        adjustTextareaHeight(textareaRefs.current[step.id]);
+      }
+    });
+
+    previousStepsRef.current = steps;
+  }, [steps]);
 
   useEffect(() => {
     const mediaQuery = window.matchMedia('(max-width: 639px)');
@@ -216,27 +230,37 @@ export default function JournalForm({ date, onClose, entryToEdit, initialEntry }
   };
 
   const setStepValue = (stepId: string, patch: Partial<CardStep>) => {
-    setSteps((currentSteps) =>
-      currentSteps.map((step, index) =>
-        step.id === stepId
-          ? {
-              ...step,
-              ...patch,
-              order: index + 1,
-            }
-          : {
-              ...step,
-              order: index + 1,
-            }
-      )
-    );
+    setSteps((currentSteps) => {
+      let changed = false;
+
+      const nextSteps = currentSteps.map((step) => {
+        if (step.id !== stepId) {
+          return step;
+        }
+
+        const nextStep = {
+          ...step,
+          ...patch,
+        };
+
+        const hasDiff = Object.keys(patch).some((key) => nextStep[key as keyof CardStep] !== step[key as keyof CardStep]);
+        if (hasDiff) {
+          changed = true;
+          return nextStep;
+        }
+
+        return step;
+      });
+
+      return changed ? nextSteps : currentSteps;
+    });
   };
 
   const addStep = () => {
     setSteps((currentSteps) => {
       const nextStep = createCardStep(currentSteps.length + 1);
       pendingScrollStepIdRef.current = nextStep.id;
-      return [...currentSteps, nextStep];
+      return [...currentSteps, { ...nextStep, order: currentSteps.length + 1 }];
     });
   };
 
