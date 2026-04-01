@@ -542,7 +542,7 @@ export default function JournalForm({ date, onClose, entryToEdit, initialEntry }
                 ref={(element) => {
                   textareaRefs.current.trigger = element;
                 }}
-                rows={3}
+                rows={4}
                 value={triggerContent}
                 onChange={(e) => {
                   setTriggerContent(e.target.value);
@@ -555,7 +555,7 @@ export default function JournalForm({ date, onClose, entryToEdit, initialEntry }
                 }}
                 onBlur={handleFieldBlur}
                 placeholder={triggerPlaceholder}
-                className="w-full rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3.5 text-[15px] leading-6 text-stone-800 placeholder:text-stone-400 outline-none transition-all duration-200 resize-none focus:ring-2 focus:ring-sky-200 focus:border-sky-400 min-h-[96px]"
+                className="w-full rounded-2xl border border-stone-200 bg-stone-50 px-4 py-3.5 text-[15px] leading-6 text-stone-800 placeholder:text-stone-400 outline-none transition-all duration-200 resize-none focus:ring-2 focus:ring-sky-200 focus:border-sky-400 min-h-[132px]"
                 style={{ maxHeight: `${maxTextareaHeight}px` }}
               />
             </section>

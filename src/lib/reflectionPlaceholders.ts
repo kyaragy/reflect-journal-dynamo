@@ -56,7 +56,6 @@ export const reflectionPlaceholderMap: Record<ReflectionMode, string> = {
 };
 
 export const triggerPlaceholder = `きっかけになった出来事や、最初に起きたことを書いてください
-
 例：会議で厳しい指摘を受けた
 例：急に不安になった
 例：胸がざわついた`;
