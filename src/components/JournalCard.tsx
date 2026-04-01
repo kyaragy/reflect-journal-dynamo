@@ -1,6 +1,5 @@
 import React from 'react';
 import { format } from 'date-fns';
-import { motion } from 'motion/react';
 import { Activity, ArrowRight, Brain, Heart, Edit2, Sparkles, Trash2 } from 'lucide-react';
 import type { Card } from '../store/useJournalStore';
 import { getStepTypeLabel, type StepType } from '../domain/journal';
@@ -51,13 +50,7 @@ const JournalCard: React.FC<JournalCardProps> = ({ entry, onEdit, onDelete }) =>
       }).format(createdAt);
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, scale: 0.95 }}
-      transition={{ duration: 0.3 }}
-      className="bg-white rounded-2xl p-6 shadow-sm border border-stone-200/60 relative overflow-hidden group"
-    >
+    <div className="bg-white rounded-2xl p-6 shadow-sm border border-stone-200/60 relative overflow-hidden group">
       <div className="flex justify-between items-center mb-5">
         <div className="flex items-center gap-2">
           {entry.tag ? (
@@ -146,8 +139,12 @@ const JournalCard: React.FC<JournalCardProps> = ({ entry, onEdit, onDelete }) =>
           )}
         </section>
       </div>
-    </motion.div>
+    </div>
   );
 };
 
-export default JournalCard;
+export default React.memo(JournalCard, (prevProps, nextProps) => (
+  prevProps.entry === nextProps.entry
+  && prevProps.onEdit === nextProps.onEdit
+  && prevProps.onDelete === nextProps.onDelete
+));

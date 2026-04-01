@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { format, parseISO } from 'date-fns';
 import { ja } from 'date-fns/locale';
@@ -76,13 +76,21 @@ export default function DayPage() {
   const parsedDate = parseISO(date);
   const formattedDate = format(parsedDate, 'yyyy年M月d日', { locale: ja });
 
-  const handleEdit = (entry: Card) => {
+  const handleEdit = useCallback((entry: Card) => {
     setCardDraft(null);
     setEntryToEdit(entry);
     setIsFormOpen(true);
-  };
+  }, []);
 
-  const handleDelete = async (entry: Card) => {
+  const handleCloseForm = useCallback(() => {
+    setIsFormOpen(false);
+    setTimeout(() => {
+      setEntryToEdit(null);
+      setCardDraft(null);
+    }, 300);
+  }, []);
+
+  const handleDelete = useCallback(async (entry: Card) => {
     const shouldDelete = window.confirm('このカードを削除しますか？');
     if (!shouldDelete) {
       return;
@@ -93,21 +101,13 @@ export default function DayPage() {
     if (entryToEdit?.id === entry.id) {
       handleCloseForm();
     }
-  };
+  }, [date, deleteEntry, entryToEdit?.id, handleCloseForm]);
 
-  const handleCloseForm = () => {
-    setIsFormOpen(false);
-    setTimeout(() => {
-      setEntryToEdit(null);
-      setCardDraft(null);
-    }, 300);
-  };
-
-  const handleOpenNewCard = (initialDraft?: CreateCardInput) => {
+  const handleOpenNewCard = useCallback((initialDraft?: CreateCardInput) => {
     setEntryToEdit(null);
     setCardDraft(initialDraft ?? null);
     setIsFormOpen(true);
-  };
+  }, []);
 
   const handleSaveReflection = async () => {
     await setSummary(date, reflectionText);
@@ -151,7 +151,7 @@ export default function DayPage() {
     }
   };
 
-  const handleCreateCardFromActivity = (activity: DayActivity) => {
+  const handleCreateCardFromActivity = useCallback((activity: DayActivity) => {
     handleOpenNewCard({
       trigger: {
         type: 'external',
@@ -169,7 +169,7 @@ export default function DayPage() {
             ]
           : [],
     });
-  };
+  }, [handleOpenNewCard]);
 
   const generateMarkdown = () => {
     let md = `# ${formattedDate}\n\n`;
@@ -372,7 +372,7 @@ export default function DayPage() {
         </div>
       ) : (
         <div className="space-y-6 mb-24">
-          <AnimatePresence>
+          <AnimatePresence initial={false}>
             {entries.map((entry) => (
               <JournalCard key={entry.id} entry={entry} onEdit={handleEdit} onDelete={handleDelete} />
             ))}

@@ -1,4 +1,4 @@
-import React, { useEffect, useLayoutEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { motion } from 'motion/react';
 import { Activity, ArrowRight, Brain, Check, Heart, Plus, Save, Sparkles, Trash2, X } from 'lucide-react';
 import { useJournalStore, type Card } from '../store/useJournalStore';
@@ -65,6 +65,120 @@ const stepTextareaClassMap: Record<StepType, string> = {
   action: 'border-amber-100 bg-white focus:ring-amber-200 focus:border-amber-400',
   body: 'border-emerald-100 bg-white focus:ring-emerald-200 focus:border-emerald-400',
 };
+
+interface StepEditorProps {
+  step: CardStep;
+  index: number;
+  maxTextareaHeight: number;
+  isActive: boolean;
+  setStepRef: (stepId: string, element: HTMLTextAreaElement | null) => void;
+  setStepSectionRef: (stepId: string, element: HTMLDivElement | null) => void;
+  onRemove: (stepId: string) => void;
+  onTypeChange: (stepId: string, type: StepType) => void;
+  onContentChange: (stepId: string, content: string, element: HTMLTextAreaElement) => void;
+  onFocus: (stepId: string, element: HTMLTextAreaElement) => void;
+  onBlur: () => void;
+  onPreventPointerFocusChange: (e: React.PointerEvent<HTMLButtonElement>) => void;
+}
+
+const StepEditor = React.memo(function StepEditor({
+  step,
+  index,
+  maxTextareaHeight,
+  isActive,
+  setStepRef,
+  setStepSectionRef,
+  onRemove,
+  onTypeChange,
+  onContentChange,
+  onFocus,
+  onBlur,
+  onPreventPointerFocusChange,
+}: StepEditorProps) {
+  const Icon = stepIconMap[step.type];
+
+  return (
+    <div
+      ref={(element) => {
+        setStepSectionRef(step.id, element);
+      }}
+      className={[
+        'rounded-3xl border p-4 sm:p-5 space-y-4 transition-colors',
+        stepSectionClassMap[step.type],
+      ].join(' ')}
+    >
+      <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center gap-3">
+          <div
+            className={[
+              'flex h-8 w-8 items-center justify-center rounded-full text-xs font-semibold',
+              stepNumberClassMap[step.type],
+            ].join(' ')}
+          >
+            {index + 1}
+          </div>
+          <div className={['flex items-center gap-2 text-sm font-semibold', stepHeaderClassMap[step.type]].join(' ')}>
+            <Icon className="w-4 h-4" />
+            <span>{getStepTypeLabel(step.type)}</span>
+          </div>
+        </div>
+        <button
+          type="button"
+          onPointerDown={onPreventPointerFocusChange}
+          onClick={() => onRemove(step.id)}
+          className="inline-flex items-center gap-1 rounded-full border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-700 hover:bg-rose-100 transition-colors"
+        >
+          <Trash2 className="w-3.5 h-3.5" />
+          削除
+        </button>
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        {stepTypes.map((type) => {
+          const isSelected = step.type === type;
+          return (
+            <button
+              key={type}
+              type="button"
+              onPointerDown={onPreventPointerFocusChange}
+              onClick={() => onTypeChange(step.id, type)}
+              className={[
+                'rounded-full border px-3.5 py-2 text-sm font-medium transition-all',
+                isSelected
+                  ? stepOptionClassMap[type]
+                  : 'border-stone-200 bg-stone-50 text-stone-700 hover:border-stone-300',
+              ].join(' ')}
+            >
+              {getStepTypeLabel(type)}
+            </button>
+          );
+        })}
+      </div>
+
+      <textarea
+        ref={(element) => {
+          setStepRef(step.id, element);
+        }}
+        rows={3}
+        value={step.content}
+        onChange={(e) => onContentChange(step.id, e.target.value, e.target)}
+        onFocus={(e) => onFocus(step.id, e.currentTarget)}
+        onBlur={onBlur}
+        placeholder={`${getStepTypeLabel(step.type)}として記録したい内容を書いてください`}
+        className={[
+          'w-full rounded-2xl border px-4 py-3.5 text-[15px] leading-6 text-stone-800 placeholder:text-stone-400 outline-none transition-all duration-200 resize-none focus:ring-2 min-h-[96px]',
+          stepTextareaClassMap[step.type],
+          isActive ? 'ring-2' : '',
+        ].join(' ')}
+        style={{ maxHeight: `${maxTextareaHeight}px` }}
+      />
+    </div>
+  );
+}, (prevProps, nextProps) => (
+  prevProps.step === nextProps.step
+  && prevProps.index === nextProps.index
+  && prevProps.isActive === nextProps.isActive
+));
 
 export default function JournalForm({ date, onClose, entryToEdit, initialEntry }: JournalFormProps) {
   const addEntry = useJournalStore((state) => state.addEntry);
@@ -142,7 +256,7 @@ export default function JournalForm({ date, onClose, entryToEdit, initialEntry }
     };
   }, []);
 
-  const adjustTextareaHeight = (element: HTMLTextAreaElement | null) => {
+  const adjustTextareaHeight = useCallback((element: HTMLTextAreaElement | null) => {
     if (!element) {
       return;
     }
@@ -151,7 +265,7 @@ export default function JournalForm({ date, onClose, entryToEdit, initialEntry }
     const nextHeight = Math.min(element.scrollHeight, maxTextareaHeight);
     element.style.height = `${nextHeight}px`;
     element.style.overflowY = element.scrollHeight > maxTextareaHeight ? 'auto' : 'hidden';
-  };
+  }, []);
 
   useLayoutEffect(() => {
     adjustTextareaHeight(textareaRefs.current.trigger);
@@ -198,13 +312,13 @@ export default function JournalForm({ date, onClose, entryToEdit, initialEntry }
     }, 120);
   }, [steps]);
 
-  const scrollFieldIntoView = (element: HTMLTextAreaElement) => {
+  const scrollFieldIntoView = useCallback((element: HTMLTextAreaElement) => {
     window.setTimeout(() => {
       element.scrollIntoView({ block: 'center', behavior: 'smooth' });
     }, 120);
-  };
+  }, []);
 
-  const handleFieldBlur = () => {
+  const handleFieldBlur = useCallback(() => {
     window.setTimeout(() => {
       const activeElement = document.activeElement;
       const isToolbarTarget = toolbarRef.current?.contains(activeElement);
@@ -213,23 +327,23 @@ export default function JournalForm({ date, onClose, entryToEdit, initialEntry }
         setActiveFieldKey(null);
       }
     }, 0);
-  };
+  }, []);
 
-  const blurActiveField = () => {
+  const blurActiveField = useCallback(() => {
     if (!activeFieldKey) {
       return;
     }
 
     textareaRefs.current[activeFieldKey]?.blur();
     setActiveFieldKey(null);
-  };
+  }, [activeFieldKey]);
 
-  const preventPointerFocusChange = (e: React.PointerEvent<HTMLButtonElement>) => {
+  const preventPointerFocusChange = useCallback((e: React.PointerEvent<HTMLButtonElement>) => {
     // Keep the focused textarea active until the action completes.
     e.preventDefault();
-  };
+  }, []);
 
-  const setStepValue = (stepId: string, patch: Partial<CardStep>) => {
+  const setStepValue = useCallback((stepId: string, patch: Partial<CardStep>) => {
     setSteps((currentSteps) => {
       let changed = false;
 
@@ -254,17 +368,17 @@ export default function JournalForm({ date, onClose, entryToEdit, initialEntry }
 
       return changed ? nextSteps : currentSteps;
     });
-  };
+  }, []);
 
-  const addStep = () => {
+  const addStep = useCallback(() => {
     setSteps((currentSteps) => {
       const nextStep = createCardStep(currentSteps.length + 1);
       pendingScrollStepIdRef.current = nextStep.id;
       return [...currentSteps, { ...nextStep, order: currentSteps.length + 1 }];
     });
-  };
+  }, []);
 
-  const removeStep = (stepId: string) => {
+  const removeStep = useCallback((stepId: string) => {
     setSteps((currentSteps) => {
       const filtered = currentSteps.filter((step) => step.id !== stepId);
       const nextSteps = filtered.length > 0 ? filtered : [createCardStep(1)];
@@ -277,7 +391,30 @@ export default function JournalForm({ date, onClose, entryToEdit, initialEntry }
     if (activeFieldKey === stepId) {
       setActiveFieldKey(null);
     }
-  };
+  }, [activeFieldKey]);
+
+  const setStepTextareaRef = useCallback((stepId: string, element: HTMLTextAreaElement | null) => {
+    textareaRefs.current[stepId] = element;
+  }, []);
+
+  const setStepSectionRef = useCallback((stepId: string, element: HTMLDivElement | null) => {
+    stepSectionRefs.current[stepId] = element;
+  }, []);
+
+  const handleStepTypeChange = useCallback((stepId: string, type: StepType) => {
+    setStepValue(stepId, { type });
+  }, [setStepValue]);
+
+  const handleStepContentChange = useCallback((stepId: string, content: string, element: HTMLTextAreaElement) => {
+    setStepValue(stepId, { content });
+    adjustTextareaHeight(element);
+  }, [adjustTextareaHeight, setStepValue]);
+
+  const handleStepFocus = useCallback((stepId: string, element: HTMLTextAreaElement) => {
+    setActiveFieldKey(stepId);
+    adjustTextareaHeight(element);
+    scrollFieldIntoView(element);
+  }, [adjustTextareaHeight, scrollFieldIntoView]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -414,94 +551,23 @@ export default function JournalForm({ date, onClose, entryToEdit, initialEntry }
               <div className="text-sm font-semibold tracking-[0.08em] text-stone-600">ステップ</div>
 
               <div className="grid gap-4">
-                {steps.map((step, index) => {
-                  const Icon = stepIconMap[step.type];
-
-                  return (
-                    <div
-                      key={step.id}
-                      ref={(element) => {
-                        stepSectionRefs.current[step.id] = element;
-                      }}
-                      className={[
-                        'rounded-3xl border p-4 sm:p-5 space-y-4 transition-colors',
-                        stepSectionClassMap[step.type],
-                      ].join(' ')}
-                    >
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="flex items-center gap-3">
-                          <div
-                            className={[
-                              'flex h-8 w-8 items-center justify-center rounded-full text-xs font-semibold',
-                              stepNumberClassMap[step.type],
-                            ].join(' ')}
-                          >
-                            {index + 1}
-                          </div>
-                          <div className={['flex items-center gap-2 text-sm font-semibold', stepHeaderClassMap[step.type]].join(' ')}>
-                            <Icon className="w-4 h-4" />
-                            <span>{getStepTypeLabel(step.type)}</span>
-                          </div>
-                        </div>
-                        <button
-                          type="button"
-                          onPointerDown={preventPointerFocusChange}
-                          onClick={() => removeStep(step.id)}
-                          className="inline-flex items-center gap-1 rounded-full border border-rose-200 bg-rose-50 px-3 py-1.5 text-xs font-semibold text-rose-700 hover:bg-rose-100 transition-colors"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                          削除
-                        </button>
-                      </div>
-
-                      <div className="flex flex-wrap gap-2">
-                        {stepTypes.map((type) => {
-                          const isSelected = step.type === type;
-                          return (
-                            <button
-                              key={type}
-                              type="button"
-                              onPointerDown={preventPointerFocusChange}
-                              onClick={() => setStepValue(step.id, { type })}
-                              className={[
-                                'rounded-full border px-3.5 py-2 text-sm font-medium transition-all',
-                                isSelected
-                                  ? stepOptionClassMap[type]
-                                  : 'border-stone-200 bg-stone-50 text-stone-700 hover:border-stone-300',
-                              ].join(' ')}
-                            >
-                              {getStepTypeLabel(type)}
-                            </button>
-                          );
-                        })}
-                      </div>
-
-                      <textarea
-                        ref={(element) => {
-                          textareaRefs.current[step.id] = element;
-                        }}
-                        rows={3}
-                        value={step.content}
-                        onChange={(e) => {
-                          setStepValue(step.id, { content: e.target.value });
-                          adjustTextareaHeight(e.target);
-                        }}
-                        onFocus={(e) => {
-                          setActiveFieldKey(step.id);
-                          adjustTextareaHeight(e.currentTarget);
-                          scrollFieldIntoView(e.currentTarget);
-                        }}
-                        onBlur={handleFieldBlur}
-                        placeholder={`${getStepTypeLabel(step.type)}として記録したい内容を書いてください`}
-                        className={[
-                          'w-full rounded-2xl border px-4 py-3.5 text-[15px] leading-6 text-stone-800 placeholder:text-stone-400 outline-none transition-all duration-200 resize-none focus:ring-2 min-h-[96px]',
-                          stepTextareaClassMap[step.type],
-                        ].join(' ')}
-                        style={{ maxHeight: `${maxTextareaHeight}px` }}
-                      />
-                    </div>
-                  );
-                })}
+                {steps.map((step, index) => (
+                  <StepEditor
+                    key={step.id}
+                    step={step}
+                    index={index}
+                    maxTextareaHeight={maxTextareaHeight}
+                    isActive={activeFieldKey === step.id}
+                    setStepRef={setStepTextareaRef}
+                    setStepSectionRef={setStepSectionRef}
+                    onRemove={removeStep}
+                    onTypeChange={handleStepTypeChange}
+                    onContentChange={handleStepContentChange}
+                    onFocus={handleStepFocus}
+                    onBlur={handleFieldBlur}
+                    onPreventPointerFocusChange={preventPointerFocusChange}
+                  />
+                ))}
               </div>
 
               <div className="flex justify-start pt-1">
