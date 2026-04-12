@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { JournalService } from './journalService';
 import { createEmptyJournalSnapshot, type Day } from '../../../src/domain/journal';
+import { createEmptyThinkingDayRecord, createEmptyThinkingWeekRecord } from '../../../src/domain/thinkingReflection';
 import type { JournalDataRepository } from '../repositories/journalRepository';
 
 const dayFixture: Day = {
@@ -50,6 +51,31 @@ const createRepositoryStub = (): JournalDataRepository => ({
   },
   async importSnapshot() {
     return createEmptyJournalSnapshot();
+  },
+  async getThinkingDay() {
+    return createEmptyThinkingDayRecord('2026-03-10');
+  },
+  async getThinkingMonth() {
+    return { monthKey: '2026-03', days: [] };
+  },
+  async getThinkingWeek() {
+    return createEmptyThinkingWeekRecord('2026-03-08', '2026-03-14');
+  },
+  async createThinkingMemoCard() {
+    return createEmptyThinkingDayRecord('2026-03-10');
+  },
+  async deleteThinkingMemoCard() {},
+  async saveThinkingReflection() {
+    return createEmptyThinkingDayRecord('2026-03-10');
+  },
+  async saveThinkingQuestionResponses() {
+    return createEmptyThinkingDayRecord('2026-03-10');
+  },
+  async saveWeeklyReflection() {
+    return createEmptyThinkingWeekRecord('2026-03-08', '2026-03-14');
+  },
+  async saveWeeklyUserNote() {
+    return createEmptyThinkingWeekRecord('2026-03-08', '2026-03-14');
   },
 });
 

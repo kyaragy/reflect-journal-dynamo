@@ -1,4 +1,12 @@
 import type { CreateCardInput, Day, JournalSnapshot } from '../../../src/domain/journal';
+import type {
+  CreateThinkingMemoCardInput,
+  ThinkingWeekRecord,
+  ThinkingReflectionResult,
+  UpsertThinkingQuestionResponseInput,
+  WeeklyReflectionResult,
+  WeeklyUserNote,
+} from '../../../src/domain/thinkingReflection';
 import type { JournalDataRepository } from '../repositories/journalRepository';
 
 export class JournalService {
@@ -57,5 +65,41 @@ export class JournalService {
 
   importSnapshot(userId: string, snapshot: JournalSnapshot) {
     return this.repository.importSnapshot(userId, snapshot);
+  }
+
+  getThinkingDay(userId: string, date: string) {
+    return this.repository.getThinkingDay(userId, date);
+  }
+
+  getThinkingMonth(userId: string, monthKey: string) {
+    return this.repository.getThinkingMonth(userId, monthKey);
+  }
+
+  getThinkingWeek(userId: string, weekStart: string): Promise<ThinkingWeekRecord> {
+    return this.repository.getThinkingWeek(userId, weekStart);
+  }
+
+  createThinkingMemoCard(userId: string, date: string, input: CreateThinkingMemoCardInput) {
+    return this.repository.createThinkingMemoCard(userId, date, input);
+  }
+
+  deleteThinkingMemoCard(userId: string, date: string, memoCardId: string) {
+    return this.repository.deleteThinkingMemoCard(userId, date, memoCardId);
+  }
+
+  saveThinkingReflection(userId: string, date: string, reflection: ThinkingReflectionResult) {
+    return this.repository.saveThinkingReflection(userId, date, reflection);
+  }
+
+  saveThinkingQuestionResponses(userId: string, date: string, questionResponses: UpsertThinkingQuestionResponseInput[]) {
+    return this.repository.saveThinkingQuestionResponses(userId, date, questionResponses);
+  }
+
+  saveWeeklyReflection(userId: string, weekStart: string, reflection: WeeklyReflectionResult) {
+    return this.repository.saveWeeklyReflection(userId, weekStart, reflection);
+  }
+
+  saveWeeklyUserNote(userId: string, weekStart: string, userNote: WeeklyUserNote) {
+    return this.repository.saveWeeklyUserNote(userId, weekStart, userNote);
   }
 }
