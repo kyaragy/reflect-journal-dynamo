@@ -1,6 +1,9 @@
 import type { JournalRepository } from './journalRepository';
 import { apiRepository } from './api/apiRepository';
+import { apiThinkingReflectionRepository } from './api/apiThinkingReflectionRepository';
 import { localStorageRepository } from './localStorageRepository';
+import { localStorageThinkingReflectionRepository } from './localStorageThinkingReflectionRepository';
+import type { ThinkingReflectionRepository } from './thinkingReflectionRepository';
 
 export type RepositoryDriver = 'localStorage' | 'api';
 
@@ -13,6 +16,12 @@ const repositoryMap: Record<RepositoryDriver, JournalRepository> = {
   api: apiRepository,
 };
 
+const thinkingRepositoryMap: Record<RepositoryDriver, ThinkingReflectionRepository> = {
+  localStorage: localStorageThinkingReflectionRepository,
+  api: apiThinkingReflectionRepository,
+};
+
 export const journalRepositoryDriver = resolveRepositoryDriver();
 
 export const journalRepository = repositoryMap[journalRepositoryDriver];
+export const thinkingReflectionRepository = thinkingRepositoryMap[journalRepositoryDriver];

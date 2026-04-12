@@ -13,6 +13,25 @@ import type {
   YearlySummary,
 } from '../../../src/domain/journal';
 import { createCardStep, createEmptyTrigger, hasMeaningfulCardContent, normalizeCard, normalizeDay, normalizeSnapshot } from '../../../src/domain/journal';
+import {
+  createEmptyThinkingDayRecord,
+  createEmptyThinkingWeekRecord,
+  hasMeaningfulThinkingMemoContent,
+  normalizeThinkingDayRecord,
+  normalizeThinkingReflectionResult,
+  normalizeThinkingQuestionResponse,
+  normalizeThinkingWeekRecord,
+  type CreateThinkingMemoCardInput,
+  type ThinkingDayRecord,
+  type ThinkingMonthRecord,
+  type ThinkingWeekRecord,
+  type ThinkingReflectionResult,
+  type ThinkingMemoCard,
+  type ThinkingQuestionResponse,
+  type UpsertThinkingQuestionResponseInput,
+  type WeeklyReflectionResult,
+  type WeeklyUserNote,
+} from '../../../src/domain/thinkingReflection';
 import { DynamoDbClient } from '../db/dynamoDbClient';
 import { notFoundError, validationError } from '../libs/errors';
 import type { JournalDataRepository } from './journalRepository';
@@ -59,13 +78,38 @@ type YearlySummaryItem = {
   updatedAt: string;
 };
 
-type JournalItem = DayItem | WeeklySummaryItem | MonthlySummaryItem | YearlySummaryItem;
+type ThinkingDayItem = {
+  PK: string;
+  SK: string;
+  entityType: 'THINKING_DAY';
+  date: string;
+  memoCards: ThinkingMemoCard[];
+  thinkingReflection: ThinkingReflectionResult | null;
+  questionResponses: ThinkingQuestionResponse[];
+  createdAt: string;
+  updatedAt: string;
+};
+
+type ThinkingWeekItem = {
+  PK: string;
+  SK: string;
+  entityType: 'THINKING_WEEK';
+  weekStart: string;
+  weekEnd: string;
+  reflection: WeeklyReflectionResult | null;
+  userNote: WeeklyUserNote | null;
+  updatedAt: string;
+};
+
+type JournalItem = DayItem | WeeklySummaryItem | MonthlySummaryItem | YearlySummaryItem | ThinkingDayItem | ThinkingWeekItem;
 
 const toUserPk = (userId: string) => `USER#${userId}`;
 const toDaySk = (date: string) => `DAY#${date}`;
 const toWeekSk = (weekKey: string) => `WEEK#${weekKey}`;
 const toMonthSk = (monthKey: string) => `MONTH#${monthKey}`;
 const toYearSk = (yearKey: string) => `YEAR#${yearKey}`;
+const toThinkingDaySk = (date: string) => `THINKING_DAY#${date}`;
+const toThinkingWeekSk = (weekStart: string) => `THINKING_WEEK#${weekStart}`;
 
 const toDayItem = (userId: string, day: Day): DayItem => ({
   PK: toUserPk(userId),
@@ -127,6 +171,47 @@ const createEmptyDay = (date: string, now: string): Day => ({
   createdAt: now,
   updatedAt: now,
 });
+
+const toThinkingDayItem = (userId: string, day: ThinkingDayRecord): ThinkingDayItem => ({
+  PK: toUserPk(userId),
+  SK: toThinkingDaySk(day.date),
+  entityType: 'THINKING_DAY',
+  date: day.date,
+  memoCards: day.memoCards,
+  thinkingReflection: day.thinkingReflection,
+  questionResponses: day.questionResponses,
+  createdAt: day.createdAt,
+  updatedAt: day.updatedAt,
+});
+
+const toThinkingDay = (item: ThinkingDayItem): ThinkingDayRecord =>
+  normalizeThinkingDayRecord({
+    date: item.date,
+    memoCards: item.memoCards ?? [],
+    thinkingReflection: item.thinkingReflection ?? null,
+    questionResponses: item.questionResponses ?? [],
+    createdAt: item.createdAt,
+    updatedAt: item.updatedAt,
+  });
+
+const toThinkingWeekItem = (userId: string, week: ThinkingWeekRecord): ThinkingWeekItem => ({
+  PK: toUserPk(userId),
+  SK: toThinkingWeekSk(week.weekStart),
+  entityType: 'THINKING_WEEK',
+  weekStart: week.weekStart,
+  weekEnd: week.weekEnd,
+  reflection: week.reflection,
+  userNote: week.userNote,
+  updatedAt: week.userNote?.updated_at ?? week.reflection?.importedAt ?? new Date().toISOString(),
+});
+
+const toThinkingWeek = (item: ThinkingWeekItem): ThinkingWeekRecord =>
+  normalizeThinkingWeekRecord({
+    weekStart: item.weekStart,
+    weekEnd: item.weekEnd,
+    reflection: item.reflection,
+    userNote: item.userNote,
+  });
 
 export class DynamoDbJournalRepository implements JournalDataRepository {
   constructor(private readonly client: DynamoDbClient) {}
@@ -377,6 +462,130 @@ export class DynamoDbJournalRepository implements JournalDataRepository {
     } satisfies YearlySummaryItem);
 
     return this.getYear(userId, yearKey);
+  }
+
+  async getThinkingDay(userId: string, date: string) {
+    const item = await this.client.getItem<ThinkingDayItem>({
+      PK: toUserPk(userId),
+      SK: toThinkingDaySk(date),
+    });
+
+    return item ? toThinkingDay(item) : null;
+  }
+
+  async getThinkingMonth(userId: string, monthKey: string): Promise<ThinkingMonthRecord> {
+    const items = await this.client.queryByPrefix<ThinkingDayItem>(toUserPk(userId), `THINKING_DAY#${monthKey}`);
+    return {
+      monthKey,
+      days: items.map(toThinkingDay).sort((left, right) => left.date.localeCompare(right.date)),
+    };
+  }
+
+  async getThinkingWeek(userId: string, weekStart: string): Promise<ThinkingWeekRecord> {
+    const item = await this.client.getItem<ThinkingWeekItem>({
+      PK: toUserPk(userId),
+      SK: toThinkingWeekSk(weekStart),
+    });
+    const weekEnd = format(addDays(parseISO(weekStart), 6), 'yyyy-MM-dd');
+    return item ? toThinkingWeek(item) : createEmptyThinkingWeekRecord(weekStart, weekEnd);
+  }
+
+  async createThinkingMemoCard(userId: string, date: string, input: CreateThinkingMemoCardInput) {
+    if (!hasMeaningfulThinkingMemoContent(input)) {
+      throw validationError('INVALID_REQUEST_BODY', 'Memo card must include both trigger and body');
+    }
+
+    const now = new Date().toISOString();
+    const current = (await this.getThinkingDay(userId, date)) ?? createEmptyThinkingDayRecord(date, now);
+    const nextDay: ThinkingDayRecord = {
+      ...current,
+      memoCards: [
+        ...current.memoCards,
+        {
+          id: crypto.randomUUID(),
+          trigger: input.trigger.trim(),
+          body: input.body.trim(),
+          createdAt: now,
+          updatedAt: now,
+        },
+      ],
+      updatedAt: now,
+    };
+
+    await this.client.putItem(toThinkingDayItem(userId, nextDay));
+    return nextDay;
+  }
+
+  async deleteThinkingMemoCard(userId: string, date: string, memoCardId: string) {
+    const current = await this.getThinkingDay(userId, date);
+    if (!current?.memoCards.some((item) => item.id === memoCardId)) {
+      throw notFoundError('Thinking memo card not found', { date, memoCardId });
+    }
+
+    const nextDay: ThinkingDayRecord = {
+      ...current,
+      memoCards: current.memoCards.filter((item) => item.id !== memoCardId),
+      updatedAt: new Date().toISOString(),
+    };
+
+    await this.client.putItem(toThinkingDayItem(userId, nextDay));
+  }
+
+  async saveThinkingReflection(userId: string, date: string, reflection: ThinkingReflectionResult) {
+    const now = new Date().toISOString();
+    const current = (await this.getThinkingDay(userId, date)) ?? createEmptyThinkingDayRecord(date, now);
+    const nextDay: ThinkingDayRecord = {
+      ...current,
+      thinkingReflection: normalizeThinkingReflectionResult(reflection),
+      updatedAt: now,
+    };
+
+    await this.client.putItem(toThinkingDayItem(userId, nextDay));
+    return nextDay;
+  }
+
+  async saveThinkingQuestionResponses(userId: string, date: string, questionResponses: UpsertThinkingQuestionResponseInput[]) {
+    const now = new Date().toISOString();
+    const current = (await this.getThinkingDay(userId, date)) ?? createEmptyThinkingDayRecord(date, now);
+    const previousByQuestion = new Map(current.questionResponses.map((item) => [item.question, item]));
+    const nextDay: ThinkingDayRecord = {
+      ...current,
+      questionResponses: questionResponses
+        .filter((item) => item.question.trim().length > 0)
+        .map((item) =>
+          normalizeThinkingQuestionResponse({
+            id: previousByQuestion.get(item.question)?.id ?? crypto.randomUUID(),
+            question: item.question,
+            response: item.response,
+            createdAt: previousByQuestion.get(item.question)?.createdAt ?? now,
+            updatedAt: now,
+          })
+        ),
+      updatedAt: now,
+    };
+
+    await this.client.putItem(toThinkingDayItem(userId, nextDay));
+    return nextDay;
+  }
+
+  async saveWeeklyReflection(userId: string, weekStart: string, reflection: WeeklyReflectionResult) {
+    const current = await this.getThinkingWeek(userId, weekStart);
+    const nextWeek: ThinkingWeekRecord = {
+      ...current,
+      reflection,
+    };
+    await this.client.putItem(toThinkingWeekItem(userId, nextWeek));
+    return nextWeek;
+  }
+
+  async saveWeeklyUserNote(userId: string, weekStart: string, userNote: WeeklyUserNote) {
+    const current = await this.getThinkingWeek(userId, weekStart);
+    const nextWeek: ThinkingWeekRecord = {
+      ...current,
+      userNote,
+    };
+    await this.client.putItem(toThinkingWeekItem(userId, nextWeek));
+    return nextWeek;
   }
 
   async importSnapshot(userId: string, snapshot: JournalSnapshot) {

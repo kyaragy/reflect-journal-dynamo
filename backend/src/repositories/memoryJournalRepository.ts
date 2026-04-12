@@ -19,6 +19,24 @@ import {
   type YearlySummary,
   type MonthRecord,
 } from '../../../src/domain/journal';
+import {
+  createEmptyThinkingDayRecord,
+  createEmptyThinkingWeekRecord,
+  hasMeaningfulThinkingMemoContent,
+  normalizeThinkingDayRecord,
+  normalizeThinkingReflectionResult,
+  normalizeThinkingQuestionResponse,
+  normalizeThinkingWeekRecord,
+  replaceThinkingDay,
+  type CreateThinkingMemoCardInput,
+  type ThinkingDayRecord,
+  type ThinkingMonthRecord,
+  type ThinkingWeekRecord,
+  type ThinkingReflectionResult,
+  type UpsertThinkingQuestionResponseInput,
+  type WeeklyReflectionResult,
+  type WeeklyUserNote,
+} from '../../../src/domain/thinkingReflection';
 import { notFoundError } from '../libs/errors';
 import type { JournalDataRepository } from './journalRepository';
 import { validationError } from '../libs/errors';
@@ -67,6 +85,8 @@ const sortSnapshot = (snapshot: JournalSnapshot): JournalSnapshot => ({
 
 export class MemoryJournalRepository implements JournalDataRepository {
   private readonly snapshots = new Map<string, JournalSnapshot>();
+  private readonly thinkingSnapshots = new Map<string, ThinkingDayRecord[]>();
+  private readonly thinkingWeekSnapshots = new Map<string, ThinkingWeekRecord[]>();
 
   private getSnapshot(userId: string) {
     if (!this.snapshots.has(userId)) {
@@ -78,6 +98,36 @@ export class MemoryJournalRepository implements JournalDataRepository {
 
   private setSnapshot(userId: string, snapshot: JournalSnapshot) {
     this.snapshots.set(userId, sortSnapshot(normalizeSnapshot(snapshot)));
+  }
+
+  private getThinkingSnapshot(userId: string) {
+    if (!this.thinkingSnapshots.has(userId)) {
+      this.thinkingSnapshots.set(userId, []);
+    }
+
+    return this.thinkingSnapshots.get(userId)!;
+  }
+
+  private setThinkingSnapshot(userId: string, days: ThinkingDayRecord[]) {
+    this.thinkingSnapshots.set(
+      userId,
+      [...days].map(normalizeThinkingDayRecord).sort((left, right) => left.date.localeCompare(right.date))
+    );
+  }
+
+  private getThinkingWeekSnapshot(userId: string) {
+    if (!this.thinkingWeekSnapshots.has(userId)) {
+      this.thinkingWeekSnapshots.set(userId, []);
+    }
+
+    return this.thinkingWeekSnapshots.get(userId)!;
+  }
+
+  private setThinkingWeekSnapshot(userId: string, weeks: ThinkingWeekRecord[]) {
+    this.thinkingWeekSnapshots.set(
+      userId,
+      [...weeks].map(normalizeThinkingWeekRecord).sort((left, right) => left.weekStart.localeCompare(right.weekStart))
+    );
   }
 
   async getDay(userId: string, date: string) {
@@ -300,5 +350,133 @@ export class MemoryJournalRepository implements JournalDataRepository {
   async importSnapshot(userId: string, snapshot: JournalSnapshot) {
     this.setSnapshot(userId, clone(normalizeSnapshot(snapshot)));
     return clone(this.getSnapshot(userId));
+  }
+
+  async getThinkingDay(userId: string, date: string) {
+    const day = this.getThinkingSnapshot(userId).find((item) => item.date === date) ?? null;
+    return day ? clone(normalizeThinkingDayRecord(day)) : null;
+  }
+
+  async getThinkingMonth(userId: string, monthKey: string): Promise<ThinkingMonthRecord> {
+    return {
+      monthKey,
+      days: clone(this.getThinkingSnapshot(userId).filter((item) => item.date.startsWith(monthKey))),
+    };
+  }
+
+  async getThinkingWeek(userId: string, weekStart: string): Promise<ThinkingWeekRecord> {
+    const weekEnd = format(addDays(parseISO(weekStart), 6), 'yyyy-MM-dd');
+    const week = this.getThinkingWeekSnapshot(userId).find((item) => item.weekStart === weekStart);
+    return week ? clone(week) : createEmptyThinkingWeekRecord(weekStart, weekEnd);
+  }
+
+  async createThinkingMemoCard(userId: string, date: string, input: CreateThinkingMemoCardInput) {
+    if (!hasMeaningfulThinkingMemoContent(input)) {
+      throw validationError('INVALID_REQUEST_BODY', 'Memo card must include both trigger and body');
+    }
+
+    const now = new Date().toISOString();
+    const days = this.getThinkingSnapshot(userId);
+    const current = days.find((item) => item.date === date) ?? createEmptyThinkingDayRecord(date, now);
+    const nextDay: ThinkingDayRecord = {
+      ...current,
+      memoCards: [
+        ...current.memoCards,
+        {
+          id: randomUUID(),
+          trigger: input.trigger.trim(),
+          body: input.body.trim(),
+          createdAt: now,
+          updatedAt: now,
+        },
+      ],
+      updatedAt: now,
+    };
+
+    this.setThinkingSnapshot(userId, replaceThinkingDay(days, nextDay));
+    return clone(nextDay);
+  }
+
+  async deleteThinkingMemoCard(userId: string, date: string, memoCardId: string) {
+    const days = this.getThinkingSnapshot(userId);
+    const current = days.find((item) => item.date === date);
+    if (!current?.memoCards.some((item) => item.id === memoCardId)) {
+      throw notFoundError('Thinking memo card not found', { date, memoCardId });
+    }
+
+    const nextDay: ThinkingDayRecord = {
+      ...current,
+      memoCards: current.memoCards.filter((item) => item.id !== memoCardId),
+      updatedAt: new Date().toISOString(),
+    };
+
+    this.setThinkingSnapshot(userId, replaceThinkingDay(days, nextDay));
+  }
+
+  async saveThinkingReflection(userId: string, date: string, reflection: ThinkingReflectionResult) {
+    const now = new Date().toISOString();
+    const days = this.getThinkingSnapshot(userId);
+    const current = days.find((item) => item.date === date) ?? createEmptyThinkingDayRecord(date, now);
+    const nextDay: ThinkingDayRecord = {
+      ...current,
+      thinkingReflection: normalizeThinkingReflectionResult(reflection),
+      updatedAt: now,
+    };
+
+    this.setThinkingSnapshot(userId, replaceThinkingDay(days, nextDay));
+    return clone(nextDay);
+  }
+
+  async saveThinkingQuestionResponses(userId: string, date: string, questionResponses: UpsertThinkingQuestionResponseInput[]) {
+    const now = new Date().toISOString();
+    const days = this.getThinkingSnapshot(userId);
+    const current = days.find((item) => item.date === date) ?? createEmptyThinkingDayRecord(date, now);
+    const previousByQuestion = new Map(current.questionResponses.map((item) => [item.question, item]));
+    const nextDay: ThinkingDayRecord = {
+      ...current,
+      questionResponses: questionResponses
+        .filter((item) => item.question.trim().length > 0)
+        .map((item) =>
+          normalizeThinkingQuestionResponse({
+            id: previousByQuestion.get(item.question)?.id ?? randomUUID(),
+            question: item.question,
+            response: item.response,
+            createdAt: previousByQuestion.get(item.question)?.createdAt ?? now,
+            updatedAt: now,
+          })
+        ),
+      updatedAt: now,
+    };
+
+    this.setThinkingSnapshot(userId, replaceThinkingDay(days, nextDay));
+    return clone(nextDay);
+  }
+
+  async saveWeeklyReflection(userId: string, weekStart: string, reflection: WeeklyReflectionResult) {
+    const current = await this.getThinkingWeek(userId, weekStart);
+    const weeks = this.getThinkingWeekSnapshot(userId);
+    const nextWeek: ThinkingWeekRecord = {
+      ...current,
+      reflection,
+    };
+    this.setThinkingWeekSnapshot(
+      userId,
+      [...weeks.filter((item) => item.weekStart !== weekStart), nextWeek]
+    );
+    return clone(nextWeek);
+  }
+
+  async saveWeeklyUserNote(userId: string, weekStart: string, userNote: WeeklyUserNote) {
+    const current = await this.getThinkingWeek(userId, weekStart);
+    const weeks = this.getThinkingWeekSnapshot(userId);
+    const nextWeek: ThinkingWeekRecord = {
+      ...current,
+      userNote,
+    };
+    this.setThinkingWeekSnapshot(
+      userId,
+      [...weeks.filter((item) => item.weekStart !== weekStart), nextWeek]
+    );
+    return clone(nextWeek);
   }
 }

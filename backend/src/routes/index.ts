@@ -13,6 +13,13 @@ import {
   type PutWeekSummaryRequest,
   type PutYearSummaryRequest,
 } from '../../../src/contracts/journalApi';
+import type {
+  PostThinkingMemoCardRequest,
+  PutThinkingReflectionRequest,
+  PutThinkingQuestionResponsesRequest,
+  PutWeeklyReflectionRequest,
+  PutWeeklyUserNoteRequest,
+} from '../../../src/contracts/thinkingReflectionApi';
 import { getCurrentUser } from '../auth/getCurrentUser';
 import { methodNotAllowedError, notFoundError, validationError } from '../libs/errors';
 import { noContent, success } from '../libs/response';
@@ -59,6 +66,8 @@ const validateMonthKey = (value: string) => {
     throw validationError('INVALID_MONTH_KEY', 'Invalid monthKey: expected YYYY-MM', { monthKey: value });
   }
 };
+
+const validateThinkingMonthKey = validateMonthKey;
 
 const validateYearKey = (value: string) => {
   try {
@@ -111,6 +120,121 @@ export const routeRequest = async (
   }
 
   const { userId } = getCurrentUser(event);
+
+  const thinkingMemoCardMatch = path.match(/^\/v2\/days\/([^/]+)\/memo-cards\/([^/]+)$/);
+  if (thinkingMemoCardMatch) {
+    const [, date, memoCardId] = thinkingMemoCardMatch;
+    validateDate(date);
+    validateCardId(memoCardId);
+
+    if (method === 'DELETE') {
+      await dependencies.journalService.deleteThinkingMemoCard(userId, date, memoCardId);
+      return success({ deleted: true }, requestId);
+    }
+
+    throw methodNotAllowedError(method, path);
+  }
+
+  const thinkingMemoCardsMatch = path.match(/^\/v2\/days\/([^/]+)\/memo-cards$/);
+  if (thinkingMemoCardsMatch) {
+    const [, date] = thinkingMemoCardsMatch;
+    validateDate(date);
+
+    if (method !== 'POST') {
+      throw methodNotAllowedError(method, path);
+    }
+
+    const payload = parseJsonBody<PostThinkingMemoCardRequest>(event);
+    return success(await dependencies.journalService.createThinkingMemoCard(userId, date, payload), requestId);
+  }
+
+  const thinkingReflectionMatch = path.match(/^\/v2\/days\/([^/]+)\/thinking-reflection$/);
+  if (thinkingReflectionMatch) {
+    const [, date] = thinkingReflectionMatch;
+    validateDate(date);
+
+    if (method !== 'PUT') {
+      throw methodNotAllowedError(method, path);
+    }
+
+    const payload = parseJsonBody<PutThinkingReflectionRequest>(event);
+    return success(await dependencies.journalService.saveThinkingReflection(userId, date, payload.reflection), requestId);
+  }
+
+  const thinkingQuestionResponsesMatch = path.match(/^\/v2\/days\/([^/]+)\/question-responses$/);
+  if (thinkingQuestionResponsesMatch) {
+    const [, date] = thinkingQuestionResponsesMatch;
+    validateDate(date);
+
+    if (method !== 'PUT') {
+      throw methodNotAllowedError(method, path);
+    }
+
+    const payload = parseJsonBody<PutThinkingQuestionResponsesRequest>(event);
+    return success(await dependencies.journalService.saveThinkingQuestionResponses(userId, date, payload.questionResponses), requestId);
+  }
+
+  const thinkingDayMatch = path.match(/^\/v2\/days\/([^/]+)$/);
+  if (thinkingDayMatch) {
+    const [, date] = thinkingDayMatch;
+    validateDate(date);
+
+    if (method !== 'GET') {
+      throw methodNotAllowedError(method, path);
+    }
+
+    return success(await dependencies.journalService.getThinkingDay(userId, date), requestId);
+  }
+
+  const thinkingMonthMatch = path.match(/^\/v2\/months\/([^/]+)$/);
+  if (thinkingMonthMatch) {
+    const [, monthKey] = thinkingMonthMatch;
+    validateThinkingMonthKey(monthKey);
+
+    if (method !== 'GET') {
+      throw methodNotAllowedError(method, path);
+    }
+
+    return success(await dependencies.journalService.getThinkingMonth(userId, monthKey), requestId);
+  }
+
+  const thinkingWeekReflectionMatch = path.match(/^\/v2\/weeks\/([^/]+)\/reflection$/);
+  if (thinkingWeekReflectionMatch) {
+    const [, weekStart] = thinkingWeekReflectionMatch;
+    validateWeekKey(weekStart);
+
+    if (method !== 'PUT') {
+      throw methodNotAllowedError(method, path);
+    }
+
+    const payload = parseJsonBody<PutWeeklyReflectionRequest>(event);
+    return success(await dependencies.journalService.saveWeeklyReflection(userId, weekStart, payload.reflection), requestId);
+  }
+
+  const thinkingWeekUserNoteMatch = path.match(/^\/v2\/weeks\/([^/]+)\/note$/);
+  if (thinkingWeekUserNoteMatch) {
+    const [, weekStart] = thinkingWeekUserNoteMatch;
+    validateWeekKey(weekStart);
+
+    if (method !== 'PUT') {
+      throw methodNotAllowedError(method, path);
+    }
+
+    const payload = parseJsonBody<PutWeeklyUserNoteRequest>(event);
+    return success(await dependencies.journalService.saveWeeklyUserNote(userId, weekStart, payload.userNote), requestId);
+  }
+
+  const thinkingWeekMatch = path.match(/^\/v2\/weeks\/([^/]+)$/);
+  if (thinkingWeekMatch) {
+    const [, weekStart] = thinkingWeekMatch;
+    validateWeekKey(weekStart);
+
+    if (method !== 'GET') {
+      throw methodNotAllowedError(method, path);
+    }
+
+    return success(await dependencies.journalService.getThinkingWeek(userId, weekStart), requestId);
+  }
 
   if (path === '/migration/local-storage-import') {
     if (method !== 'POST') {
