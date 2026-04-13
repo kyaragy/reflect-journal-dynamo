@@ -15,6 +15,7 @@ import {
 } from '../../../src/contracts/journalApi';
 import type {
   PostThinkingMemoCardRequest,
+  PutThinkingMemoCardRequest,
   PutThinkingReflectionRequest,
   PutThinkingQuestionResponsesRequest,
   PutWeeklyReflectionRequest,
@@ -130,6 +131,11 @@ export const routeRequest = async (
     if (method === 'DELETE') {
       await dependencies.journalService.deleteThinkingMemoCard(userId, date, memoCardId);
       return success({ deleted: true }, requestId);
+    }
+
+    if (method === 'PUT') {
+      const payload = parseJsonBody<PutThinkingMemoCardRequest>(event);
+      return success(await dependencies.journalService.updateThinkingMemoCard(userId, date, memoCardId, payload), requestId);
     }
 
     throw methodNotAllowedError(method, path);

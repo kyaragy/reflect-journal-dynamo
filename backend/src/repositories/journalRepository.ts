@@ -13,6 +13,7 @@ import type {
   ThinkingMonthRecord,
   ThinkingWeekRecord,
   ThinkingReflectionResult,
+  UpdateThinkingMemoCardInput,
   UpsertThinkingQuestionResponseInput,
   WeeklyReflectionResult,
   WeeklyUserNote,
@@ -36,6 +37,7 @@ export interface JournalDataRepository {
   getThinkingMonth(userId: string, monthKey: string): Promise<ThinkingMonthRecord>;
   getThinkingWeek(userId: string, weekStart: string): Promise<ThinkingWeekRecord>;
   createThinkingMemoCard(userId: string, date: string, input: CreateThinkingMemoCardInput): Promise<ThinkingDayRecord>;
+  updateThinkingMemoCard(userId: string, date: string, memoCardId: string, input: UpdateThinkingMemoCardInput): Promise<ThinkingDayRecord>;
   deleteThinkingMemoCard(userId: string, date: string, memoCardId: string): Promise<void>;
   saveThinkingReflection(userId: string, date: string, reflection: ThinkingReflectionResult): Promise<ThinkingDayRecord>;
   saveThinkingQuestionResponses(userId: string, date: string, questionResponses: UpsertThinkingQuestionResponseInput[]): Promise<ThinkingDayRecord>;

@@ -99,6 +99,24 @@ test('memory repository stores question responses separately from thinking memo 
   assert.equal(day?.questionResponses[0]?.response, 'まず最悪ケースを置いている');
 });
 
+test('memory repository updates thinking memo cards in place', async () => {
+  const repository = new MemoryJournalRepository();
+
+  const created = await repository.createThinkingMemoCard('user-a', '2026-04-10', {
+    trigger: 'Teamsの通知が来た',
+    body: '急ぎ依頼かと思って身構えた。',
+  });
+
+  const updated = await repository.updateThinkingMemoCard('user-a', '2026-04-10', created.memoCards[0]!.id, {
+    trigger: 'Slackの通知が来た',
+    body: 'まず背景を確認してから反応するようにした。',
+  });
+
+  assert.equal(updated.memoCards.length, 1);
+  assert.equal(updated.memoCards[0]?.trigger, 'Slackの通知が来た');
+  assert.equal(updated.memoCards[0]?.body, 'まず背景を確認してから反応するようにした。');
+});
+
 test('memory repository stores weekly reflection and user note', async () => {
   const repository = new MemoryJournalRepository();
 

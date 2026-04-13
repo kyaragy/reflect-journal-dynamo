@@ -8,6 +8,7 @@ import {
   type ThinkingDayRecord,
   type ThinkingReflectionResult,
   type ThinkingWeekRecord,
+  type UpdateThinkingMemoCardInput,
   type UpsertThinkingQuestionResponseInput,
   type WeeklyReflectionResult,
   type WeeklyUserNote,
@@ -28,6 +29,7 @@ interface ThinkingReflectionState {
   refreshDay: (date: string) => Promise<void>;
   refreshWeek: (weekStart: string) => Promise<void>;
   addMemoCard: (date: string, input: CreateThinkingMemoCardInput) => Promise<void>;
+  updateMemoCard: (date: string, memoCardId: string, input: UpdateThinkingMemoCardInput) => Promise<void>;
   deleteMemoCard: (date: string, memoCardId: string) => Promise<void>;
   saveThinkingReflection: (date: string, reflection: ThinkingReflectionResult) => Promise<void>;
   saveQuestionResponses: (date: string, questionResponses: UpsertThinkingQuestionResponseInput[]) => Promise<void>;
@@ -137,6 +139,15 @@ export const useThinkingReflectionStore = create<ThinkingReflectionState>()((set
   async addMemoCard(date, input) {
     await withSaving(set, async () => {
       const day = await thinkingReflectionRepository.createMemoCard(date, input);
+      set((state) => ({
+        days: replaceThinkingDay(state.days, day),
+      }));
+    });
+  },
+
+  async updateMemoCard(date, memoCardId, input) {
+    await withSaving(set, async () => {
+      const day = await thinkingReflectionRepository.updateMemoCard(date, memoCardId, input);
       set((state) => ({
         days: replaceThinkingDay(state.days, day),
       }));

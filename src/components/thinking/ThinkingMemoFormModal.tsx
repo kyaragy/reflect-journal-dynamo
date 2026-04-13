@@ -5,17 +5,24 @@ type Props = {
   onClose: () => void;
   onSave: (input: { trigger: string; body: string }) => Promise<void>;
   saving: boolean;
+  initialValue?: {
+    trigger: string;
+    body: string;
+  };
+  mode?: 'create' | 'edit';
 };
 
-export default function ThinkingMemoFormModal({ onClose, onSave, saving }: Props) {
-  const [trigger, setTrigger] = useState('');
-  const [body, setBody] = useState('');
+export default function ThinkingMemoFormModal({ onClose, onSave, saving, initialValue, mode = 'create' }: Props) {
+  const [trigger, setTrigger] = useState(initialValue?.trigger ?? '');
+  const [body, setBody] = useState(initialValue?.body ?? '');
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     await onSave({ trigger, body });
-    setTrigger('');
-    setBody('');
+    if (mode === 'create') {
+      setTrigger('');
+      setBody('');
+    }
   };
 
   return (
@@ -23,7 +30,7 @@ export default function ThinkingMemoFormModal({ onClose, onSave, saving }: Props
       <div className="w-full max-w-2xl rounded-3xl border border-stone-200 bg-white p-6 shadow-xl">
         <div className="mb-6 flex items-start justify-between gap-4">
           <div>
-            <h3 className="text-xl font-medium text-stone-900">新版の記録を追加</h3>
+            <h3 className="text-xl font-medium text-stone-900">{mode === 'edit' ? '新版の記録を編集' : '新版の記録を追加'}</h3>
             <p className="mt-1 text-sm text-stone-500">分類は後で行うため、この画面では自由記述だけを保存します。</p>
           </div>
           <button
@@ -73,7 +80,7 @@ export default function ThinkingMemoFormModal({ onClose, onSave, saving }: Props
               disabled={saving || !trigger.trim() || !body.trim()}
               className="rounded-2xl bg-sky-700 px-5 py-3 text-sm font-medium text-white transition-colors hover:bg-sky-600 disabled:opacity-60"
             >
-              {saving ? '保存中...' : '保存する'}
+              {saving ? '保存中...' : mode === 'edit' ? '更新する' : '保存する'}
             </button>
           </div>
         </form>

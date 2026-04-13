@@ -11,6 +11,8 @@ import {
   type GetThinkingWeekResponse,
   type PostThinkingMemoCardRequest,
   type PostThinkingMemoCardResponse,
+  type PutThinkingMemoCardRequest,
+  type PutThinkingMemoCardResponse,
   type PutThinkingReflectionRequest,
   type PutThinkingReflectionResponse,
   type PutThinkingQuestionResponsesRequest,
@@ -24,6 +26,7 @@ import {
   normalizeThinkingDayRecord,
   normalizeThinkingWeekRecord,
   type ThinkingReflectionResult,
+  type UpdateThinkingMemoCardInput,
   type UpsertThinkingQuestionResponseInput,
   type WeeklyReflectionResult,
   type WeeklyUserNote,
@@ -57,6 +60,14 @@ export const apiThinkingReflectionRepository: ThinkingReflectionRepository = {
     assertDateString(date);
     const payload: PostThinkingMemoCardRequest = input;
     const response = await apiClient.post<PostThinkingMemoCardResponse>(thinkingReflectionApiPaths.dayMemoCards(date), payload);
+    return normalizeThinkingDayRecord(response.data);
+  },
+
+  async updateMemoCard(date, memoCardId, input) {
+    assertDateString(date);
+    assertCardId(memoCardId);
+    const payload: PutThinkingMemoCardRequest = input as UpdateThinkingMemoCardInput;
+    const response = await apiClient.put<PutThinkingMemoCardResponse>(thinkingReflectionApiPaths.dayMemoCard(date, memoCardId), payload);
     return normalizeThinkingDayRecord(response.data);
   },
 

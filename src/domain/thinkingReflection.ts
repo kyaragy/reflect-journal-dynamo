@@ -16,6 +16,8 @@ export type CreateThinkingMemoCardInput = {
   body: string;
 };
 
+export type UpdateThinkingMemoCardInput = CreateThinkingMemoCardInput;
+
 export type ThinkingReflectionCard = {
   card_id: string;
   trigger: string;
@@ -251,7 +253,7 @@ export const isWeeklyReflectionResult = (value: unknown): value is WeeklyReflect
   );
 };
 
-export const hasMeaningfulThinkingMemoContent = (value: CreateThinkingMemoCardInput) =>
+export const hasMeaningfulThinkingMemoContent = (value: CreateThinkingMemoCardInput | UpdateThinkingMemoCardInput) =>
   value.trigger.trim().length > 0 && value.body.trim().length > 0;
 
 export const replaceThinkingDay = (days: ThinkingDayRecord[], day: ThinkingDayRecord) =>

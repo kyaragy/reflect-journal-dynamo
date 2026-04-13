@@ -28,6 +28,7 @@ import {
   type ThinkingReflectionResult,
   type ThinkingMemoCard,
   type ThinkingQuestionResponse,
+  type UpdateThinkingMemoCardInput,
   type UpsertThinkingQuestionResponseInput,
   type WeeklyReflectionResult,
   type WeeklyUserNote,
@@ -509,6 +510,36 @@ export class DynamoDbJournalRepository implements JournalDataRepository {
           updatedAt: now,
         },
       ],
+      updatedAt: now,
+    };
+
+    await this.client.putItem(toThinkingDayItem(userId, nextDay));
+    return nextDay;
+  }
+
+  async updateThinkingMemoCard(userId: string, date: string, memoCardId: string, input: UpdateThinkingMemoCardInput) {
+    if (!hasMeaningfulThinkingMemoContent(input)) {
+      throw validationError('INVALID_REQUEST_BODY', 'Memo card must include both trigger and body');
+    }
+
+    const current = await this.getThinkingDay(userId, date);
+    if (!current?.memoCards.some((item) => item.id === memoCardId)) {
+      throw notFoundError('Thinking memo card not found', { date, memoCardId });
+    }
+
+    const now = new Date().toISOString();
+    const nextDay: ThinkingDayRecord = {
+      ...current,
+      memoCards: current.memoCards.map((item) =>
+        item.id === memoCardId
+          ? {
+              ...item,
+              trigger: input.trigger.trim(),
+              body: input.body.trim(),
+              updatedAt: now,
+            }
+          : item
+      ),
       updatedAt: now,
     };
 

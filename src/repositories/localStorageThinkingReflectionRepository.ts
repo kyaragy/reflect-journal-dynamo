@@ -12,6 +12,7 @@ import {
   type ThinkingMonthRecord,
   type ThinkingWeekRecord,
   type ThinkingReflectionResult,
+  type UpdateThinkingMemoCardInput,
   type UpsertThinkingQuestionResponseInput,
   type WeeklyReflectionResult,
   type WeeklyUserNote,
@@ -134,6 +135,36 @@ export const localStorageThinkingReflectionRepository: ThinkingReflectionReposit
           updatedAt: now,
         },
       ],
+      updatedAt: now,
+    };
+
+    return persistDay(snapshot, nextDay);
+  },
+
+  async updateMemoCard(date, memoCardId, input) {
+    if (!hasMeaningfulThinkingMemoContent(input)) {
+      throw new Error('Memo card must include both trigger and body');
+    }
+
+    const snapshot = readSnapshot();
+    const current = getDayRecord(snapshot, date);
+    if (!current?.memoCards.some((card) => card.id === memoCardId)) {
+      throw new Error('Thinking memo card not found');
+    }
+
+    const now = new Date().toISOString();
+    const nextDay: ThinkingDayRecord = {
+      ...current,
+      memoCards: current.memoCards.map((card) =>
+        card.id === memoCardId
+          ? {
+              ...card,
+              trigger: input.trigger.trim(),
+              body: input.body.trim(),
+              updatedAt: now,
+            }
+          : card
+      ),
       updatedAt: now,
     };
 

@@ -4,6 +4,7 @@ import type {
   ThinkingMonthRecord,
   ThinkingWeekRecord,
   ThinkingReflectionResult,
+  UpdateThinkingMemoCardInput,
   UpsertThinkingQuestionResponseInput,
   WeeklyReflectionResult,
   WeeklyUserNote,
@@ -38,6 +39,9 @@ export type PostThinkingMemoCardResponse = {
     requestId?: string;
   };
 };
+
+export type PutThinkingMemoCardRequest = UpdateThinkingMemoCardInput;
+export type PutThinkingMemoCardResponse = PostThinkingMemoCardResponse;
 
 export type PutThinkingReflectionRequest = {
   reflection: ThinkingReflectionResult;

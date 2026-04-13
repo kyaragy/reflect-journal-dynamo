@@ -2,13 +2,14 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { format, parseISO, startOfWeek } from 'date-fns';
 import { ja } from 'date-fns/locale';
-import { ArrowLeft, CalendarRange, MessageCircleQuestion, Plus, Sparkles, Upload } from 'lucide-react';
+import { ArrowLeft, CalendarRange, MessageCircleQuestion, Pencil, Plus, Sparkles, Trash2, Upload } from 'lucide-react';
 import { useThinkingReflectionStore } from '../store/useThinkingReflectionStore';
 import ThinkingMemoFormModal from '../components/thinking/ThinkingMemoFormModal';
 import ThinkingPromptModal from '../components/thinking/ThinkingPromptModal';
 import ThinkingImportModal from '../components/thinking/ThinkingImportModal';
 import ThinkingQuestionResponseModal from '../components/thinking/ThinkingQuestionResponseModal';
 import { generateThinkingReflectionPrompt } from '../lib/thinkingReflectionPrompt';
+import type { ThinkingMemoCard } from '../domain/thinkingReflection';
 
 export default function V2DayPage() {
   const { date } = useParams<{ date: string }>();
@@ -17,11 +18,13 @@ export default function V2DayPage() {
   const [isPromptModalOpen, setIsPromptModalOpen] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [selectedQuestion, setSelectedQuestion] = useState<string | null>(null);
+  const [editingMemoCard, setEditingMemoCard] = useState<ThinkingMemoCard | null>(null);
 
   const days = useThinkingReflectionStore((state) => state.days);
   const saving = useThinkingReflectionStore((state) => state.saving);
   const refreshDay = useThinkingReflectionStore((state) => state.refreshDay);
   const addMemoCard = useThinkingReflectionStore((state) => state.addMemoCard);
+  const updateMemoCard = useThinkingReflectionStore((state) => state.updateMemoCard);
   const deleteMemoCard = useThinkingReflectionStore((state) => state.deleteMemoCard);
   const saveThinkingReflection = useThinkingReflectionStore((state) => state.saveThinkingReflection);
   const saveQuestionResponses = useThinkingReflectionStore((state) => state.saveQuestionResponses);
@@ -159,13 +162,26 @@ export default function V2DayPage() {
                   </p>
                   <h3 className="mt-2 text-lg font-medium text-stone-900">{card.trigger}</h3>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => void deleteMemoCard(date, card.id)}
-                  className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700 transition-colors hover:bg-rose-100"
-                >
-                  削除
-                </button>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setEditingMemoCard(card)}
+                    className="rounded-xl border border-stone-200 bg-white p-2.5 text-stone-600 transition-colors hover:bg-stone-50 hover:text-stone-900"
+                    aria-label="記録を編集"
+                    title="編集"
+                  >
+                    <Pencil className="h-4 w-4" />
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => void deleteMemoCard(date, card.id)}
+                    className="rounded-xl border border-rose-200 bg-rose-50 p-2.5 text-rose-700 transition-colors hover:bg-rose-100"
+                    aria-label="記録を削除"
+                    title="削除"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
               </div>
               <p className="mt-4 whitespace-pre-wrap text-sm leading-7 text-stone-700">{card.body}</p>
             </article>
@@ -184,6 +200,22 @@ export default function V2DayPage() {
           onSave={async (input) => {
             await addMemoCard(date, input);
             setIsMemoModalOpen(false);
+          }}
+        />
+      ) : null}
+
+      {editingMemoCard ? (
+        <ThinkingMemoFormModal
+          mode="edit"
+          initialValue={{
+            trigger: editingMemoCard.trigger,
+            body: editingMemoCard.body,
+          }}
+          saving={saving}
+          onClose={() => setEditingMemoCard(null)}
+          onSave={async (input) => {
+            await updateMemoCard(date, editingMemoCard.id, input);
+            setEditingMemoCard(null);
           }}
         />
       ) : null}

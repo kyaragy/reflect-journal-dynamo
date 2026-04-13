@@ -3,6 +3,7 @@ import type {
   CreateThinkingMemoCardInput,
   ThinkingWeekRecord,
   ThinkingReflectionResult,
+  UpdateThinkingMemoCardInput,
   UpsertThinkingQuestionResponseInput,
   WeeklyReflectionResult,
   WeeklyUserNote,
@@ -81,6 +82,10 @@ export class JournalService {
 
   createThinkingMemoCard(userId: string, date: string, input: CreateThinkingMemoCardInput) {
     return this.repository.createThinkingMemoCard(userId, date, input);
+  }
+
+  updateThinkingMemoCard(userId: string, date: string, memoCardId: string, input: UpdateThinkingMemoCardInput) {
+    return this.repository.updateThinkingMemoCard(userId, date, memoCardId, input);
   }
 
   deleteThinkingMemoCard(userId: string, date: string, memoCardId: string) {
