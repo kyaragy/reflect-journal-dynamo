@@ -54,34 +54,40 @@ export default function V2DayPage() {
 
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <nav className="mb-6 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <button onClick={() => navigate('/v2/calendar')} className="flex items-center text-stone-500 transition-colors hover:text-stone-800">
+      <nav className="mb-6">
+        <button
+          type="button"
+          onClick={() => navigate('/v2/calendar')}
+          className="flex items-center text-stone-500 transition-colors hover:text-stone-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-4"
+        >
           <ArrowLeft className="mr-2 h-4 w-4" />
           新版カレンダーへ戻る
         </button>
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => navigate(`/v2/day/${previousDate}`)}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-stone-200 bg-white px-3 py-2 text-sm font-medium text-stone-600 transition-colors hover:bg-stone-50 hover:text-stone-900"
-          >
-            <ChevronLeft className="h-4 w-4" />
-            前日
-          </button>
-          <button
-            type="button"
-            onClick={() => navigate(`/v2/day/${nextDate}`)}
-            className="inline-flex items-center gap-1.5 rounded-xl border border-stone-200 bg-white px-3 py-2 text-sm font-medium text-stone-600 transition-colors hover:bg-stone-50 hover:text-stone-900"
-          >
-            翌日
-            <ChevronRight className="h-4 w-4" />
-          </button>
-        </div>
       </nav>
 
       <header className="mb-8 flex flex-col gap-4 rounded-3xl border border-stone-200 bg-white p-6 shadow-sm md:flex-row md:items-end md:justify-between">
         <div>
-          <p className="text-xs font-semibold uppercase tracking-[0.24em] text-sky-500">Thinking Reflection</p>
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
+            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-sky-500">Thinking Reflection</p>
+            <div className="inline-flex w-fit overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-xs">
+              <button
+                type="button"
+                onClick={() => navigate(`/v2/day/${previousDate}`)}
+                className="inline-flex h-11 w-24 items-center justify-center gap-1.5 text-sm font-medium text-stone-600 transition-colors hover:bg-stone-50 hover:text-stone-900 focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+              >
+                <ChevronLeft className="h-4 w-4" />
+                前日
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate(`/v2/day/${nextDate}`)}
+                className="inline-flex h-11 w-24 items-center justify-center gap-1.5 border-l border-stone-200 text-sm font-medium text-stone-600 transition-colors hover:bg-stone-50 hover:text-stone-900 focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
+              >
+                翌日
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
           <h2 className="mt-2 font-serif text-3xl text-stone-900">{formattedDate}</h2>
           <p className="mt-2 text-sm text-stone-500">
             {memoCards.length}件の記録
