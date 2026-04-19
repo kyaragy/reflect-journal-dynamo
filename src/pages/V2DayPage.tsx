@@ -71,7 +71,7 @@ export default function V2DayPage() {
             <button
               type="button"
               onClick={() => navigate(`/v2/day/${previousDate}`)}
-              className="order-2 inline-flex h-11 w-24 items-center justify-center justify-self-end gap-1.5 rounded-2xl border border-stone-200 bg-white text-sm font-medium text-stone-600 transition-colors hover:bg-stone-50 hover:text-stone-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 sm:order-1"
+              className="order-2 inline-flex h-11 w-24 items-center justify-center justify-self-end gap-1.5 rounded-2xl border border-stone-300 bg-stone-100 text-sm font-medium text-stone-700 transition-colors hover:bg-stone-200 hover:text-stone-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 sm:order-1"
             >
               <ChevronLeft className="h-4 w-4" />
               前日
@@ -80,7 +80,7 @@ export default function V2DayPage() {
             <button
               type="button"
               onClick={() => navigate(`/v2/day/${nextDate}`)}
-              className="order-3 inline-flex h-11 w-24 items-center justify-center justify-self-start gap-1.5 rounded-2xl border border-stone-200 bg-white text-sm font-medium text-stone-600 transition-colors hover:bg-stone-50 hover:text-stone-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2"
+              className="order-3 inline-flex h-11 w-24 items-center justify-center justify-self-start gap-1.5 rounded-2xl border border-stone-300 bg-stone-100 text-sm font-medium text-stone-700 transition-colors hover:bg-stone-200 hover:text-stone-950 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2"
             >
               翌日
               <ChevronRight className="h-4 w-4" />
@@ -105,7 +105,7 @@ export default function V2DayPage() {
             type="button"
             onClick={() => setIsPromptModalOpen(true)}
             disabled={memoCards.length === 0}
-            className="inline-flex items-center gap-2 rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm font-medium text-stone-700 transition-colors hover:bg-stone-50 disabled:opacity-60"
+            className="inline-flex items-center gap-2 rounded-2xl border border-stone-300 bg-stone-100 px-4 py-3 text-sm font-medium text-stone-700 transition-colors hover:bg-stone-200 disabled:opacity-60"
           >
             <Sparkles className="h-4 w-4" />
             ChatGPT用に出力
@@ -114,7 +114,7 @@ export default function V2DayPage() {
             type="button"
             onClick={() => setIsImportModalOpen(true)}
             disabled={memoCards.length === 0}
-            className="inline-flex items-center gap-2 rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm font-medium text-stone-700 transition-colors hover:bg-stone-50 disabled:opacity-60"
+            className="inline-flex items-center gap-2 rounded-2xl border border-stone-300 bg-stone-100 px-4 py-3 text-sm font-medium text-stone-700 transition-colors hover:bg-stone-200 disabled:opacity-60"
           >
             <Upload className="h-4 w-4" />
             JSONを取り込む
@@ -132,7 +132,7 @@ export default function V2DayPage() {
           <button
             type="button"
             onClick={() => navigate(`/v2/week/${weekStart}/thinking`)}
-            className="inline-flex items-center gap-2 rounded-2xl border border-stone-200 bg-white px-4 py-3 text-sm font-medium text-stone-700 transition-colors hover:bg-stone-50"
+            className="inline-flex items-center gap-2 rounded-2xl border border-stone-300 bg-stone-100 px-4 py-3 text-sm font-medium text-stone-700 transition-colors hover:bg-stone-200"
           >
             <CalendarRange className="h-4 w-4" />
             週次集約を見る
