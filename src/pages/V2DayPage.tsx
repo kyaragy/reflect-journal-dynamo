@@ -65,37 +65,34 @@ export default function V2DayPage() {
         </button>
       </nav>
 
-      <header className="mb-8 flex flex-col gap-4 rounded-3xl border border-stone-200 bg-white p-6 shadow-sm md:flex-row md:items-end md:justify-between">
-        <div>
-          <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
-            <p className="text-xs font-semibold uppercase tracking-[0.24em] text-sky-500">Thinking Reflection</p>
-            <div className="inline-flex w-fit overflow-hidden rounded-2xl border border-stone-200 bg-white shadow-xs">
-              <button
-                type="button"
-                onClick={() => navigate(`/v2/day/${previousDate}`)}
-                className="inline-flex h-11 w-24 items-center justify-center gap-1.5 text-sm font-medium text-stone-600 transition-colors hover:bg-stone-50 hover:text-stone-900 focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
-              >
-                <ChevronLeft className="h-4 w-4" />
-                前日
-              </button>
-              <button
-                type="button"
-                onClick={() => navigate(`/v2/day/${nextDate}`)}
-                className="inline-flex h-11 w-24 items-center justify-center gap-1.5 border-l border-stone-200 text-sm font-medium text-stone-600 transition-colors hover:bg-stone-50 hover:text-stone-900 focus-visible:z-10 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500"
-              >
-                翌日
-                <ChevronRight className="h-4 w-4" />
-              </button>
-            </div>
+      <header className="mb-8 rounded-3xl border border-stone-200 bg-white p-6 shadow-sm">
+        <div className="flex flex-col items-center gap-3">
+          <div className="grid w-full max-w-2xl grid-cols-2 items-center gap-3 sm:grid-cols-[1fr_auto_1fr]">
+            <button
+              type="button"
+              onClick={() => navigate(`/v2/day/${previousDate}`)}
+              className="order-2 inline-flex h-11 w-24 items-center justify-center justify-self-end gap-1.5 rounded-2xl border border-stone-200 bg-white text-sm font-medium text-stone-600 transition-colors hover:bg-stone-50 hover:text-stone-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2 sm:order-1"
+            >
+              <ChevronLeft className="h-4 w-4" />
+              前日
+            </button>
+            <h2 className="order-1 col-span-2 whitespace-nowrap text-center font-serif text-2xl text-stone-900 sm:order-2 sm:col-span-1 sm:text-3xl">{formattedDate}</h2>
+            <button
+              type="button"
+              onClick={() => navigate(`/v2/day/${nextDate}`)}
+              className="order-3 inline-flex h-11 w-24 items-center justify-center justify-self-start gap-1.5 rounded-2xl border border-stone-200 bg-white text-sm font-medium text-stone-600 transition-colors hover:bg-stone-50 hover:text-stone-900 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-sky-500 focus-visible:ring-offset-2"
+            >
+              翌日
+              <ChevronRight className="h-4 w-4" />
+            </button>
           </div>
-          <h2 className="mt-2 font-serif text-3xl text-stone-900">{formattedDate}</h2>
-          <p className="mt-2 text-sm text-stone-500">
+          <p className="text-center text-sm text-stone-500">
             {memoCards.length}件の記録
             {reflection ? ' · 振り返り済み' : ' · 振り返り未実施'}
           </p>
         </div>
 
-        <div className="flex flex-wrap gap-3">
+        <div className="mt-6 flex flex-wrap justify-center gap-3">
           <button
             type="button"
             onClick={() => setIsMemoModalOpen(true)}
