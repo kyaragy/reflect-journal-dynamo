@@ -37,6 +37,7 @@ import {
   createEmptyTodoSnapshot,
   normalizeTodoLabel,
   normalizeTodoTask,
+  pickTodoLabelColorByIndex,
   toDateKey,
   todayKey,
   type CreateTodoLabelInput,
@@ -774,10 +775,12 @@ export class DynamoDbJournalRepository implements JournalDataRepository {
 
   async createTodoLabel(userId: string, input: CreateTodoLabelInput): Promise<TodoLabel> {
     const now = new Date().toISOString();
+    const existingLabels = await this.client.queryByPrefix<TodoLabelItem>(toUserPk(userId), 'TODO_LABEL#');
+    const nextColor = input.color ?? pickTodoLabelColorByIndex(existingLabels.length);
     const label = normalizeTodoLabel({
       id: crypto.randomUUID(),
       name: input.name.trim(),
-      color: input.color ?? null,
+      color: nextColor,
       createdAt: now,
       updatedAt: now,
     });

@@ -2,6 +2,7 @@ import {
   createEmptyTodoSnapshot,
   normalizeTodoLabel,
   normalizeTodoSnapshot,
+  pickTodoLabelColorByIndex,
   toDateKey,
   todayKey,
   type CreateTodoLabelInput,
@@ -143,10 +144,11 @@ export const localStorageTodoRepository: TodoRepository = {
   async createLabel(input: CreateTodoLabelInput) {
     const snapshot = readSnapshot();
     const now = new Date().toISOString();
+    const nextColor = input.color ?? pickTodoLabelColorByIndex(snapshot.labels.length);
     const label: TodoLabel = normalizeTodoLabel({
       id: createId(),
       name: input.name.trim(),
-      color: input.color ?? null,
+      color: nextColor,
       createdAt: now,
       updatedAt: now,
     });

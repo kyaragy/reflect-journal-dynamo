@@ -71,7 +71,28 @@ export const isDueDateOverdue = (dueDate: string | null, baseDate = new Date()) 
 export const isDueToday = (dueDate: string | null, baseDate = new Date()) => dueDate === toDateKey(baseDate);
 
 const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
-const labelColorPalette = ['#fee2e2', '#ffedd5', '#fef3c7', '#dcfce7', '#dbeafe', '#e0e7ff', '#f3e8ff', '#fce7f3'];
+export const TODO_LABEL_COLOR_PALETTE = [
+  '#fee2e2',
+  '#fecaca',
+  '#ffedd5',
+  '#fed7aa',
+  '#fef3c7',
+  '#fde68a',
+  '#ecfccb',
+  '#bef264',
+  '#dcfce7',
+  '#bbf7d0',
+  '#ccfbf1',
+  '#99f6e4',
+  '#cffafe',
+  '#a5f3fc',
+  '#dbeafe',
+  '#bfdbfe',
+  '#e0e7ff',
+  '#c7d2fe',
+  '#ede9fe',
+  '#ddd6fe',
+] as const;
 
 const isDateKey = (value: string | null | undefined): value is string => Boolean(value && DATE_PATTERN.test(value));
 
@@ -87,8 +108,10 @@ const isoToDateKey = (value: string | null | undefined): string | null => {
   return toDateKey(parsed);
 };
 
-export const pickTodoLabelColor = (name: string) =>
-  labelColorPalette[[...name].reduce((hash, char) => hash + char.charCodeAt(0), 0) % labelColorPalette.length];
+export const pickTodoLabelColorByIndex = (index: number) => {
+  const normalizedIndex = Number.isFinite(index) ? Math.abs(Math.trunc(index)) : 0;
+  return TODO_LABEL_COLOR_PALETTE[normalizedIndex % TODO_LABEL_COLOR_PALETTE.length];
+};
 
 export const normalizeTodoTask = (value: TodoTask): TodoTask => ({
   ...value,
@@ -110,7 +133,7 @@ export const normalizeTodoTask = (value: TodoTask): TodoTask => ({
 
 export const normalizeTodoLabel = (value: TodoLabel): TodoLabel => ({
   ...value,
-  color: value.color ?? pickTodoLabelColor(value.name),
+  color: value.color ?? null,
 });
 
 export const normalizeTodoSnapshot = (snapshot: TodoSnapshot): TodoSnapshot => {
@@ -124,8 +147,17 @@ export const normalizeTodoSnapshot = (snapshot: TodoSnapshot): TodoSnapshot => {
       })
     : [];
 
+  const labels = Array.isArray(snapshot.labels) ? snapshot.labels.map(normalizeTodoLabel) : [];
+  const registrationOrder = [...labels]
+    .sort((left, right) => left.createdAt.localeCompare(right.createdAt) || left.id.localeCompare(right.id))
+    .map((label, index) => [label.id, index] as const);
+  const registrationOrderMap = new Map(registrationOrder);
+
   return {
     tasks,
-    labels: Array.isArray(snapshot.labels) ? snapshot.labels.map(normalizeTodoLabel) : [],
+    labels: labels.map((label) => ({
+      ...label,
+      color: pickTodoLabelColorByIndex(registrationOrderMap.get(label.id) ?? 0),
+    })),
   };
 };

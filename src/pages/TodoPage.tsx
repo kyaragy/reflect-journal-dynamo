@@ -19,7 +19,6 @@ import {
   isDueDateOverdue,
   isDueToday,
   isOverdueScheduledDate,
-  pickTodoLabelColor,
   todayKey,
   toDateKey,
   type CreateTodoLabelInput,
@@ -150,7 +149,6 @@ function AddTaskComposer({ mode, saving, labels, defaultScheduledDate, defaultLa
     try {
       const createdLabel = await onCreateLabel({
         name: mentionQueryTrimmed,
-        color: pickTodoLabelColor(mentionQueryTrimmed),
       });
       attachLabelFromMention(createdLabel);
       return createdLabel;
@@ -312,7 +310,6 @@ function AddTaskComposer({ mode, saving, labels, defaultScheduledDate, defaultLa
                   }
                   const created = await onCreateLabel({
                     name,
-                    color: pickTodoLabelColor(name),
                   });
                   setSelectedLabelIds((prev) => (prev.includes(created.id) ? prev : [...prev, created.id]));
                   setNewLabelName('');
@@ -934,7 +931,7 @@ export default function TodoPage() {
     setSelectedTaskId(null);
   };
 
-  const createAndSelectLabel = async (name: string) => createLabel({ name, color: pickTodoLabelColor(name) });
+  const createAndSelectLabel = async (name: string) => createLabel({ name });
 
   const sidebarItemClass = (active: boolean) =>
     [

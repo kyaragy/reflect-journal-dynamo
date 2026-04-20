@@ -43,6 +43,7 @@ import {
   normalizeTodoLabel,
   normalizeTodoSnapshot,
   normalizeTodoTask,
+  pickTodoLabelColorByIndex,
   toDateKey,
   todayKey,
   type CreateTodoLabelInput,
@@ -633,10 +634,11 @@ export class MemoryJournalRepository implements JournalDataRepository {
   async createTodoLabel(userId: string, input: CreateTodoLabelInput) {
     const snapshot = this.getTodoSnapshotState(userId);
     const now = new Date().toISOString();
+    const nextColor = input.color ?? pickTodoLabelColorByIndex(snapshot.labels.length);
     const label: TodoLabel = normalizeTodoLabel({
       id: randomUUID(),
       name: input.name.trim(),
-      color: input.color ?? null,
+      color: nextColor,
       createdAt: now,
       updatedAt: now,
     });
