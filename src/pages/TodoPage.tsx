@@ -335,19 +335,17 @@ function AddTaskComposer({ mode, saving, labels, defaultScheduledDate, defaultLa
               aria-label="実施日"
             />
           </label>
-          {mode === 'modal' ? (
-            <label className="inline-flex h-10 items-center gap-2 rounded-md border border-stone-200 bg-white px-3 text-sm text-stone-600 hover:bg-stone-50">
-              <CalendarDays className="h-4 w-4" />
-              <span>期限</span>
-              <input
-                type="date"
-                value={dueDate ?? ''}
-                onChange={(event) => setDueDate(event.target.value || null)}
-                className="w-32 border-none bg-transparent text-sm outline-none"
-                aria-label="期限"
-              />
-            </label>
-          ) : null}
+          <label className="inline-flex h-10 items-center gap-2 rounded-md border border-stone-200 bg-white px-3 text-sm text-stone-600 hover:bg-stone-50">
+            <CalendarDays className="h-4 w-4" />
+            <span>期限</span>
+            <input
+              type="date"
+              value={dueDate ?? ''}
+              onChange={(event) => setDueDate(event.target.value || null)}
+              className="w-32 border-none bg-transparent text-sm outline-none"
+              aria-label="期限"
+            />
+          </label>
         </div>
       </div>
 
