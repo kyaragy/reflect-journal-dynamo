@@ -388,16 +388,29 @@ type TaskListProps = {
   onSelectTask: (task: TodoTask) => void;
   onToggleTask: (taskId: string) => void;
   onSelectLabel: (labelId: string) => void;
-  onReorder: (sourceTaskId: string, targetTaskId: string) => void;
+  onReorder?: (sourceTaskId: string, targetTaskId: string) => void;
+  completed?: boolean;
+  emptyMessage?: string;
 };
 
-function TaskList({ tasks, labels, selectedTaskId, onSelectTask, onToggleTask, onSelectLabel, onReorder }: TaskListProps) {
+function TaskList({
+  tasks,
+  labels,
+  selectedTaskId,
+  onSelectTask,
+  onToggleTask,
+  onSelectLabel,
+  onReorder,
+  completed = false,
+  emptyMessage = '表示するTODOはありません。',
+}: TaskListProps) {
   const [draggingTaskId, setDraggingTaskId] = useState<string | null>(null);
   const [dragOverTaskId, setDragOverTaskId] = useState<string | null>(null);
   const labelMap = getLabelMap(labels);
+  const canReorder = !completed && Boolean(onReorder);
 
   if (tasks.length === 0) {
-    return <div className="border-y border-stone-100 py-10 text-sm text-stone-400">表示するTODOはありません。</div>;
+    return <div className="border-y border-stone-100 py-6 text-sm text-stone-400">{emptyMessage}</div>;
   }
 
   return (
@@ -408,7 +421,12 @@ function TaskList({ tasks, labels, selectedTaskId, onSelectTask, onToggleTask, o
         const isDragging = task.id === draggingTaskId;
         const isDragOver = task.id === dragOverTaskId;
 
+        const isCompletedTask = completed || task.status === 'completed';
+
         const handleDragStart = (event: DragEvent<HTMLElement>) => {
+          if (!canReorder) {
+            return;
+          }
           event.dataTransfer.effectAllowed = 'move';
           event.dataTransfer.setData('text/plain', task.id);
           // Hide browser's semi-transparent drag ghost; keep the original row as the visual cue.
@@ -426,7 +444,9 @@ function TaskList({ tasks, labels, selectedTaskId, onSelectTask, onToggleTask, o
             setDragOverTaskId(null);
             return;
           }
-          onReorder(sourceTaskId, task.id);
+          if (onReorder) {
+            onReorder(sourceTaskId, task.id);
+          }
           setDraggingTaskId(null);
           setDragOverTaskId(null);
         };
@@ -434,61 +454,92 @@ function TaskList({ tasks, labels, selectedTaskId, onSelectTask, onToggleTask, o
         return (
           <article
             key={task.id}
-            draggable
-            onDragStart={handleDragStart}
-            onDragOver={(event) => {
-              event.preventDefault();
-              event.dataTransfer.dropEffect = 'move';
-              setDragOverTaskId(task.id);
-            }}
-            onDragLeave={() => {
-              if (dragOverTaskId === task.id) {
-                setDragOverTaskId(null);
-              }
-            }}
-            onDrop={handleDrop}
-            onDragEnd={() => {
-              setDraggingTaskId(null);
-              setDragOverTaskId(null);
-            }}
+            draggable={canReorder}
+            onDragStart={canReorder ? handleDragStart : undefined}
+            onDragOver={
+              canReorder
+                ? (event) => {
+                    event.preventDefault();
+                    event.dataTransfer.dropEffect = 'move';
+                    setDragOverTaskId(task.id);
+                  }
+                : undefined
+            }
+            onDragLeave={
+              canReorder
+                ? () => {
+                    if (dragOverTaskId === task.id) {
+                      setDragOverTaskId(null);
+                    }
+                  }
+                : undefined
+            }
+            onDrop={canReorder ? handleDrop : undefined}
+            onDragEnd={
+              canReorder
+                ? () => {
+                    setDraggingTaskId(null);
+                    setDragOverTaskId(null);
+                  }
+                : undefined
+            }
             className={[
-              'relative grid cursor-grab grid-cols-[18px_28px_1fr] gap-3 border-b border-stone-100 py-3 transition-colors hover:bg-stone-50 active:cursor-grabbing',
+              'relative grid grid-cols-[18px_28px_1fr] gap-3 border-b border-stone-100 py-3 transition-colors',
+              canReorder ? 'cursor-grab hover:bg-stone-50 active:cursor-grabbing' : 'bg-stone-100/70 hover:bg-stone-100',
               selectedTaskId === task.id ? 'bg-red-50/50' : '',
               isDragging ? 'bg-white ring-2 ring-red-300 shadow-sm' : '',
             ].join(' ')}
           >
-            {isDragOver ? (
+            {canReorder && isDragOver ? (
               <>
                 <span className="pointer-events-none absolute -top-px left-0 right-0 h-0.5 bg-red-500" />
                 <span className="pointer-events-none absolute -top-[5px] -left-[7px] h-3 w-3 rounded-full border-2 border-red-500 bg-white" />
               </>
             ) : null}
-            <span className="mt-0.5 flex h-5 w-5 items-center justify-center text-stone-300">
+            <span className={['mt-0.5 flex h-5 w-5 items-center justify-center text-stone-300', canReorder ? '' : 'opacity-0'].join(' ')}>
               <GripVertical className="h-4 w-4" />
             </span>
             <button
               type="button"
               onClick={() => onToggleTask(task.id)}
               className="mt-0.5 flex h-5 w-5 items-center justify-center rounded-full border border-stone-300 text-stone-400 transition-colors hover:border-red-500 hover:text-red-500"
-              aria-label="TODOを完了"
-              title="完了"
+              aria-label={isCompletedTask ? 'TODOを未完了に戻す' : 'TODOを完了'}
+              title={isCompletedTask ? '未完了に戻す' : '完了'}
             >
               <Circle className="h-4 w-4" />
             </button>
             <button type="button" onClick={() => onSelectTask(task)} className="min-w-0 text-left">
-              <div className={['text-sm leading-6 text-stone-950', isScheduledOverdue ? 'font-medium text-red-700' : ''].join(' ')}>
+              <div
+                className={[
+                  'text-sm leading-6',
+                  isCompletedTask ? 'text-stone-500 line-through' : 'text-stone-950',
+                  !isCompletedTask && isScheduledOverdue ? 'font-medium text-red-700' : '',
+                ].join(' ')}
+              >
                 {task.title}
               </div>
               {task.description ? (
-                <p className="mt-0.5 line-clamp-2 text-xs leading-5 text-stone-500">{task.description}</p>
+                <p className={['mt-0.5 line-clamp-2 text-xs leading-5', isCompletedTask ? 'text-stone-400' : 'text-stone-500'].join(' ')}>
+                  {task.description}
+                </p>
               ) : null}
-              <div className="mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-stone-500">
-                <span className={['inline-flex items-center gap-1', isScheduledOverdue ? 'text-red-600' : 'text-green-700'].join(' ')}>
+              <div className={['mt-1 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs', isCompletedTask ? 'text-stone-400' : 'text-stone-500'].join(' ')}>
+                <span
+                  className={[
+                    'inline-flex items-center gap-1',
+                    isCompletedTask ? 'text-stone-400' : isScheduledOverdue ? 'text-red-600' : 'text-green-700',
+                  ].join(' ')}
+                >
                   <CalendarDays className="h-3.5 w-3.5" />
                   {formatDateLabel(task.scheduledDate)}
                 </span>
                 {task.dueDate ? (
-                  <span className={['inline-flex items-center gap-1', isDueOverdue ? 'text-red-600' : isDueToday(task.dueDate) ? 'text-green-700' : ''].join(' ')}>
+                  <span
+                    className={[
+                      'inline-flex items-center gap-1',
+                      isCompletedTask ? 'text-stone-400' : isDueOverdue ? 'text-red-600' : isDueToday(task.dueDate) ? 'text-green-700' : '',
+                    ].join(' ')}
+                  >
                     期限 {formatDateLabel(task.dueDate)}
                   </span>
                 ) : null}
@@ -512,7 +563,7 @@ function TaskList({ tasks, labels, selectedTaskId, onSelectTask, onToggleTask, o
                           onSelectLabel(labelId);
                         }
                       }}
-                      className="inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-stone-700 hover:brightness-95"
+                      className={['inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-stone-700 hover:brightness-95', isCompletedTask ? 'opacity-70' : ''].join(' ')}
                       style={{ backgroundColor: label.color ?? '#e7e5e4' }}
                     >
                       <Tag className="h-3.5 w-3.5" />
@@ -800,40 +851,50 @@ export default function TodoPage() {
   }, [upcomingDayKeys, upcomingTasks]);
 
   const visibleTasks = useMemo(() => {
+    const today = todayKey();
     if (view === 'today') {
-      return todayTasks;
+      return tasks.filter((task) => task.scheduledDate <= today);
     }
     if (view === 'upcoming') {
       return upcomingTasks;
     }
     if (view === 'label' && selectedLabelId) {
-      return selectLabelTasks(tasks, selectedLabelId);
+      return tasks.filter((task) => task.labelIds.includes(selectedLabelId));
     }
     if (view === 'calendar') {
-      return openTasks.filter((task) => task.scheduledDate === calendarDate);
+      return tasks.filter((task) => task.scheduledDate === calendarDate);
     }
     if (view === 'search') {
       const normalizedQuery = query.trim().toLowerCase();
       if (!normalizedQuery) {
         return [];
       }
-      return openTasks.filter((task) =>
+      return tasks.filter((task) =>
         `${task.title}\n${task.description}`.toLowerCase().includes(normalizedQuery)
       );
     }
-    return openTasks;
-  }, [calendarDate, openTasks, query, selectedLabelId, tasks, todayTasks, upcomingTasks, view]);
+    return tasks;
+  }, [calendarDate, query, selectedLabelId, tasks, upcomingTasks, view]);
+
+  const visibleOpenTasks = useMemo(() => selectOpenTasks(visibleTasks), [visibleTasks]);
+  const visibleCompletedTasks = useMemo(
+    () =>
+      [...visibleTasks]
+        .filter((task) => task.status === 'completed')
+        .sort((left, right) => (right.completedAt ?? '').localeCompare(left.completedAt ?? '') || right.updatedAt.localeCompare(left.updatedAt)),
+    [visibleTasks]
+  );
 
   const viewTitle = view === 'label' && selectedLabel ? selectedLabel.name : view === 'calendar' ? formatDateLabel(calendarDate) : viewTitles[view];
   const handleReorderTask = useCallback(
     async (sourceTaskId: string, targetTaskId: string) => {
-      const sourceIndex = visibleTasks.findIndex((task) => task.id === sourceTaskId);
-      const targetIndex = visibleTasks.findIndex((task) => task.id === targetTaskId);
+      const sourceIndex = visibleOpenTasks.findIndex((task) => task.id === sourceTaskId);
+      const targetIndex = visibleOpenTasks.findIndex((task) => task.id === targetTaskId);
       if (sourceIndex < 0 || targetIndex < 0 || sourceIndex === targetIndex) {
         return;
       }
 
-      const reorderedVisibleTasks = [...visibleTasks];
+      const reorderedVisibleTasks = [...visibleOpenTasks];
       const [movedTask] = reorderedVisibleTasks.splice(sourceIndex, 1);
       const insertIndex = sourceIndex < targetIndex ? targetIndex - 1 : targetIndex;
       reorderedVisibleTasks.splice(insertIndex, 0, movedTask);
@@ -845,7 +906,7 @@ export default function TodoPage() {
       );
       await reorderOpenTasks(nextOpenTaskIds);
     },
-    [openTasks, reorderOpenTasks, visibleTasks]
+    [openTasks, reorderOpenTasks, visibleOpenTasks]
   );
 
   const getComposerDefaults = () => ({
@@ -1138,20 +1199,47 @@ export default function TodoPage() {
 
           {view !== 'labels' && view !== 'upcoming' ? (
             <>
-              <TaskList
-                tasks={visibleTasks}
-                labels={labels}
-                selectedTaskId={selectedTaskId}
-                onSelectTask={(task) => setSelectedTaskId(task.id)}
-                onToggleTask={(taskId) => void toggleTask(taskId)}
-                onSelectLabel={(labelId) => {
-                  setSelectedLabelId(labelId);
-                  setView('label');
-                }}
-                onReorder={(sourceTaskId, targetTaskId) => {
-                  void handleReorderTask(sourceTaskId, targetTaskId);
-                }}
-              />
+              <section className="mb-6">
+                <div className="mb-2 flex items-center justify-between">
+                  <h3 className="text-sm font-semibold text-stone-700">未完了</h3>
+                  <span className="text-xs text-stone-400">{visibleOpenTasks.length}</span>
+                </div>
+                <TaskList
+                  tasks={visibleOpenTasks}
+                  labels={labels}
+                  selectedTaskId={selectedTaskId}
+                  onSelectTask={(task) => setSelectedTaskId(task.id)}
+                  onToggleTask={(taskId) => void toggleTask(taskId)}
+                  onSelectLabel={(labelId) => {
+                    setSelectedLabelId(labelId);
+                    setView('label');
+                  }}
+                  onReorder={(sourceTaskId, targetTaskId) => {
+                    void handleReorderTask(sourceTaskId, targetTaskId);
+                  }}
+                  emptyMessage="未完了のTODOはありません。"
+                />
+              </section>
+
+              <section className="mb-4">
+                <div className="mb-2 flex items-center justify-between">
+                  <h3 className="text-sm font-semibold text-stone-700">完了</h3>
+                  <span className="text-xs text-stone-400">{visibleCompletedTasks.length}</span>
+                </div>
+                <TaskList
+                  tasks={visibleCompletedTasks}
+                  labels={labels}
+                  selectedTaskId={selectedTaskId}
+                  onSelectTask={(task) => setSelectedTaskId(task.id)}
+                  onToggleTask={(taskId) => void toggleTask(taskId)}
+                  onSelectLabel={(labelId) => {
+                    setSelectedLabelId(labelId);
+                    setView('label');
+                  }}
+                  completed
+                  emptyMessage="完了済みのTODOはありません。"
+                />
+              </section>
               <div className="border-b border-stone-100 py-4">
                 {isInlineComposerOpen ? (
                   <AddTaskComposer
