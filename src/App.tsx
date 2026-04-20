@@ -72,14 +72,10 @@ function AppShell() {
     <Router>
       <div className="min-h-screen bg-stone-50 text-stone-900 font-sans">
         <header className="sticky top-0 z-10 bg-stone-50/80 backdrop-blur-md border-b border-stone-200">
-          <div className="relative max-w-5xl mx-auto px-4 h-14 flex items-center justify-center">
-            <div className="absolute left-4">
-              <AppVersionSwitcher />
-            </div>
-            <h1 className="font-serif text-xl font-medium tracking-wide text-stone-700">Inner Space</h1>
-            <div className="absolute right-4">
-              <AuthStatus />
-            </div>
+          <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-2 px-4 py-2 sm:min-h-14 sm:py-0">
+            <AppVersionSwitcher />
+            <h1 className="hidden font-serif text-xl font-medium tracking-wide text-stone-700 md:block">Inner Space</h1>
+            <AuthStatus />
           </div>
         </header>
         <main className="max-w-5xl mx-auto px-4 py-8">

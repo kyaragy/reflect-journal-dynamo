@@ -9,6 +9,7 @@ import {
   Circle,
   GripVertical,
   Inbox,
+  Menu,
   Plus,
   Search,
   Tag,
@@ -791,6 +792,7 @@ function DetailPanel({ task, labels, saving, onClose, onUpdate, onDelete, onCrea
 
 export default function TodoPage() {
   const [view, setView] = useState<TodoView>('today');
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [selectedLabelId, setSelectedLabelId] = useState<string | null>(null);
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [isInlineComposerOpen, setIsInlineComposerOpen] = useState(false);
@@ -1061,14 +1063,40 @@ export default function TodoPage() {
 
   return (
     <div className="-mx-4 -my-8 min-h-[calc(100vh-3.5rem)] bg-white text-stone-950">
-      <div className="grid min-h-[calc(100vh-3.5rem)] grid-cols-[260px_1fr]">
-        <aside className="border-r border-stone-100 bg-stone-50 px-3 py-5">
+      {isSidebarOpen ? (
+        <button
+          type="button"
+          aria-label="サイドバーを閉じる"
+          onClick={() => setIsSidebarOpen(false)}
+          className="fixed inset-0 z-20 bg-stone-950/35 md:hidden"
+        />
+      ) : null}
+      <div className="relative min-h-[calc(100vh-3.5rem)] md:grid md:grid-cols-[260px_1fr]">
+        <aside
+          className={[
+            'border-r border-stone-100 bg-stone-50 px-3 py-5',
+            'fixed inset-y-0 left-0 z-30 w-[min(85vw,300px)] overflow-y-auto shadow-xl transition-transform md:static md:w-auto md:shadow-none',
+            isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0',
+          ].join(' ')}
+        >
+          <div className="mb-3 flex items-center justify-between px-1 md:hidden">
+            <span className="text-sm font-semibold text-stone-600">メニュー</span>
+            <button
+              type="button"
+              aria-label="サイドバーを閉じる"
+              onClick={() => setIsSidebarOpen(false)}
+              className="rounded-md p-1 text-stone-500 hover:bg-stone-200 hover:text-stone-900"
+            >
+              <X className="h-5 w-5" />
+            </button>
+          </div>
           <button
             type="button"
             onClick={() => {
               setView('today');
               setSelectedLabelId(null);
               openModalComposer(todayKey(), []);
+              setIsSidebarOpen(false);
             }}
             className="mb-3 flex w-full items-center gap-2 rounded-md px-3 py-2 text-left text-sm font-medium text-red-600 hover:bg-red-50"
           >
@@ -1076,27 +1104,55 @@ export default function TodoPage() {
             タスクを追加
           </button>
 
-          <button type="button" onClick={() => setView('search')} className={sidebarItemClass(view === 'search')}>
+          <button
+            type="button"
+            onClick={() => {
+              setView('search');
+              setIsSidebarOpen(false);
+            }}
+            className={sidebarItemClass(view === 'search')}
+          >
             <span className="inline-flex items-center gap-2">
               <Search className="h-4 w-4" />
               検索
             </span>
           </button>
-          <button type="button" onClick={() => setView('today')} className={sidebarItemClass(view === 'today')}>
+          <button
+            type="button"
+            onClick={() => {
+              setView('today');
+              setIsSidebarOpen(false);
+            }}
+            className={sidebarItemClass(view === 'today')}
+          >
             <span className="inline-flex items-center gap-2">
               <Inbox className="h-4 w-4" />
               今日
             </span>
             <span className="text-xs text-stone-400">{todayTasks.length}</span>
           </button>
-          <button type="button" onClick={() => setView('upcoming')} className={sidebarItemClass(view === 'upcoming')}>
+          <button
+            type="button"
+            onClick={() => {
+              setView('upcoming');
+              setIsSidebarOpen(false);
+            }}
+            className={sidebarItemClass(view === 'upcoming')}
+          >
             <span className="inline-flex items-center gap-2">
               <CalendarDays className="h-4 w-4" />
               近日予定
             </span>
             <span className="text-xs text-stone-400">{upcomingTasks.length}</span>
           </button>
-          <button type="button" onClick={() => setView('labels')} className={sidebarItemClass(view === 'labels')}>
+          <button
+            type="button"
+            onClick={() => {
+              setView('labels');
+              setIsSidebarOpen(false);
+            }}
+            className={sidebarItemClass(view === 'labels')}
+          >
             <span className="inline-flex items-center gap-2">
               <Tag className="h-4 w-4" />
               フィルター&ラベル
@@ -1112,6 +1168,7 @@ export default function TodoPage() {
                 onClick={() => {
                   setSelectedLabelId(label.id);
                   setView('label');
+                  setIsSidebarOpen(false);
                 }}
                 className={sidebarItemClass(view === 'label' && selectedLabelId === label.id)}
               >
@@ -1125,11 +1182,29 @@ export default function TodoPage() {
           </div>
         </aside>
 
-        <main className="mx-auto min-w-0 w-full max-w-4xl px-10 py-8">
+        <main className="mx-auto min-w-0 w-full max-w-4xl px-4 py-6 sm:px-6 sm:py-8 lg:px-10">
           {error ? <p className="mb-4 rounded-md bg-red-50 px-4 py-3 text-sm text-red-700">{error}</p> : null}
-          <header className="mb-7">
-            <h2 className="text-2xl font-semibold text-stone-950">{viewTitle}</h2>
-            {loading ? <p className="mt-2 text-sm text-stone-400">読み込み中...</p> : null}
+          <header className="mb-6 flex items-center justify-between gap-3 sm:mb-7">
+            <div className="flex min-w-0 items-center gap-2">
+              <button
+                type="button"
+                aria-label="サイドバーを開く"
+                onClick={() => setIsSidebarOpen(true)}
+                className="inline-flex h-9 w-9 items-center justify-center rounded-md border border-stone-200 text-stone-700 hover:bg-stone-100 md:hidden"
+              >
+                <Menu className="h-5 w-5" />
+              </button>
+              <h2 className="hidden text-2xl font-semibold text-stone-950 md:block">{viewTitle}</h2>
+              {loading ? <p className="text-sm text-stone-400 md:mt-2">読み込み中...</p> : null}
+            </div>
+            <button
+              type="button"
+              onClick={() => openModalComposer(view === 'calendar' ? calendarDate : todayKey(), view === 'label' && selectedLabelId ? [selectedLabelId] : [])}
+              className="inline-flex items-center gap-1 rounded-md bg-red-500 px-3 py-2 text-sm font-medium text-white hover:bg-red-600 md:hidden"
+            >
+              <Plus className="h-4 w-4" />
+              追加
+            </button>
           </header>
 
           {view === 'search' ? (

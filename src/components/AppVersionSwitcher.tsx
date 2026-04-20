@@ -1,14 +1,14 @@
 import { Link, useLocation } from 'react-router-dom';
 
 const baseButtonClass =
-  'whitespace-nowrap rounded-full px-3 py-1.5 text-xs font-medium transition-colors';
+  'whitespace-nowrap rounded-full px-2.5 py-1 text-[11px] font-medium transition-colors sm:px-3 sm:py-1.5 sm:text-xs';
 
 export default function AppVersionSwitcher() {
   const location = useLocation();
   const isTodo = location.pathname.startsWith('/todo');
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex min-w-0 items-center gap-1 sm:gap-2">
       <Link
         to="/todo"
         className={[
