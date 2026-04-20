@@ -15,6 +15,7 @@ import EntryPage from './pages/EntryPage';
 import WeekPage from './pages/WeekPage';
 import MonthPage from './pages/MonthPage';
 import YearPage from './pages/YearPage';
+import TodoPage from './pages/TodoPage';
 import { useJournalStore } from './store/useJournalStore';
 import { useThinkingReflectionStore } from './store/useThinkingReflectionStore';
 import V2CalendarPage from './pages/V2CalendarPage';
@@ -87,6 +88,7 @@ function AppShell() {
           {thinkingError ? <p className="mb-4 rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-700">{thinkingError}</p> : null}
           <Routes>
             <Route path="/" element={<EntryPage />} />
+            <Route path="/todo" element={<TodoPage />} />
             <Route path="/calendar" element={<CalendarPage />} />
             <Route path="/day/:date" element={<DayPage />} />
             <Route path="/week/:weekStart" element={<WeekPage />} />

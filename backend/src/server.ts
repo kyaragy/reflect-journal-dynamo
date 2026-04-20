@@ -31,6 +31,7 @@ const server = createServer(async (req, res) => {
   const event: ApiGatewayHttpEvent = {
     version: '2.0',
     rawPath: url.pathname,
+    rawQueryString: url.searchParams.toString(),
     body,
     isBase64Encoded: false,
     headers: Object.fromEntries(

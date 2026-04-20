@@ -13,6 +13,16 @@ import {
   type PutWeekSummaryRequest,
   type PutYearSummaryRequest,
 } from '../../../src/contracts/journalApi';
+import {
+  assertTodoDate,
+  assertTodoLabelId,
+  assertTodoTaskId,
+  type PostTodoLabelRequest,
+  type PostTodoReorderRequest,
+  type PostTodoTaskRequest,
+  type PutTodoLabelRequest,
+  type PutTodoTaskRequest,
+} from '../../../src/contracts/todoApi';
 import type {
   PostThinkingMemoCardRequest,
   PutThinkingMemoCardRequest,
@@ -86,6 +96,32 @@ const validateCardId = (value: string) => {
   }
 };
 
+const validateTodoDate = (value: string, field: 'from' | 'to') => {
+  try {
+    assertTodoDate(value);
+  } catch {
+    throw validationError('INVALID_DATE', `Invalid ${field}: expected YYYY-MM-DD`, { [field]: value });
+  }
+};
+
+const validateTodoTaskId = (value: string) => {
+  try {
+    assertTodoTaskId(value);
+  } catch {
+    throw validationError('INVALID_REQUEST_BODY', 'Invalid taskId: expected non-empty string', { taskId: value });
+  }
+};
+
+const validateTodoLabelId = (value: string) => {
+  try {
+    assertTodoLabelId(value);
+  } catch {
+    throw validationError('INVALID_REQUEST_BODY', 'Invalid labelId: expected non-empty string', { labelId: value });
+  }
+};
+
+const parseQuery = (event: ApiGatewayHttpEvent) => new URLSearchParams(event.rawQueryString ?? '');
+
 const assertSummaryBody = (value: unknown): string => {
   if (typeof value !== 'string') {
     throw validationError('INVALID_REQUEST_BODY', 'summary must be a string');
@@ -121,6 +157,80 @@ export const routeRequest = async (
   }
 
   const { userId } = getCurrentUser(event);
+
+  if (path === '/todos') {
+    if (method === 'GET') {
+      const query = parseQuery(event);
+      const from = query.get('from');
+      const to = query.get('to');
+      if (!from || !to) {
+        throw validationError('INVALID_REQUEST_BODY', 'from and to query params are required');
+      }
+      validateTodoDate(from, 'from');
+      validateTodoDate(to, 'to');
+      return success(await dependencies.journalService.getTodoSnapshot(userId, from, to), requestId);
+    }
+
+    if (method === 'POST') {
+      const payload = parseJsonBody<PostTodoTaskRequest>(event);
+      return success(await dependencies.journalService.createTodoTask(userId, payload), requestId);
+    }
+
+    throw methodNotAllowedError(method, path);
+  }
+
+  if (path === '/todos/reorder') {
+    if (method !== 'POST') {
+      throw methodNotAllowedError(method, path);
+    }
+    const payload = parseJsonBody<PostTodoReorderRequest>(event);
+    await dependencies.journalService.reorderTodoTasks(userId, payload.taskIds ?? []);
+    return success({ reordered: true }, requestId);
+  }
+
+  const todoTaskMatch = path.match(/^\/todos\/([^/]+)$/);
+  if (todoTaskMatch) {
+    const [, taskId] = todoTaskMatch;
+    validateTodoTaskId(taskId);
+
+    if (method === 'PUT') {
+      const payload = parseJsonBody<PutTodoTaskRequest>(event);
+      return success(await dependencies.journalService.updateTodoTask(userId, taskId, payload), requestId);
+    }
+
+    if (method === 'DELETE') {
+      await dependencies.journalService.deleteTodoTask(userId, taskId);
+      return success({ deleted: true }, requestId);
+    }
+
+    throw methodNotAllowedError(method, path);
+  }
+
+  if (path === '/todo-labels') {
+    if (method !== 'POST') {
+      throw methodNotAllowedError(method, path);
+    }
+    const payload = parseJsonBody<PostTodoLabelRequest>(event);
+    return success(await dependencies.journalService.createTodoLabel(userId, payload), requestId);
+  }
+
+  const todoLabelMatch = path.match(/^\/todo-labels\/([^/]+)$/);
+  if (todoLabelMatch) {
+    const [, labelId] = todoLabelMatch;
+    validateTodoLabelId(labelId);
+
+    if (method === 'PUT') {
+      const payload = parseJsonBody<PutTodoLabelRequest>(event);
+      return success(await dependencies.journalService.updateTodoLabel(userId, labelId, payload), requestId);
+    }
+
+    if (method === 'DELETE') {
+      await dependencies.journalService.deleteTodoLabel(userId, labelId);
+      return success({ deleted: true }, requestId);
+    }
+
+    throw methodNotAllowedError(method, path);
+  }
 
   const thinkingMemoCardMatch = path.match(/^\/v2\/days\/([^/]+)\/memo-cards\/([^/]+)$/);
   if (thinkingMemoCardMatch) {
