@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { JournalService } from './journalService';
 import { createEmptyJournalSnapshot, type Day } from '../../../src/domain/journal';
 import { createEmptyThinkingDayRecord, createEmptyThinkingWeekRecord } from '../../../src/domain/thinkingReflection';
+import { createEmptyTodoSnapshot } from '../../../src/domain/todo';
 import type { JournalDataRepository } from '../repositories/journalRepository';
 
 const dayFixture: Day = {
@@ -80,6 +81,24 @@ const createRepositoryStub = (): JournalDataRepository => ({
   async saveWeeklyUserNote() {
     return createEmptyThinkingWeekRecord('2026-03-08', '2026-03-14');
   },
+  async getTodoSnapshot() {
+    return createEmptyTodoSnapshot();
+  },
+  async createTodoTask() {
+    throw new Error('not implemented');
+  },
+  async updateTodoTask() {
+    return null;
+  },
+  async reorderTodoTasks() {},
+  async deleteTodoTask() {},
+  async createTodoLabel() {
+    throw new Error('not implemented');
+  },
+  async updateTodoLabel() {
+    return null;
+  },
+  async deleteTodoLabel() {},
 });
 
 test('saveDay uses the path date instead of trusting the request payload date', async () => {

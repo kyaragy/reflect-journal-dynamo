@@ -18,6 +18,15 @@ import type {
   WeeklyReflectionResult,
   WeeklyUserNote,
 } from '../../../src/domain/thinkingReflection';
+import type {
+  CreateTodoLabelInput,
+  CreateTodoTaskInput,
+  TodoLabel,
+  TodoSnapshot,
+  TodoTask,
+  UpdateTodoLabelInput,
+  UpdateTodoTaskInput,
+} from '../../../src/domain/todo';
 
 export interface JournalDataRepository {
   getDay(userId: string, date: string): Promise<Day | null>;
@@ -43,4 +52,12 @@ export interface JournalDataRepository {
   saveThinkingQuestionResponses(userId: string, date: string, questionResponses: UpsertThinkingQuestionResponseInput[]): Promise<ThinkingDayRecord>;
   saveWeeklyReflection(userId: string, weekStart: string, reflection: WeeklyReflectionResult): Promise<ThinkingWeekRecord>;
   saveWeeklyUserNote(userId: string, weekStart: string, userNote: WeeklyUserNote): Promise<ThinkingWeekRecord>;
+  getTodoSnapshot(userId: string, from: string, to: string): Promise<TodoSnapshot>;
+  createTodoTask(userId: string, input: CreateTodoTaskInput): Promise<TodoTask>;
+  updateTodoTask(userId: string, taskId: string, input: UpdateTodoTaskInput): Promise<TodoTask | null>;
+  reorderTodoTasks(userId: string, taskIds: string[]): Promise<void>;
+  deleteTodoTask(userId: string, taskId: string): Promise<void>;
+  createTodoLabel(userId: string, input: CreateTodoLabelInput): Promise<TodoLabel>;
+  updateTodoLabel(userId: string, labelId: string, input: UpdateTodoLabelInput): Promise<TodoLabel | null>;
+  deleteTodoLabel(userId: string, labelId: string): Promise<void>;
 }

@@ -8,6 +8,12 @@ import type {
   WeeklyReflectionResult,
   WeeklyUserNote,
 } from '../../../src/domain/thinkingReflection';
+import type {
+  CreateTodoLabelInput,
+  CreateTodoTaskInput,
+  UpdateTodoLabelInput,
+  UpdateTodoTaskInput,
+} from '../../../src/domain/todo';
 import type { JournalDataRepository } from '../repositories/journalRepository';
 
 export class JournalService {
@@ -106,5 +112,37 @@ export class JournalService {
 
   saveWeeklyUserNote(userId: string, weekStart: string, userNote: WeeklyUserNote) {
     return this.repository.saveWeeklyUserNote(userId, weekStart, userNote);
+  }
+
+  getTodoSnapshot(userId: string, from: string, to: string) {
+    return this.repository.getTodoSnapshot(userId, from, to);
+  }
+
+  createTodoTask(userId: string, input: CreateTodoTaskInput) {
+    return this.repository.createTodoTask(userId, input);
+  }
+
+  updateTodoTask(userId: string, taskId: string, input: UpdateTodoTaskInput) {
+    return this.repository.updateTodoTask(userId, taskId, input);
+  }
+
+  reorderTodoTasks(userId: string, taskIds: string[]) {
+    return this.repository.reorderTodoTasks(userId, taskIds);
+  }
+
+  deleteTodoTask(userId: string, taskId: string) {
+    return this.repository.deleteTodoTask(userId, taskId);
+  }
+
+  createTodoLabel(userId: string, input: CreateTodoLabelInput) {
+    return this.repository.createTodoLabel(userId, input);
+  }
+
+  updateTodoLabel(userId: string, labelId: string, input: UpdateTodoLabelInput) {
+    return this.repository.updateTodoLabel(userId, labelId, input);
+  }
+
+  deleteTodoLabel(userId: string, labelId: string) {
+    return this.repository.deleteTodoLabel(userId, labelId);
   }
 }

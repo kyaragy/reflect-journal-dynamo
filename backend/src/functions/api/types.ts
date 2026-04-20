@@ -5,6 +5,7 @@ export type JwtAuthorizer = {
 export type ApiGatewayHttpEvent = {
   version: '2.0';
   rawPath: string;
+  rawQueryString?: string;
   body?: string | null;
   isBase64Encoded?: boolean;
   headers?: Record<string, string | undefined>;

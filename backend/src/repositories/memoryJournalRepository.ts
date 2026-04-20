@@ -38,6 +38,20 @@ import {
   type WeeklyReflectionResult,
   type WeeklyUserNote,
 } from '../../../src/domain/thinkingReflection';
+import {
+  createEmptyTodoSnapshot,
+  normalizeTodoLabel,
+  normalizeTodoSnapshot,
+  normalizeTodoTask,
+  todayKey,
+  type CreateTodoLabelInput,
+  type CreateTodoTaskInput,
+  type TodoLabel,
+  type TodoSnapshot,
+  type TodoTask,
+  type UpdateTodoLabelInput,
+  type UpdateTodoTaskInput,
+} from '../../../src/domain/todo';
 import { notFoundError } from '../libs/errors';
 import type { JournalDataRepository } from './journalRepository';
 import { validationError } from '../libs/errors';
@@ -88,6 +102,7 @@ export class MemoryJournalRepository implements JournalDataRepository {
   private readonly snapshots = new Map<string, JournalSnapshot>();
   private readonly thinkingSnapshots = new Map<string, ThinkingDayRecord[]>();
   private readonly thinkingWeekSnapshots = new Map<string, ThinkingWeekRecord[]>();
+  private readonly todoSnapshots = new Map<string, TodoSnapshot>();
 
   private getSnapshot(userId: string) {
     if (!this.snapshots.has(userId)) {
@@ -129,6 +144,17 @@ export class MemoryJournalRepository implements JournalDataRepository {
       userId,
       [...weeks].map(normalizeThinkingWeekRecord).sort((left, right) => left.weekStart.localeCompare(right.weekStart))
     );
+  }
+
+  private getTodoSnapshotState(userId: string) {
+    if (!this.todoSnapshots.has(userId)) {
+      this.todoSnapshots.set(userId, createEmptyTodoSnapshot());
+    }
+    return this.todoSnapshots.get(userId)!;
+  }
+
+  private setTodoSnapshotState(userId: string, snapshot: TodoSnapshot) {
+    this.todoSnapshots.set(userId, normalizeTodoSnapshot(snapshot));
   }
 
   async getDay(userId: string, date: string) {
@@ -510,5 +536,139 @@ export class MemoryJournalRepository implements JournalDataRepository {
       [...weeks.filter((item) => item.weekStart !== weekStart), nextWeek]
     );
     return clone(nextWeek);
+  }
+
+  async getTodoSnapshot(userId: string, from: string, to: string) {
+    const snapshot = this.getTodoSnapshotState(userId);
+    return clone({
+      labels: [...snapshot.labels].map(normalizeTodoLabel),
+      tasks: snapshot.tasks
+        .map(normalizeTodoTask)
+        .filter((task) => task.scheduledDate >= from && task.scheduledDate <= to)
+        .sort((left, right) => left.sortOrder - right.sortOrder),
+    });
+  }
+
+  async createTodoTask(userId: string, input: CreateTodoTaskInput) {
+    const snapshot = this.getTodoSnapshotState(userId);
+    const now = new Date().toISOString();
+    const task: TodoTask = normalizeTodoTask({
+      id: randomUUID(),
+      title: input.title.trim(),
+      description: input.description ?? '',
+      scheduledDate: input.scheduledDate || todayKey(),
+      dueDate: input.dueDate ?? null,
+      sortOrder: snapshot.tasks.reduce((maxOrder, current) => Math.max(maxOrder, current.sortOrder), -1) + 1,
+      labelIds: input.labelIds ?? [],
+      status: 'open',
+      completedAt: null,
+      createdAt: now,
+      updatedAt: now,
+    });
+    this.setTodoSnapshotState(userId, {
+      ...snapshot,
+      tasks: [...snapshot.tasks, task],
+    });
+    return clone(task);
+  }
+
+  async updateTodoTask(userId: string, taskId: string, input: UpdateTodoTaskInput) {
+    const snapshot = this.getTodoSnapshotState(userId);
+    const current = snapshot.tasks.find((task) => task.id === taskId);
+    if (!current) {
+      return null;
+    }
+    const status = input.status ?? current.status;
+    const updated = normalizeTodoTask({
+      ...current,
+      ...input,
+      title: input.title === undefined ? current.title : input.title.trim(),
+      description: input.description === undefined ? current.description : input.description,
+      dueDate: input.dueDate === undefined ? current.dueDate : input.dueDate,
+      status,
+      completedAt: status === 'completed' ? input.completedAt ?? current.completedAt ?? new Date().toISOString() : null,
+      updatedAt: new Date().toISOString(),
+    });
+    this.setTodoSnapshotState(userId, {
+      ...snapshot,
+      tasks: snapshot.tasks.map((task) => (task.id === taskId ? updated : task)),
+    });
+    return clone(updated);
+  }
+
+  async reorderTodoTasks(userId: string, taskIds: string[]) {
+    const snapshot = this.getTodoSnapshotState(userId);
+    const now = new Date().toISOString();
+    const orderMap = new Map(taskIds.map((taskId, index) => [taskId, index]));
+    this.setTodoSnapshotState(userId, {
+      ...snapshot,
+      tasks: snapshot.tasks.map((task) => {
+        const nextOrder = orderMap.get(task.id);
+        if (nextOrder === undefined) {
+          return task;
+        }
+        return {
+          ...task,
+          sortOrder: nextOrder,
+          updatedAt: now,
+        };
+      }),
+    });
+  }
+
+  async deleteTodoTask(userId: string, taskId: string) {
+    const snapshot = this.getTodoSnapshotState(userId);
+    this.setTodoSnapshotState(userId, {
+      ...snapshot,
+      tasks: snapshot.tasks.filter((task) => task.id !== taskId),
+    });
+  }
+
+  async createTodoLabel(userId: string, input: CreateTodoLabelInput) {
+    const snapshot = this.getTodoSnapshotState(userId);
+    const now = new Date().toISOString();
+    const label: TodoLabel = normalizeTodoLabel({
+      id: randomUUID(),
+      name: input.name.trim(),
+      color: input.color ?? null,
+      createdAt: now,
+      updatedAt: now,
+    });
+    this.setTodoSnapshotState(userId, {
+      ...snapshot,
+      labels: [...snapshot.labels, label],
+    });
+    return clone(label);
+  }
+
+  async updateTodoLabel(userId: string, labelId: string, input: UpdateTodoLabelInput) {
+    const snapshot = this.getTodoSnapshotState(userId);
+    const current = snapshot.labels.find((label) => label.id === labelId);
+    if (!current) {
+      return null;
+    }
+    const updated = normalizeTodoLabel({
+      ...current,
+      ...input,
+      name: input.name === undefined ? current.name : input.name.trim(),
+      color: input.color === undefined ? current.color : input.color,
+      updatedAt: new Date().toISOString(),
+    });
+    this.setTodoSnapshotState(userId, {
+      ...snapshot,
+      labels: snapshot.labels.map((label) => (label.id === labelId ? updated : label)),
+    });
+    return clone(updated);
+  }
+
+  async deleteTodoLabel(userId: string, labelId: string) {
+    const snapshot = this.getTodoSnapshotState(userId);
+    this.setTodoSnapshotState(userId, {
+      labels: snapshot.labels.filter((label) => label.id !== labelId),
+      tasks: snapshot.tasks.map((task) => ({
+        ...task,
+        labelIds: task.labelIds.filter((item) => item !== labelId),
+      })),
+    });
   }
 }

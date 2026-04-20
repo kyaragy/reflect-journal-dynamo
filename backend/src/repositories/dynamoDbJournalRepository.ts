@@ -33,6 +33,19 @@ import {
   type WeeklyReflectionResult,
   type WeeklyUserNote,
 } from '../../../src/domain/thinkingReflection';
+import {
+  createEmptyTodoSnapshot,
+  normalizeTodoLabel,
+  normalizeTodoTask,
+  todayKey,
+  type CreateTodoLabelInput,
+  type CreateTodoTaskInput,
+  type TodoLabel,
+  type TodoSnapshot,
+  type TodoTask,
+  type UpdateTodoLabelInput,
+  type UpdateTodoTaskInput,
+} from '../../../src/domain/todo';
 import { DynamoDbClient } from '../db/dynamoDbClient';
 import { notFoundError, validationError } from '../libs/errors';
 import type { JournalDataRepository } from './journalRepository';
@@ -102,7 +115,31 @@ type ThinkingWeekItem = {
   updatedAt: string;
 };
 
-type JournalItem = DayItem | WeeklySummaryItem | MonthlySummaryItem | YearlySummaryItem | ThinkingDayItem | ThinkingWeekItem;
+type TodoTaskItem = {
+  PK: string;
+  SK: string;
+  entityType: 'TODO_TASK';
+  task: TodoTask;
+  updatedAt: string;
+};
+
+type TodoLabelItem = {
+  PK: string;
+  SK: string;
+  entityType: 'TODO_LABEL';
+  label: TodoLabel;
+  updatedAt: string;
+};
+
+type JournalItem =
+  | DayItem
+  | WeeklySummaryItem
+  | MonthlySummaryItem
+  | YearlySummaryItem
+  | ThinkingDayItem
+  | ThinkingWeekItem
+  | TodoTaskItem
+  | TodoLabelItem;
 
 const toUserPk = (userId: string) => `USER#${userId}`;
 const toDaySk = (date: string) => `DAY#${date}`;
@@ -111,6 +148,8 @@ const toMonthSk = (monthKey: string) => `MONTH#${monthKey}`;
 const toYearSk = (yearKey: string) => `YEAR#${yearKey}`;
 const toThinkingDaySk = (date: string) => `THINKING_DAY#${date}`;
 const toThinkingWeekSk = (weekStart: string) => `THINKING_WEEK#${weekStart}`;
+const toTodoTaskSk = (taskId: string) => `TODO_TASK#${taskId}`;
+const toTodoLabelSk = (labelId: string) => `TODO_LABEL#${labelId}`;
 
 const toDayItem = (userId: string, day: Day): DayItem => ({
   PK: toUserPk(userId),
@@ -213,6 +252,22 @@ const toThinkingWeek = (item: ThinkingWeekItem): ThinkingWeekRecord =>
     reflection: item.reflection,
     userNote: item.userNote,
   });
+
+const toTodoTaskItem = (userId: string, task: TodoTask): TodoTaskItem => ({
+  PK: toUserPk(userId),
+  SK: toTodoTaskSk(task.id),
+  entityType: 'TODO_TASK',
+  task: normalizeTodoTask(task),
+  updatedAt: task.updatedAt,
+});
+
+const toTodoLabelItem = (userId: string, label: TodoLabel): TodoLabelItem => ({
+  PK: toUserPk(userId),
+  SK: toTodoLabelSk(label.id),
+  entityType: 'TODO_LABEL',
+  label: normalizeTodoLabel(label),
+  updatedAt: label.updatedAt,
+});
 
 export class DynamoDbJournalRepository implements JournalDataRepository {
   constructor(private readonly client: DynamoDbClient) {}
@@ -617,6 +672,154 @@ export class DynamoDbJournalRepository implements JournalDataRepository {
     };
     await this.client.putItem(toThinkingWeekItem(userId, nextWeek));
     return nextWeek;
+  }
+
+  async getTodoSnapshot(userId: string, from: string, to: string): Promise<TodoSnapshot> {
+    const pk = toUserPk(userId);
+    const [taskItems, labelItems] = await Promise.all([
+      this.client.queryByPrefix<TodoTaskItem>(pk, 'TODO_TASK#'),
+      this.client.queryByPrefix<TodoLabelItem>(pk, 'TODO_LABEL#'),
+    ]);
+
+    return {
+      ...createEmptyTodoSnapshot(),
+      tasks: taskItems
+        .map((item) => normalizeTodoTask(item.task))
+        .filter((task) => task.scheduledDate >= from && task.scheduledDate <= to)
+        .sort((left, right) => left.sortOrder - right.sortOrder),
+      labels: labelItems.map((item) => normalizeTodoLabel(item.label)).sort((left, right) => left.name.localeCompare(right.name, 'ja')),
+    };
+  }
+
+  async createTodoTask(userId: string, input: CreateTodoTaskInput): Promise<TodoTask> {
+    const now = new Date().toISOString();
+    const existingTasks = await this.client.queryByPrefix<TodoTaskItem>(toUserPk(userId), 'TODO_TASK#');
+    const task = normalizeTodoTask({
+      id: crypto.randomUUID(),
+      title: input.title.trim(),
+      description: input.description ?? '',
+      scheduledDate: input.scheduledDate || todayKey(),
+      dueDate: input.dueDate ?? null,
+      sortOrder: existingTasks.reduce((maxOrder, current) => Math.max(maxOrder, current.task.sortOrder), -1) + 1,
+      labelIds: input.labelIds ?? [],
+      status: 'open',
+      completedAt: null,
+      createdAt: now,
+      updatedAt: now,
+    });
+    await this.client.putItem(toTodoTaskItem(userId, task));
+    return task;
+  }
+
+  async updateTodoTask(userId: string, taskId: string, input: UpdateTodoTaskInput): Promise<TodoTask | null> {
+    const currentItem = await this.client.getItem<TodoTaskItem>({
+      PK: toUserPk(userId),
+      SK: toTodoTaskSk(taskId),
+    });
+    if (!currentItem) {
+      return null;
+    }
+
+    const current = normalizeTodoTask(currentItem.task);
+    const status = input.status ?? current.status;
+    const updated = normalizeTodoTask({
+      ...current,
+      ...input,
+      title: input.title === undefined ? current.title : input.title.trim(),
+      description: input.description === undefined ? current.description : input.description,
+      dueDate: input.dueDate === undefined ? current.dueDate : input.dueDate,
+      status,
+      completedAt: status === 'completed' ? input.completedAt ?? current.completedAt ?? new Date().toISOString() : null,
+      updatedAt: new Date().toISOString(),
+    });
+
+    await this.client.putItem(toTodoTaskItem(userId, updated));
+    return updated;
+  }
+
+  async reorderTodoTasks(userId: string, taskIds: string[]): Promise<void> {
+    const pk = toUserPk(userId);
+    const tasks = await this.client.queryByPrefix<TodoTaskItem>(pk, 'TODO_TASK#');
+    const orderMap = new Map(taskIds.map((taskId, index) => [taskId, index]));
+    const now = new Date().toISOString();
+
+    await Promise.all(
+      tasks.map(async (item) => {
+        const nextOrder = orderMap.get(item.task.id);
+        if (nextOrder === undefined) {
+          return;
+        }
+        const nextTask = normalizeTodoTask({
+          ...item.task,
+          sortOrder: nextOrder,
+          updatedAt: now,
+        });
+        await this.client.putItem(toTodoTaskItem(userId, nextTask));
+      })
+    );
+  }
+
+  async deleteTodoTask(userId: string, taskId: string): Promise<void> {
+    await this.client.deleteItem({
+      PK: toUserPk(userId),
+      SK: toTodoTaskSk(taskId),
+    });
+  }
+
+  async createTodoLabel(userId: string, input: CreateTodoLabelInput): Promise<TodoLabel> {
+    const now = new Date().toISOString();
+    const label = normalizeTodoLabel({
+      id: crypto.randomUUID(),
+      name: input.name.trim(),
+      color: input.color ?? null,
+      createdAt: now,
+      updatedAt: now,
+    });
+    await this.client.putItem(toTodoLabelItem(userId, label));
+    return label;
+  }
+
+  async updateTodoLabel(userId: string, labelId: string, input: UpdateTodoLabelInput): Promise<TodoLabel | null> {
+    const currentItem = await this.client.getItem<TodoLabelItem>({
+      PK: toUserPk(userId),
+      SK: toTodoLabelSk(labelId),
+    });
+    if (!currentItem) {
+      return null;
+    }
+    const current = normalizeTodoLabel(currentItem.label);
+    const updated = normalizeTodoLabel({
+      ...current,
+      ...input,
+      name: input.name === undefined ? current.name : input.name.trim(),
+      color: input.color === undefined ? current.color : input.color,
+      updatedAt: new Date().toISOString(),
+    });
+    await this.client.putItem(toTodoLabelItem(userId, updated));
+    return updated;
+  }
+
+  async deleteTodoLabel(userId: string, labelId: string): Promise<void> {
+    const pk = toUserPk(userId);
+    await this.client.deleteItem({
+      PK: pk,
+      SK: toTodoLabelSk(labelId),
+    });
+
+    const tasks = await this.client.queryByPrefix<TodoTaskItem>(pk, 'TODO_TASK#');
+    await Promise.all(
+      tasks.map(async (item) => {
+        if (!item.task.labelIds.includes(labelId)) {
+          return;
+        }
+        const nextTask = normalizeTodoTask({
+          ...item.task,
+          labelIds: item.task.labelIds.filter((currentLabelId) => currentLabelId !== labelId),
+          updatedAt: new Date().toISOString(),
+        });
+        await this.client.putItem(toTodoTaskItem(userId, nextTask));
+      })
+    );
   }
 
   async importSnapshot(userId: string, snapshot: JournalSnapshot) {
