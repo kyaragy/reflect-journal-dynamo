@@ -19,6 +19,7 @@ import {
   isDueDateOverdue,
   isDueToday,
   isOverdueScheduledDate,
+  pickTodoLabelColor,
   todayKey,
   toDateKey,
   type CreateTodoLabelInput,
@@ -67,11 +68,6 @@ const formatUpcomingSectionLabel = (dateKey: string) => {
 };
 
 const getLabelMap = (labels: TodoLabel[]) => new Map(labels.map((label) => [label.id, label]));
-const labelColorPalette = ['#fee2e2', '#ffedd5', '#fef3c7', '#dcfce7', '#dbeafe', '#e0e7ff', '#f3e8ff', '#fce7f3'];
-const pickLabelColor = (name: string) =>
-  labelColorPalette[
-    [...name].reduce((hash, char) => hash + char.charCodeAt(0), 0) % labelColorPalette.length
-  ];
 const areStringArraysEqual = (left: string[], right: string[]) =>
   left.length === right.length && left.every((value, index) => value === right[index]);
 
@@ -87,6 +83,7 @@ type AddTaskComposerProps = {
     title: string;
     description: string;
     scheduledDate: string;
+    dueDate: string | null;
     labelIds: string[];
   }) => Promise<void>;
 };
@@ -95,7 +92,9 @@ function AddTaskComposer({ mode, saving, labels, defaultScheduledDate, defaultLa
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
   const [scheduledDate, setScheduledDate] = useState(defaultScheduledDate);
+  const [dueDate, setDueDate] = useState<string | null>(null);
   const [selectedLabelIds, setSelectedLabelIds] = useState<string[]>(defaultLabelIds);
+  const [newLabelName, setNewLabelName] = useState('');
   const [creatingMentionLabel, setCreatingMentionLabel] = useState(false);
   const titleInputRef = useRef<HTMLInputElement | null>(null);
   const mentionMatch = title.match(/(?:^| )@([^\s@]*)$/);
@@ -151,7 +150,7 @@ function AddTaskComposer({ mode, saving, labels, defaultScheduledDate, defaultLa
     try {
       const createdLabel = await onCreateLabel({
         name: mentionQueryTrimmed,
-        color: pickLabelColor(mentionQueryTrimmed),
+        color: pickTodoLabelColor(mentionQueryTrimmed),
       });
       attachLabelFromMention(createdLabel);
       return createdLabel;
@@ -171,11 +170,14 @@ function AddTaskComposer({ mode, saving, labels, defaultScheduledDate, defaultLa
       title: trimmedTitle,
       description: description.trim(),
       scheduledDate: scheduledDate || todayKey(),
+      dueDate,
       labelIds: selectedLabelIds,
     });
     setTitle('');
     setDescription('');
     setScheduledDate(defaultScheduledDate);
+    setDueDate(null);
+    setNewLabelName('');
     setSelectedLabelIds(defaultLabelIds);
   };
 
@@ -272,6 +274,56 @@ function AddTaskComposer({ mode, saving, labels, defaultScheduledDate, defaultLa
             })}
           </div>
         ) : null}
+        {mode === 'inline' ? (
+          <div className="mt-3">
+            <select
+              value=""
+              onChange={(event) => {
+                const labelId = event.target.value;
+                if (!labelId) {
+                  return;
+                }
+                setSelectedLabelIds((prev) => (prev.includes(labelId) ? prev : [...prev, labelId]));
+              }}
+              className="mb-2 w-full rounded-md border border-stone-200 bg-white px-3 py-2 text-sm text-stone-800 outline-none focus:border-red-300 focus:ring-2 focus:ring-red-100"
+            >
+              <option value="">ラベルを追加</option>
+              {labels
+                .filter((label) => !selectedLabelIds.includes(label.id))
+                .map((label) => (
+                  <option key={label.id} value={label.id}>
+                    {label.name}
+                  </option>
+                ))}
+            </select>
+            <div className="flex gap-2">
+              <input
+                value={newLabelName}
+                onChange={(event) => setNewLabelName(event.target.value)}
+                placeholder="新しいラベル"
+                className="min-w-0 flex-1 rounded-md border border-stone-200 bg-white px-3 py-2 text-sm outline-none focus:border-red-300 focus:ring-2 focus:ring-red-100"
+              />
+              <button
+                type="button"
+                onClick={async () => {
+                  const name = newLabelName.trim();
+                  if (!name) {
+                    return;
+                  }
+                  const created = await onCreateLabel({
+                    name,
+                    color: pickTodoLabelColor(name),
+                  });
+                  setSelectedLabelIds((prev) => (prev.includes(created.id) ? prev : [...prev, created.id]));
+                  setNewLabelName('');
+                }}
+                className="rounded-md bg-stone-800 px-3 py-2 text-sm text-white hover:bg-stone-700"
+              >
+                追加
+              </button>
+            </div>
+          </div>
+        ) : null}
         <div className="mt-3 flex flex-wrap gap-2">
           <label className="inline-flex h-10 items-center gap-2 rounded-md border border-stone-200 bg-white px-3 text-sm text-stone-600 hover:bg-stone-50">
             <CalendarDays className="h-4 w-4" />
@@ -283,6 +335,19 @@ function AddTaskComposer({ mode, saving, labels, defaultScheduledDate, defaultLa
               aria-label="実施日"
             />
           </label>
+          {mode === 'modal' ? (
+            <label className="inline-flex h-10 items-center gap-2 rounded-md border border-stone-200 bg-white px-3 text-sm text-stone-600 hover:bg-stone-50">
+              <CalendarDays className="h-4 w-4" />
+              <span>期限</span>
+              <input
+                type="date"
+                value={dueDate ?? ''}
+                onChange={(event) => setDueDate(event.target.value || null)}
+                className="w-32 border-none bg-transparent text-sm outline-none"
+                aria-label="期限"
+              />
+            </label>
+          ) : null}
         </div>
       </div>
 
@@ -803,13 +868,14 @@ export default function TodoPage() {
     title: string;
     description: string;
     scheduledDate: string;
+    dueDate: string | null;
     labelIds: string[];
   }) => {
     await createTask(input);
     setSelectedTaskId(null);
   };
 
-  const createAndSelectLabel = async (name: string) => createLabel({ name, color: pickLabelColor(name) });
+  const createAndSelectLabel = async (name: string) => createLabel({ name, color: pickTodoLabelColor(name) });
 
   const sidebarItemClass = (active: boolean) =>
     [

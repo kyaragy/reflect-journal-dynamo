@@ -37,6 +37,7 @@ import {
   createEmptyTodoSnapshot,
   normalizeTodoLabel,
   normalizeTodoTask,
+  toDateKey,
   todayKey,
   type CreateTodoLabelInput,
   type CreateTodoTaskInput,
@@ -692,17 +693,20 @@ export class DynamoDbJournalRepository implements JournalDataRepository {
   }
 
   async createTodoTask(userId: string, input: CreateTodoTaskInput): Promise<TodoTask> {
-    const now = new Date().toISOString();
+    const nowDate = new Date();
+    const now = nowDate.toISOString();
     const existingTasks = await this.client.queryByPrefix<TodoTaskItem>(toUserPk(userId), 'TODO_TASK#');
     const task = normalizeTodoTask({
       id: crypto.randomUUID(),
       title: input.title.trim(),
       description: input.description ?? '',
+      registeredDate: toDateKey(nowDate),
       scheduledDate: input.scheduledDate || todayKey(),
       dueDate: input.dueDate ?? null,
       sortOrder: existingTasks.reduce((maxOrder, current) => Math.max(maxOrder, current.task.sortOrder), -1) + 1,
       labelIds: input.labelIds ?? [],
       status: 'open',
+      completedDate: null,
       completedAt: null,
       createdAt: now,
       updatedAt: now,
@@ -722,6 +726,7 @@ export class DynamoDbJournalRepository implements JournalDataRepository {
 
     const current = normalizeTodoTask(currentItem.task);
     const status = input.status ?? current.status;
+    const completedAt = status === 'completed' ? input.completedAt ?? current.completedAt ?? new Date().toISOString() : null;
     const updated = normalizeTodoTask({
       ...current,
       ...input,
@@ -729,7 +734,8 @@ export class DynamoDbJournalRepository implements JournalDataRepository {
       description: input.description === undefined ? current.description : input.description,
       dueDate: input.dueDate === undefined ? current.dueDate : input.dueDate,
       status,
-      completedAt: status === 'completed' ? input.completedAt ?? current.completedAt ?? new Date().toISOString() : null,
+      completedDate: completedAt ? toDateKey(new Date(completedAt)) : null,
+      completedAt,
       updatedAt: new Date().toISOString(),
     });
 

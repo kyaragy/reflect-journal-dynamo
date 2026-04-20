@@ -1,6 +1,8 @@
 import {
   createEmptyTodoSnapshot,
+  normalizeTodoLabel,
   normalizeTodoSnapshot,
+  toDateKey,
   todayKey,
   type CreateTodoLabelInput,
   type CreateTodoTaskInput,
@@ -52,17 +54,20 @@ export const localStorageTodoRepository: TodoRepository = {
 
   async createTask(input: CreateTodoTaskInput) {
     const snapshot = readSnapshot();
-    const now = new Date().toISOString();
+    const nowDate = new Date();
+    const now = nowDate.toISOString();
     const nextSortOrder = snapshot.tasks.reduce((maxSortOrder, task) => Math.max(maxSortOrder, task.sortOrder), -1) + 1;
     const task: TodoTask = {
       id: createId(),
       title: input.title.trim(),
       description: input.description ?? '',
+      registeredDate: toDateKey(nowDate),
       scheduledDate: input.scheduledDate || todayKey(),
       dueDate: input.dueDate ?? null,
       sortOrder: nextSortOrder,
       labelIds: input.labelIds ?? [],
       status: 'open',
+      completedDate: null,
       completedAt: null,
       createdAt: now,
       updatedAt: now,
@@ -84,16 +89,15 @@ export const localStorageTodoRepository: TodoRepository = {
     }
 
     const status = input.status ?? current.status;
+    const completedAt = status === 'completed' ? input.completedAt ?? current.completedAt ?? new Date().toISOString() : null;
     const updated: TodoTask = {
       ...current,
       ...input,
       title: input.title !== undefined ? input.title.trim() : current.title,
       description: input.description ?? current.description,
       dueDate: input.dueDate === undefined ? current.dueDate : input.dueDate,
-      completedAt:
-        status === 'completed'
-          ? input.completedAt ?? current.completedAt ?? new Date().toISOString()
-          : null,
+      completedDate: completedAt ? toDateKey(new Date(completedAt)) : null,
+      completedAt,
       status,
       updatedAt: new Date().toISOString(),
     };
@@ -139,13 +143,13 @@ export const localStorageTodoRepository: TodoRepository = {
   async createLabel(input: CreateTodoLabelInput) {
     const snapshot = readSnapshot();
     const now = new Date().toISOString();
-    const label: TodoLabel = {
+    const label: TodoLabel = normalizeTodoLabel({
       id: createId(),
       name: input.name.trim(),
       color: input.color ?? null,
       createdAt: now,
       updatedAt: now,
-    };
+    });
 
     const nextSnapshot = sortSnapshot({
       ...snapshot,
@@ -162,13 +166,13 @@ export const localStorageTodoRepository: TodoRepository = {
       return null;
     }
 
-    const updated: TodoLabel = {
+    const updated: TodoLabel = normalizeTodoLabel({
       ...current,
       ...input,
       name: input.name !== undefined ? input.name.trim() : current.name,
       color: input.color === undefined ? current.color : input.color,
       updatedAt: new Date().toISOString(),
-    };
+    });
 
     const nextSnapshot = sortSnapshot({
       ...snapshot,
