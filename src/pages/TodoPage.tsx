@@ -39,7 +39,7 @@ import {
 const viewTitles: Record<TodoView, string> = {
   today: '今日',
   upcoming: '近日予定',
-  labels: 'フィルター&ラベル',
+  labels: 'ラベル',
   label: 'ラベル',
   calendar: 'カレンダー',
   search: '検索',
@@ -804,6 +804,8 @@ export default function TodoPage() {
   const [query, setQuery] = useState('');
   const [calendarMonth, setCalendarMonth] = useState(startOfMonth(new Date()));
   const [calendarDate, setCalendarDate] = useState(todayKey());
+  const [labelDeleteTarget, setLabelDeleteTarget] = useState<TodoLabel | null>(null);
+  const [deletingLabelId, setDeletingLabelId] = useState<string | null>(null);
 
   const tasks = useTodoStore((state) => state.tasks);
   const labels = useTodoStore((state) => state.labels);
@@ -817,6 +819,7 @@ export default function TodoPage() {
   const deleteTask = useTodoStore((state) => state.deleteTask);
   const toggleTask = useTodoStore((state) => state.toggleTask);
   const createLabel = useTodoStore((state) => state.createLabel);
+  const deleteLabel = useTodoStore((state) => state.deleteLabel);
 
   useEffect(() => {
     void initialize();
@@ -934,6 +937,25 @@ export default function TodoPage() {
   };
 
   const createAndSelectLabel = async (name: string) => createLabel({ name });
+
+  const handleDeleteLabel = async () => {
+    if (!labelDeleteTarget) {
+      return;
+    }
+    setDeletingLabelId(labelDeleteTarget.id);
+    try {
+      await deleteLabel(labelDeleteTarget.id);
+      if (selectedLabelId === labelDeleteTarget.id) {
+        setSelectedLabelId(null);
+        if (view === 'label') {
+          setView('labels');
+        }
+      }
+      setLabelDeleteTarget(null);
+    } finally {
+      setDeletingLabelId(null);
+    }
+  };
 
   const sidebarItemClass = (active: boolean) =>
     [
@@ -1155,7 +1177,7 @@ export default function TodoPage() {
           >
             <span className="inline-flex items-center gap-2">
               <Tag className="h-4 w-4" />
-              フィルター&ラベル
+              ラベル
             </span>
           </button>
 
@@ -1246,21 +1268,30 @@ export default function TodoPage() {
               </form>
               <div className="divide-y divide-stone-100 border-y border-stone-100">
                 {labels.map((label) => (
-                  <button
-                    key={label.id}
-                    type="button"
-                    onClick={() => {
-                      setSelectedLabelId(label.id);
-                      setView('label');
-                    }}
-                    className="flex w-full items-center justify-between py-3 text-left text-sm hover:bg-stone-50"
-                  >
-                    <span className="inline-flex items-center gap-2">
-                      <Tag className="h-4 w-4 text-stone-400" />
-                      {label.name}
-                    </span>
-                    <span className="text-xs text-stone-400">{selectLabelTasks(tasks, label.id).length}件</span>
-                  </button>
+                  <div key={label.id} className="flex items-center gap-2 py-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedLabelId(label.id);
+                        setView('label');
+                      }}
+                      className="flex min-w-0 flex-1 items-center justify-between rounded-md px-2 py-2 text-left text-sm hover:bg-stone-50"
+                    >
+                      <span className="inline-flex min-w-0 items-center gap-2">
+                        <Tag className="h-4 w-4 shrink-0 text-stone-400" />
+                        <span className="truncate">{label.name}</span>
+                      </span>
+                      <span className="shrink-0 text-xs text-stone-400">{selectLabelTasks(tasks, label.id).length}件</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setLabelDeleteTarget(label)}
+                      aria-label={`${label.name} を削除`}
+                      className="inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-stone-200 text-stone-500 hover:bg-red-50 hover:text-red-700"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
                 ))}
               </div>
             </section>
@@ -1376,6 +1407,35 @@ export default function TodoPage() {
           }}
           onCreateLabel={createAndSelectLabel}
         />
+      ) : null}
+
+      {labelDeleteTarget ? (
+        <div className="fixed inset-0 z-40 flex items-center justify-center bg-stone-950/35 px-4">
+          <div className="w-full max-w-md rounded-xl border border-stone-200 bg-white p-5 shadow-xl">
+            <h3 className="text-base font-semibold text-stone-900">ラベルを削除しますか？</h3>
+            <p className="mt-2 text-sm text-stone-600">
+              「{labelDeleteTarget.name}」を削除すると、このラベルはタスクからも外れます。
+            </p>
+            <div className="mt-5 flex justify-end gap-2">
+              <button
+                type="button"
+                onClick={() => setLabelDeleteTarget(null)}
+                disabled={deletingLabelId === labelDeleteTarget.id}
+                className="rounded-md bg-stone-100 px-4 py-2 text-sm font-medium text-stone-700 hover:bg-stone-200 disabled:opacity-60"
+              >
+                キャンセル
+              </button>
+              <button
+                type="button"
+                onClick={() => void handleDeleteLabel()}
+                disabled={deletingLabelId === labelDeleteTarget.id}
+                className="rounded-md bg-red-600 px-4 py-2 text-sm font-medium text-white hover:bg-red-500 disabled:opacity-60"
+              >
+                削除する
+              </button>
+            </div>
+          </div>
+        </div>
       ) : null}
     </div>
   );
