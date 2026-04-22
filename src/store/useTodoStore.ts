@@ -99,7 +99,7 @@ export const useTodoStore = create<TodoState>()((set, get) => ({
     set(() => ({ loading: true, error: null, initialLoadStatus: 'loading' }));
 
     try {
-      const from = todayKey();
+      const from = '1970-01-01';
       const to = toDateKey(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000));
       const snapshot = await todoRepository.getSnapshot({ from, to });
       set(() => ({

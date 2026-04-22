@@ -48,7 +48,7 @@ export type CreateTodoLabelInput = {
 
 export type UpdateTodoLabelInput = Partial<Omit<TodoLabel, 'id' | 'createdAt' | 'updatedAt'>>;
 
-export type TodoView = 'today' | 'upcoming' | 'labels' | 'label' | 'calendar' | 'search' | 'all';
+export type TodoView = 'today' | 'upcoming' | 'completed' | 'labels' | 'label' | 'calendar' | 'search' | 'all';
 
 export const createEmptyTodoSnapshot = (): TodoSnapshot => ({
   tasks: [],

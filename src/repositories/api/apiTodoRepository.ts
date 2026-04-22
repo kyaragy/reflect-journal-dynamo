@@ -17,12 +17,12 @@ import {
   type PutTodoTaskRequest,
   type PutTodoTaskResponse,
 } from '../../contracts/todoApi';
-import { normalizeTodoSnapshot, toDateKey, todayKey, type TodoSnapshot } from '../../domain/todo';
+import { normalizeTodoSnapshot, toDateKey, type TodoSnapshot } from '../../domain/todo';
 import { apiClient } from '../../lib/apiClient';
 import type { TodoRepository, TodoSnapshotRange } from '../todoRepository';
 
 const defaultRange = (): TodoSnapshotRange => {
-  const from = todayKey();
+  const from = '1970-01-01';
   const to = toDateKey(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000));
   return { from, to };
 };

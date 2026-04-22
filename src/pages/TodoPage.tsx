@@ -39,6 +39,7 @@ import {
 const viewTitles: Record<TodoView, string> = {
   today: '今日',
   upcoming: '近日予定',
+  completed: '完了',
   labels: 'ラベル',
   label: 'ラベル',
   calendar: 'カレンダー',
@@ -66,6 +67,8 @@ const formatUpcomingSectionLabel = (dateKey: string) => {
   }
   return `${format(date, 'M月d日')}・${format(date, 'EEEE', { locale: ja })}`;
 };
+
+const formatTableDate = (date: string | null) => (date ? date : '-');
 
 const getLabelMap = (labels: TodoLabel[]) => new Map(labels.map((label) => [label.id, label]));
 const areStringArraysEqual = (left: string[], right: string[]) =>
@@ -578,6 +581,60 @@ function TaskList({
   );
 }
 
+type CompletedTaskTableProps = {
+  tasks: TodoTask[];
+  selectedTaskId: string | null;
+  onSelectTask: (task: TodoTask) => void;
+  onToggleTask: (taskId: string) => void;
+};
+
+function CompletedTaskTable({ tasks, selectedTaskId, onSelectTask, onToggleTask }: CompletedTaskTableProps) {
+  if (tasks.length === 0) {
+    return <div className="border-y border-stone-100 py-6 text-sm text-stone-400">完了済みのTODOはありません。</div>;
+  }
+
+  return (
+    <div className="overflow-x-auto rounded-md border border-stone-200">
+      <table className="min-w-full border-collapse text-sm">
+        <thead className="bg-stone-100/70 text-left text-xs font-semibold text-stone-600">
+          <tr>
+            <th className="px-3 py-2">タスク名</th>
+            <th className="px-3 py-2">登録日</th>
+            <th className="px-3 py-2">実施予定日</th>
+            <th className="px-3 py-2">期限</th>
+            <th className="px-3 py-2">完了日</th>
+            <th className="w-16 px-3 py-2 text-center">操作</th>
+          </tr>
+        </thead>
+        <tbody>
+          {tasks.map((task) => (
+            <tr key={task.id} className={[selectedTaskId === task.id ? 'bg-red-50' : 'bg-white', 'border-t border-stone-100'].join(' ')}>
+              <td className="px-3 py-2">
+                <button type="button" onClick={() => onSelectTask(task)} className="truncate text-left text-stone-800 hover:text-red-700">
+                  {task.title}
+                </button>
+              </td>
+              <td className="px-3 py-2 text-stone-600">{formatTableDate(task.registeredDate)}</td>
+              <td className="px-3 py-2 text-stone-600">{formatTableDate(task.scheduledDate)}</td>
+              <td className="px-3 py-2 text-stone-600">{formatTableDate(task.dueDate)}</td>
+              <td className="px-3 py-2 text-stone-600">{formatTableDate(task.completedDate)}</td>
+              <td className="px-3 py-2 text-center">
+                <button
+                  type="button"
+                  onClick={() => onToggleTask(task.id)}
+                  className="rounded-md border border-stone-300 px-2 py-1 text-xs text-stone-700 hover:bg-stone-100"
+                >
+                  戻す
+                </button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
+}
+
 type DetailPanelProps = {
   task: TodoTask;
   labels: TodoLabel[];
@@ -827,6 +884,7 @@ export default function TodoPage() {
 
   const selectedTask = tasks.find((task) => task.id === selectedTaskId) ?? null;
   const openTasks = useMemo(() => selectOpenTasks(tasks), [tasks]);
+  const completedTasks = useMemo(() => tasks.filter((task) => task.status === 'completed'), [tasks]);
   const todayTasks = useMemo(() => selectTodayTasks(tasks), [tasks]);
   const upcomingTasks = useMemo(() => selectUpcomingTasks(tasks), [tasks]);
   const calendarCounts = useMemo(() => selectCalendarCounts(tasks), [tasks]);
@@ -860,6 +918,9 @@ export default function TodoPage() {
     if (view === 'upcoming') {
       return upcomingTasks;
     }
+    if (view === 'completed') {
+      return tasks.filter((task) => task.status === 'completed');
+    }
     if (view === 'label' && selectedLabelId) {
       return tasks.filter((task) => task.labelIds.includes(selectedLabelId));
     }
@@ -885,6 +946,16 @@ export default function TodoPage() {
         .filter((task) => task.status === 'completed')
         .sort((left, right) => (right.completedAt ?? '').localeCompare(left.completedAt ?? '') || right.updatedAt.localeCompare(left.updatedAt)),
     [visibleTasks]
+  );
+  const completedTableTasks = useMemo(
+    () =>
+      [...completedTasks].sort(
+        (left, right) =>
+          left.scheduledDate.localeCompare(right.scheduledDate) ||
+          left.registeredDate.localeCompare(right.registeredDate) ||
+          left.createdAt.localeCompare(right.createdAt)
+      ),
+    [completedTasks]
   );
 
   const viewTitle = view === 'label' && selectedLabel ? selectedLabel.name : view === 'calendar' ? formatDateLabel(calendarDate) : viewTitles[view];
@@ -1170,6 +1241,20 @@ export default function TodoPage() {
           <button
             type="button"
             onClick={() => {
+              setView('completed');
+              setIsSidebarOpen(false);
+            }}
+            className={sidebarItemClass(view === 'completed')}
+          >
+            <span className="inline-flex items-center gap-2">
+              <Circle className="h-4 w-4" />
+              完了
+            </span>
+            <span className="text-xs text-stone-400">{completedTasks.length}</span>
+          </button>
+          <button
+            type="button"
+            onClick={() => {
               setView('labels');
               setIsSidebarOpen(false);
             }}
@@ -1299,8 +1384,22 @@ export default function TodoPage() {
 
           {view === 'calendar' ? renderCalendar() : null}
           {view === 'upcoming' ? renderUpcomingSchedule() : null}
+          {view === 'completed' ? (
+            <section className="mb-8">
+              <div className="mb-2 flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-stone-700">完了タスク一覧</h3>
+                <span className="text-xs text-stone-400">{completedTableTasks.length}</span>
+              </div>
+              <CompletedTaskTable
+                tasks={completedTableTasks}
+                selectedTaskId={selectedTaskId}
+                onSelectTask={(task) => setSelectedTaskId(task.id)}
+                onToggleTask={(taskId) => void toggleTask(taskId)}
+              />
+            </section>
+          ) : null}
 
-          {view !== 'labels' && view !== 'upcoming' ? (
+          {view !== 'labels' && view !== 'upcoming' && view !== 'completed' ? (
             <>
               <section className="mb-6">
                 <div className="mb-2 flex items-center justify-between">
@@ -1324,25 +1423,27 @@ export default function TodoPage() {
                 />
               </section>
 
-              <section className="mb-4">
-                <div className="mb-2 flex items-center justify-between">
-                  <h3 className="text-sm font-semibold text-stone-700">完了</h3>
-                  <span className="text-xs text-stone-400">{visibleCompletedTasks.length}</span>
-                </div>
-                <TaskList
-                  tasks={visibleCompletedTasks}
-                  labels={labels}
-                  selectedTaskId={selectedTaskId}
-                  onSelectTask={(task) => setSelectedTaskId(task.id)}
-                  onToggleTask={(taskId) => void toggleTask(taskId)}
-                  onSelectLabel={(labelId) => {
-                    setSelectedLabelId(labelId);
-                    setView('label');
-                  }}
-                  completed
-                  emptyMessage="完了済みのTODOはありません。"
-                />
-              </section>
+              {view !== 'today' ? (
+                <section className="mb-4">
+                  <div className="mb-2 flex items-center justify-between">
+                    <h3 className="text-sm font-semibold text-stone-700">完了</h3>
+                    <span className="text-xs text-stone-400">{visibleCompletedTasks.length}</span>
+                  </div>
+                  <TaskList
+                    tasks={visibleCompletedTasks}
+                    labels={labels}
+                    selectedTaskId={selectedTaskId}
+                    onSelectTask={(task) => setSelectedTaskId(task.id)}
+                    onToggleTask={(taskId) => void toggleTask(taskId)}
+                    onSelectLabel={(labelId) => {
+                      setSelectedLabelId(labelId);
+                      setView('label');
+                    }}
+                    completed
+                    emptyMessage="完了済みのTODOはありません。"
+                  />
+                </section>
+              ) : null}
               <div className="border-b border-stone-100 py-4">
                 {isInlineComposerOpen ? (
                   <AddTaskComposer
