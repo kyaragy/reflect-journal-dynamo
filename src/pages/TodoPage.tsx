@@ -276,55 +276,53 @@ function AddTaskComposer({ mode, saving, labels, defaultScheduledDate, defaultLa
             })}
           </div>
         ) : null}
-        {mode === 'inline' ? (
-          <div className="mt-3">
-            <select
-              value=""
-              onChange={(event) => {
-                const labelId = event.target.value;
-                if (!labelId) {
+        <div className="mt-3">
+          <select
+            value=""
+            onChange={(event) => {
+              const labelId = event.target.value;
+              if (!labelId) {
+                return;
+              }
+              setSelectedLabelIds((prev) => (prev.includes(labelId) ? prev : [...prev, labelId]));
+            }}
+            className="mb-2 w-full rounded-md border border-stone-200 bg-white px-3 py-2 text-sm text-stone-800 outline-none focus:border-red-300 focus:ring-2 focus:ring-red-100"
+          >
+            <option value="">ラベルを追加</option>
+            {labels
+              .filter((label) => !selectedLabelIds.includes(label.id))
+              .map((label) => (
+                <option key={label.id} value={label.id}>
+                  {label.name}
+                </option>
+              ))}
+          </select>
+          <div className="flex gap-2">
+            <input
+              value={newLabelName}
+              onChange={(event) => setNewLabelName(event.target.value)}
+              placeholder="新しいラベル"
+              className="min-w-0 flex-1 rounded-md border border-stone-200 bg-white px-3 py-2 text-sm outline-none focus:border-red-300 focus:ring-2 focus:ring-red-100"
+            />
+            <button
+              type="button"
+              onClick={async () => {
+                const name = newLabelName.trim();
+                if (!name) {
                   return;
                 }
-                setSelectedLabelIds((prev) => (prev.includes(labelId) ? prev : [...prev, labelId]));
+                const created = await onCreateLabel({
+                  name,
+                });
+                setSelectedLabelIds((prev) => (prev.includes(created.id) ? prev : [...prev, created.id]));
+                setNewLabelName('');
               }}
-              className="mb-2 w-full rounded-md border border-stone-200 bg-white px-3 py-2 text-sm text-stone-800 outline-none focus:border-red-300 focus:ring-2 focus:ring-red-100"
+              className="rounded-md bg-stone-800 px-3 py-2 text-sm text-white hover:bg-stone-700"
             >
-              <option value="">ラベルを追加</option>
-              {labels
-                .filter((label) => !selectedLabelIds.includes(label.id))
-                .map((label) => (
-                  <option key={label.id} value={label.id}>
-                    {label.name}
-                  </option>
-                ))}
-            </select>
-            <div className="flex gap-2">
-              <input
-                value={newLabelName}
-                onChange={(event) => setNewLabelName(event.target.value)}
-                placeholder="新しいラベル"
-                className="min-w-0 flex-1 rounded-md border border-stone-200 bg-white px-3 py-2 text-sm outline-none focus:border-red-300 focus:ring-2 focus:ring-red-100"
-              />
-              <button
-                type="button"
-                onClick={async () => {
-                  const name = newLabelName.trim();
-                  if (!name) {
-                    return;
-                  }
-                  const created = await onCreateLabel({
-                    name,
-                  });
-                  setSelectedLabelIds((prev) => (prev.includes(created.id) ? prev : [...prev, created.id]));
-                  setNewLabelName('');
-                }}
-                className="rounded-md bg-stone-800 px-3 py-2 text-sm text-white hover:bg-stone-700"
-              >
-                追加
-              </button>
-            </div>
+              追加
+            </button>
           </div>
-        ) : null}
+        </div>
         <div className="mt-3 flex flex-wrap gap-2">
           <label className="inline-flex h-10 items-center gap-2 rounded-md border border-stone-200 bg-white px-3 text-sm text-stone-600 hover:bg-stone-50">
             <CalendarDays className="h-4 w-4" />

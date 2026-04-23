@@ -26,8 +26,8 @@ export default function ThinkingMemoFormModal({ onClose, onSave, saving, initial
   };
 
   return (
-    <div className="fixed inset-0 z-30 flex items-center justify-center bg-stone-950/40 px-4">
-      <div className="w-full max-w-2xl rounded-3xl border border-stone-200 bg-white p-6 shadow-xl">
+    <div className="fixed inset-0 z-30 flex items-end justify-center bg-stone-950/40 p-0 sm:items-center sm:px-4">
+      <div className="max-h-[95dvh] w-full max-w-6xl overflow-y-auto rounded-t-3xl border border-stone-200 bg-white p-5 shadow-xl sm:rounded-3xl sm:p-6">
         <div className="mb-6 flex items-start justify-between gap-4">
           <div>
             <h3 className="text-xl font-medium text-stone-900">{mode === 'edit' ? '新版の記録を編集' : '新版の記録を追加'}</h3>
