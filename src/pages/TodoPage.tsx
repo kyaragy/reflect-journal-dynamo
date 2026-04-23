@@ -389,7 +389,7 @@ type TaskListProps = {
   onSelectTask: (task: TodoTask) => void;
   onToggleTask: (taskId: string) => void;
   onSelectLabel: (labelId: string) => void;
-  onReorder?: (sourceTaskId: string, targetTaskId: string) => void;
+  onReorder?: (sourceTaskId: string, targetTaskId: string | null) => void;
   completed?: boolean;
   emptyMessage?: string;
 };
@@ -407,6 +407,7 @@ function TaskList({
 }: TaskListProps) {
   const [draggingTaskId, setDraggingTaskId] = useState<string | null>(null);
   const [dragOverTaskId, setDragOverTaskId] = useState<string | null>(null);
+  const [isDragOverEnd, setIsDragOverEnd] = useState(false);
   const labelMap = getLabelMap(labels);
   const canReorder = !completed && Boolean(onReorder);
 
@@ -436,6 +437,7 @@ function TaskList({
           transparentPixel.height = 1;
           event.dataTransfer.setDragImage(transparentPixel, 0, 0);
           setDraggingTaskId(task.id);
+          setIsDragOverEnd(false);
         };
 
         const handleDrop = (event: DragEvent<HTMLElement>) => {
@@ -450,6 +452,7 @@ function TaskList({
           }
           setDraggingTaskId(null);
           setDragOverTaskId(null);
+          setIsDragOverEnd(false);
         };
 
         return (
@@ -463,6 +466,7 @@ function TaskList({
                     event.preventDefault();
                     event.dataTransfer.dropEffect = 'move';
                     setDragOverTaskId(task.id);
+                    setIsDragOverEnd(false);
                   }
                 : undefined
             }
@@ -481,6 +485,7 @@ function TaskList({
                 ? () => {
                     setDraggingTaskId(null);
                     setDragOverTaskId(null);
+                    setIsDragOverEnd(false);
                   }
                 : undefined
             }
@@ -577,6 +582,40 @@ function TaskList({
           </article>
         );
       })}
+      {canReorder ? (
+        <div
+          onDragOver={(event) => {
+            event.preventDefault();
+            event.dataTransfer.dropEffect = 'move';
+            setDragOverTaskId(null);
+            setIsDragOverEnd(true);
+          }}
+          onDragLeave={(event) => {
+            if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
+              setIsDragOverEnd(false);
+            }
+          }}
+          onDrop={(event) => {
+            event.preventDefault();
+            const sourceTaskId = event.dataTransfer.getData('text/plain');
+            if (sourceTaskId && onReorder) {
+              onReorder(sourceTaskId, null);
+            }
+            setDraggingTaskId(null);
+            setDragOverTaskId(null);
+            setIsDragOverEnd(false);
+          }}
+          className={['relative h-6', isDragOverEnd ? 'bg-red-50/40' : ''].join(' ')}
+          aria-hidden="true"
+        >
+          {isDragOverEnd ? (
+            <>
+              <span className="pointer-events-none absolute top-0 left-0 right-0 h-0.5 bg-red-500" />
+              <span className="pointer-events-none absolute -top-[5px] -left-[7px] h-3 w-3 rounded-full border-2 border-red-500 bg-white" />
+            </>
+          ) : null}
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -960,17 +999,27 @@ export default function TodoPage() {
 
   const viewTitle = view === 'label' && selectedLabel ? selectedLabel.name : view === 'calendar' ? formatDateLabel(calendarDate) : viewTitles[view];
   const handleReorderTask = useCallback(
-    async (sourceTaskId: string, targetTaskId: string) => {
+    async (sourceTaskId: string, targetTaskId: string | null) => {
       const sourceIndex = visibleOpenTasks.findIndex((task) => task.id === sourceTaskId);
-      const targetIndex = visibleOpenTasks.findIndex((task) => task.id === targetTaskId);
-      if (sourceIndex < 0 || targetIndex < 0 || sourceIndex === targetIndex) {
+      if (sourceIndex < 0) {
         return;
       }
 
       const reorderedVisibleTasks = [...visibleOpenTasks];
       const [movedTask] = reorderedVisibleTasks.splice(sourceIndex, 1);
-      const insertIndex = sourceIndex < targetIndex ? targetIndex - 1 : targetIndex;
-      reorderedVisibleTasks.splice(insertIndex, 0, movedTask);
+      if (targetTaskId === null) {
+        if (sourceIndex === visibleOpenTasks.length - 1) {
+          return;
+        }
+        reorderedVisibleTasks.push(movedTask);
+      } else {
+        const targetIndex = visibleOpenTasks.findIndex((task) => task.id === targetTaskId);
+        if (targetIndex < 0 || sourceIndex === targetIndex) {
+          return;
+        }
+        const insertIndex = sourceIndex < targetIndex ? targetIndex - 1 : targetIndex;
+        reorderedVisibleTasks.splice(insertIndex, 0, movedTask);
+      }
       const reorderedVisibleIds = reorderedVisibleTasks.map((task) => task.id);
       const visibleIdSet = new Set(reorderedVisibleIds);
       let visibleCursor = 0;

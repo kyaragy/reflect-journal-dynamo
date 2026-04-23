@@ -491,7 +491,7 @@ export default function JournalForm({ date, onClose, entryToEdit, initialEntry }
         animate={{ y: 0, opacity: 1, scale: 1 }}
         exit={{ y: 16, opacity: 0, scale: 0.99 }}
         transition={{ duration: 0.18, ease: 'easeOut' }}
-        className="bg-stone-50 w-full max-w-4xl rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden max-h-[100dvh] sm:max-h-[90vh] flex flex-col will-change-transform"
+        className="bg-stone-50 w-full max-w-5xl rounded-t-3xl sm:rounded-3xl shadow-2xl overflow-hidden max-h-[100dvh] sm:max-h-[90vh] flex flex-col will-change-transform"
       >
         <div className="flex justify-between items-center px-4 py-4 sm:p-6 border-b border-stone-200 bg-white">
           <h3 className="text-xl font-serif font-medium text-stone-800">{entryToEdit ? '記録を編集' : '新しい記録'}</h3>
@@ -614,7 +614,7 @@ export default function JournalForm({ date, onClose, entryToEdit, initialEntry }
         {shouldShowMobileToolbar ? (
           <div
             ref={toolbarRef}
-            className="fixed inset-x-0 z-[60] mx-auto w-full max-w-4xl border-t border-stone-200/80 bg-white/95 px-3 py-3 shadow-[0_-12px_32px_-24px_rgba(15,23,42,0.45)] backdrop-blur supports-[backdrop-filter]:bg-white/80"
+            className="fixed inset-x-0 z-[60] mx-auto w-full max-w-5xl border-t border-stone-200/80 bg-white/95 px-3 py-3 shadow-[0_-12px_32px_-24px_rgba(15,23,42,0.45)] backdrop-blur supports-[backdrop-filter]:bg-white/80"
             style={{ bottom: toolbarBottom }}
           >
             <div className="flex items-center gap-2">
