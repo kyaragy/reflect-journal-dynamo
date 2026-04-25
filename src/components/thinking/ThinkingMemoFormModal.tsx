@@ -10,9 +10,19 @@ type Props = {
     body: string;
   };
   mode?: 'create' | 'edit';
+  saveDate?: string;
+  onSaveDateChange?: (date: string) => void;
 };
 
-export default function ThinkingMemoFormModal({ onClose, onSave, saving, initialValue, mode = 'create' }: Props) {
+export default function ThinkingMemoFormModal({
+  onClose,
+  onSave,
+  saving,
+  initialValue,
+  mode = 'create',
+  saveDate,
+  onSaveDateChange,
+}: Props) {
   const [trigger, setTrigger] = useState(initialValue?.trigger ?? '');
   const [body, setBody] = useState(initialValue?.body ?? '');
 
@@ -62,6 +72,18 @@ export default function ThinkingMemoFormModal({ onClose, onSave, saving, initial
               className="min-h-[240px] w-full rounded-2xl border border-stone-200 px-4 py-3 text-sm leading-7 text-stone-800 outline-none transition-colors focus:border-sky-400 focus:ring-2 focus:ring-sky-100"
             />
           </div>
+
+          {saveDate !== undefined && onSaveDateChange ? (
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-stone-700">保存先日付</label>
+              <input
+                type="date"
+                value={saveDate}
+                onChange={(event) => onSaveDateChange(event.target.value)}
+                className="w-full rounded-2xl border border-stone-200 px-4 py-3 text-sm text-stone-800 outline-none transition-colors focus:border-sky-400 focus:ring-2 focus:ring-sky-100"
+              />
+            </div>
+          ) : null}
 
           <div className="rounded-2xl bg-stone-50 px-4 py-3 text-sm leading-7 text-stone-600">
             分類UI、AI途中介入、深掘り質問はここでは行いません。

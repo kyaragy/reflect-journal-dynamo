@@ -35,6 +35,8 @@ import {
   selectUpcomingTasks,
   useTodoStore,
 } from '../store/useTodoStore';
+import ThinkingMemoFormModal from '../components/thinking/ThinkingMemoFormModal';
+import { useThinkingReflectionStore } from '../store/useThinkingReflectionStore';
 
 const viewTitles: Record<TodoView, string> = {
   today: '今日',
@@ -397,6 +399,7 @@ type TaskListProps = {
   selectedTaskId: string | null;
   onSelectTask: (task: TodoTask) => void;
   onToggleTask: (taskId: string) => void;
+  onCreateJournal: (task: TodoTask) => void;
   onSelectLabel: (labelId: string) => void;
   onReorder?: (sourceTaskId: string, targetTaskId: string | null) => void;
   completed?: boolean;
@@ -409,6 +412,7 @@ function TaskList({
   selectedTaskId,
   onSelectTask,
   onToggleTask,
+  onCreateJournal,
   onSelectLabel,
   onReorder,
   completed = false,
@@ -499,7 +503,7 @@ function TaskList({
                 : undefined
             }
             className={[
-              'relative grid grid-cols-[18px_28px_1fr] gap-3 border-b border-stone-100 py-3 transition-colors',
+              'relative grid grid-cols-[18px_28px_1fr_auto] gap-3 border-b border-stone-100 py-3 transition-colors',
               canReorder ? 'cursor-grab hover:bg-stone-50 active:cursor-grabbing' : 'bg-stone-100/70 hover:bg-stone-100',
               selectedTaskId === task.id ? 'bg-red-50/50' : '',
               isDragging ? 'bg-white ring-2 ring-red-300 shadow-sm' : '',
@@ -588,6 +592,13 @@ function TaskList({
                 })}
               </div>
             </button>
+            <button
+              type="button"
+              onClick={() => onCreateJournal(task)}
+              className="self-start rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-sm font-medium text-sky-700 transition-colors hover:bg-sky-100"
+            >
+              記録
+            </button>
           </article>
         );
       })}
@@ -634,9 +645,10 @@ type CompletedTaskSectionListProps = {
   selectedTaskId: string | null;
   onSelectTask: (task: TodoTask) => void;
   onToggleTask: (taskId: string) => void;
+  onCreateJournal: (task: TodoTask) => void;
 };
 
-function CompletedTaskSectionList({ tasks, selectedTaskId, onSelectTask, onToggleTask }: CompletedTaskSectionListProps) {
+function CompletedTaskSectionList({ tasks, selectedTaskId, onSelectTask, onToggleTask, onCreateJournal }: CompletedTaskSectionListProps) {
   if (tasks.length === 0) {
     return <div className="border-y border-stone-100 py-6 text-sm text-stone-400">完了済みのTODOはありません。</div>;
   }
@@ -697,13 +709,22 @@ function CompletedTaskSectionList({ tasks, selectedTaskId, onSelectTask, onToggl
                   </dl>
                 </button>
                 <div className="sm:justify-self-end">
-                  <button
-                    type="button"
-                    onClick={() => onToggleTask(task.id)}
-                    className="rounded-md border border-stone-300 px-2 py-1 text-xs text-stone-700 hover:bg-stone-100"
-                  >
-                    戻す
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => onCreateJournal(task)}
+                      className="rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-sm font-medium text-sky-700 transition-colors hover:bg-sky-100"
+                    >
+                      記録
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => onToggleTask(task.id)}
+                      className="rounded-md border border-stone-300 px-2 py-1 text-xs text-stone-700 hover:bg-stone-100"
+                    >
+                      戻す
+                    </button>
+                  </div>
                 </div>
               </article>
             ))}
@@ -942,6 +963,7 @@ export default function TodoPage() {
   const [calendarDate, setCalendarDate] = useState(todayKey());
   const [labelDeleteTarget, setLabelDeleteTarget] = useState<TodoLabel | null>(null);
   const [deletingLabelId, setDeletingLabelId] = useState<string | null>(null);
+  const [journalSourceTask, setJournalSourceTask] = useState<{ task: TodoTask; saveDate: string } | null>(null);
 
   const tasks = useTodoStore((state) => state.tasks);
   const labels = useTodoStore((state) => state.labels);
@@ -956,6 +978,8 @@ export default function TodoPage() {
   const toggleTask = useTodoStore((state) => state.toggleTask);
   const createLabel = useTodoStore((state) => state.createLabel);
   const deleteLabel = useTodoStore((state) => state.deleteLabel);
+  const thinkingSaving = useThinkingReflectionStore((state) => state.saving);
+  const addMemoCard = useThinkingReflectionStore((state) => state.addMemoCard);
 
   useEffect(() => {
     void initialize();
@@ -966,6 +990,7 @@ export default function TodoPage() {
   const completedTasks = useMemo(() => tasks.filter((task) => task.status === 'completed'), [tasks]);
   const todayTasks = useMemo(() => selectTodayTasks(tasks), [tasks]);
   const upcomingTasks = useMemo(() => selectUpcomingTasks(tasks), [tasks]);
+  const upcomingScheduleTasks = useMemo(() => selectOpenTasks(tasks), [tasks]);
   const calendarCounts = useMemo(() => selectCalendarCounts(tasks), [tasks]);
   const selectedLabel = labels.find((label) => label.id === selectedLabelId) ?? null;
   const upcomingDayKeys = useMemo(() => {
@@ -979,15 +1004,24 @@ export default function TodoPage() {
   }, []);
   const upcomingTasksByDate = useMemo(() => {
     const grouped = new Map<string, TodoTask[]>();
+    const today = todayKey();
     upcomingDayKeys.forEach((dateKey) => grouped.set(dateKey, []));
-    upcomingTasks.forEach((task) => {
-      if (!grouped.has(task.scheduledDate)) {
+    upcomingScheduleTasks.forEach((task) => {
+      const bucketDate = task.scheduledDate < today ? today : task.scheduledDate;
+      if (!grouped.has(bucketDate)) {
         return;
       }
-      grouped.get(task.scheduledDate)?.push(task);
+      grouped.get(bucketDate)?.push(task);
     });
     return grouped;
-  }, [upcomingDayKeys, upcomingTasks]);
+  }, [upcomingDayKeys, upcomingScheduleTasks]);
+  const upcomingScheduleCount = useMemo(() => {
+    let count = 0;
+    upcomingTasksByDate.forEach((dayTasks) => {
+      count += dayTasks.length;
+    });
+    return count;
+  }, [upcomingTasksByDate]);
 
   const visibleTasks = useMemo(() => {
     const today = todayKey();
@@ -1097,6 +1131,11 @@ export default function TodoPage() {
   };
 
   const createAndSelectLabel = async (name: string) => createLabel({ name });
+  const handleOpenJournalModal = (task: TodoTask) =>
+    setJournalSourceTask({
+      task,
+      saveDate: todayKey(),
+    });
 
   const handleDeleteLabel = async () => {
     if (!labelDeleteTarget) {
@@ -1193,7 +1232,7 @@ export default function TodoPage() {
                       const isScheduledOverdue = isOverdueScheduledDate(task.scheduledDate);
                       const isDueOverdue = isDueDateOverdue(task.dueDate);
                       return (
-                        <article key={task.id} className="grid grid-cols-[28px_1fr] gap-3 border-b border-stone-100 py-3">
+                        <article key={task.id} className="grid grid-cols-[28px_1fr_auto] gap-3 border-b border-stone-100 py-3">
                           <button
                             type="button"
                             onClick={() => void toggleTask(task.id)}
@@ -1219,6 +1258,13 @@ export default function TodoPage() {
                                 </span>
                               ) : null}
                             </div>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleOpenJournalModal(task)}
+                            className="self-start rounded-lg border border-sky-200 bg-sky-50 px-3 py-2 text-sm font-medium text-sky-700 transition-colors hover:bg-sky-100"
+                          >
+                            記録
                           </button>
                         </article>
                       );
@@ -1325,7 +1371,7 @@ export default function TodoPage() {
               <CalendarDays className="h-4 w-4" />
               近日予定
             </span>
-            <span className="text-xs text-stone-400">{upcomingTasks.length}</span>
+            <span className="text-xs text-stone-400">{upcomingScheduleCount}</span>
           </button>
           <button
             type="button"
@@ -1484,6 +1530,7 @@ export default function TodoPage() {
                 selectedTaskId={selectedTaskId}
                 onSelectTask={(task) => setSelectedTaskId(task.id)}
                 onToggleTask={(taskId) => void toggleTask(taskId)}
+                onCreateJournal={handleOpenJournalModal}
               />
             </section>
           ) : null}
@@ -1501,6 +1548,7 @@ export default function TodoPage() {
                   selectedTaskId={selectedTaskId}
                   onSelectTask={(task) => setSelectedTaskId(task.id)}
                   onToggleTask={(taskId) => void toggleTask(taskId)}
+                  onCreateJournal={handleOpenJournalModal}
                   onSelectLabel={(labelId) => {
                     setSelectedLabelId(labelId);
                     setView('label');
@@ -1524,6 +1572,7 @@ export default function TodoPage() {
                     selectedTaskId={selectedTaskId}
                     onSelectTask={(task) => setSelectedTaskId(task.id)}
                     onToggleTask={(taskId) => void toggleTask(taskId)}
+                    onCreateJournal={handleOpenJournalModal}
                     onSelectLabel={(labelId) => {
                       setSelectedLabelId(labelId);
                       setView('label');
@@ -1578,6 +1627,25 @@ export default function TodoPage() {
           onCreate={async (input) => {
             await handleCreateTask(input);
             setIsModalComposerOpen(false);
+          }}
+        />
+      ) : null}
+
+      {journalSourceTask ? (
+        <ThinkingMemoFormModal
+          saving={thinkingSaving}
+          initialValue={{
+            trigger: `${journalSourceTask.task.title}をやっていた気になったこと`,
+            body: '',
+          }}
+          saveDate={journalSourceTask.saveDate}
+          onSaveDateChange={(date) =>
+            setJournalSourceTask((current) => (current ? { ...current, saveDate: date || todayKey() } : current))
+          }
+          onClose={() => setJournalSourceTask(null)}
+          onSave={async (input) => {
+            await addMemoCard(journalSourceTask.saveDate, input);
+            setJournalSourceTask(null);
           }}
         />
       ) : null}
