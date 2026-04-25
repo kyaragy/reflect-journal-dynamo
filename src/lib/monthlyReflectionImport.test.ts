@@ -38,21 +38,23 @@ test('parseMonthlyReflectionImport accepts a valid monthly payload', () => {
   const reflection = parseMonthlyReflectionImport(
     `\`\`\`json
 {
-  "month_start": "2026-04-01",
-  "month_end": "2026-04-30",
-  "mode": "monthly_reflection",
-  "monthly_summary": "4月は通知直後の最悪想定が繰り返し出た一方で、確認を先に置くことで落ち着きを取り戻す流れが徐々に増えた。週を追って、初動の解釈が感情を左右するという認識が強まり、問いに答えることで前提を言語化する習慣も進んだ。",
-  "looping_patterns": ["通知直後に最悪想定を置く"],
-  "evolving_insights": ["確認を先に置くと反応の強さが下がる"],
-  "new_patterns": ["問いに答えて前提を記録する習慣"],
-  "resolved_or_reduced_patterns": ["通知を見る前の回避行動が減った"],
-  "monthly_focus_points": ["初動の解釈と事実確認の差"],
-  "source_weeks": [
-    {
-      "week_start": "2026-04-05",
-      "week_end": "2026-04-11"
-    }
-  ]
+  "reflection": {
+    "month_start": "2026-04-01",
+    "month_end": "2026-04-30",
+    "mode": "monthly_reflection",
+    "monthly_summary": "4月は通知直後の最悪想定が繰り返し出た一方で、確認を先に置くことで落ち着きを取り戻す流れが徐々に増えた。週を追って、初動の解釈が感情を左右するという認識が強まり、問いに答えることで前提を言語化する習慣も進んだ。",
+    "looping_patterns": ["通知直後に最悪想定を置く"],
+    "evolving_insights": ["確認を先に置くと反応の強さが下がる"],
+    "new_patterns": ["問いに答えて前提を記録する習慣"],
+    "resolved_or_reduced_patterns": ["通知を見る前の回避行動が減った"],
+    "monthly_focus_points": ["初動の解釈と事実確認の差"],
+    "source_weeks": [
+      {
+        "week_start": "2026-04-05",
+        "week_end": "2026-04-11"
+      }
+    ]
+  }
 }
 \`\`\``,
     '2026-04',
@@ -61,4 +63,27 @@ test('parseMonthlyReflectionImport accepts a valid monthly payload', () => {
 
   assert.equal(reflection.mode, 'monthly_reflection');
   assert.equal(reflection.source_weeks[0]?.week_start, '2026-04-05');
+});
+
+test('parseMonthlyReflectionImport rejects payload without reflection wrapper', () => {
+  assert.throws(
+    () =>
+      parseMonthlyReflectionImport(
+        JSON.stringify({
+          month_start: '2026-04-01',
+          month_end: '2026-04-30',
+          mode: 'monthly_reflection',
+          monthly_summary: 'summary',
+          looping_patterns: [],
+          evolving_insights: [],
+          new_patterns: [],
+          resolved_or_reduced_patterns: [],
+          monthly_focus_points: [],
+          source_weeks: [{ week_start: '2026-04-05', week_end: '2026-04-11' }],
+        }),
+        '2026-04',
+        sourceWeeks
+      ),
+    /top-level "reflection"/
+  );
 });

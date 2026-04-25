@@ -15,6 +15,7 @@ const MONTHLY_PROMPT_HEADER = `以下は、ある1ヶ月分の週次振り返り
 - 必ず JSONコードブロックのみ を返してください
 - コードブロックの前後に説明文を書かないでください
 - JSONのキー名は指定どおり固定してください
+- 最上位キーは必ず "reflection" にしてください
 - 入力に書かれていない内容を過剰に補完しないでください
 - 推測が必要な場合は控えめにし、不明な項目は空配列 [] または空文字列 "" にしてください
 - 抽象的すぎる表現は避け、週次データから読み取れる範囲で具体性を保ってください
@@ -24,21 +25,23 @@ const MONTHLY_PROMPT_HEADER = `以下は、ある1ヶ月分の週次振り返り
 【出力形式】
 \`\`\`json
 {
-  "month_start": "YYYY-MM-DD",
-  "month_end": "YYYY-MM-DD",
-  "mode": "monthly_reflection",
-  "monthly_summary": "string",
-  "looping_patterns": ["string"],
-  "evolving_insights": ["string"],
-  "new_patterns": ["string"],
-  "resolved_or_reduced_patterns": ["string"],
-  "monthly_focus_points": ["string"],
-  "source_weeks": [
-    {
-      "week_start": "YYYY-MM-DD",
-      "week_end": "YYYY-MM-DD"
-    }
-  ]
+  "reflection": {
+    "month_start": "YYYY-MM-DD",
+    "month_end": "YYYY-MM-DD",
+    "mode": "monthly_reflection",
+    "monthly_summary": "string",
+    "looping_patterns": ["string"],
+    "evolving_insights": ["string"],
+    "new_patterns": ["string"],
+    "resolved_or_reduced_patterns": ["string"],
+    "monthly_focus_points": ["string"],
+    "source_weeks": [
+      {
+        "week_start": "YYYY-MM-DD",
+        "week_end": "YYYY-MM-DD"
+      }
+    ]
+  }
 }
 \`\`\`
 

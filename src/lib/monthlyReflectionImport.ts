@@ -29,13 +29,18 @@ export const parseMonthlyReflectionImport = (
   const monthEnd = getMonthEnd(monthKey);
   const jsonCandidate = extractJsonCandidate(input);
   const parsed = JSON.parse(jsonCandidate) as unknown;
+  const reflectionCandidate = parsed && typeof parsed === 'object' ? (parsed as { reflection?: unknown }).reflection : undefined;
 
-  if (!isMonthlyReflectionResult(parsed)) {
+  if (!reflectionCandidate) {
+    throw new Error('Imported JSON must include top-level "reflection"');
+  }
+
+  if (!isMonthlyReflectionResult(reflectionCandidate)) {
     throw new Error('Imported JSON does not match the monthly reflection schema');
   }
 
   const reflection = normalizeMonthlyReflectionResult({
-    ...parsed,
+    ...reflectionCandidate,
     importedAt: new Date().toISOString(),
     rawJson: jsonCandidate,
   });
