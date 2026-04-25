@@ -110,7 +110,7 @@ export const redirectToLogin = async () => {
   window.sessionStorage.setItem(LOGIN_REDIRECT_IN_PROGRESS_STORAGE_KEY, 'true');
   window.sessionStorage.setItem(AUTH_STATE_STORAGE_KEY, state);
   window.sessionStorage.setItem(PKCE_VERIFIER_STORAGE_KEY, verifier);
-  window.sessionStorage.setItem(POST_LOGIN_HASH_STORAGE_KEY, window.location.hash || '#/calendar');
+  window.sessionStorage.setItem(POST_LOGIN_HASH_STORAGE_KEY, window.location.hash || '#/v2/calendar');
 
   const authorizeUrl = new URL(`${COGNITO_DOMAIN}/oauth2/authorize`);
   authorizeUrl.searchParams.set('client_id', COGNITO_APP_CLIENT_ID);

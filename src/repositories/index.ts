@@ -1,8 +1,5 @@
-import type { JournalRepository } from './journalRepository';
-import { apiRepository } from './api/apiRepository';
 import { apiThinkingReflectionRepository } from './api/apiThinkingReflectionRepository';
 import { apiTodoRepository } from './api/apiTodoRepository';
-import { localStorageRepository } from './localStorageRepository';
 import { localStorageThinkingReflectionRepository } from './localStorageThinkingReflectionRepository';
 import { localStorageTodoRepository } from './localStorageTodoRepository';
 import type { ThinkingReflectionRepository } from './thinkingReflectionRepository';
@@ -12,11 +9,6 @@ export type RepositoryDriver = 'localStorage' | 'api';
 
 const resolveRepositoryDriver = (): RepositoryDriver => {
   return import.meta.env.VITE_REPOSITORY_DRIVER === 'api' ? 'api' : 'localStorage';
-};
-
-const repositoryMap: Record<RepositoryDriver, JournalRepository> = {
-  localStorage: localStorageRepository,
-  api: apiRepository,
 };
 
 const thinkingRepositoryMap: Record<RepositoryDriver, ThinkingReflectionRepository> = {
@@ -29,8 +21,6 @@ const todoRepositoryMap: Record<RepositoryDriver, TodoRepository> = {
   api: apiTodoRepository,
 };
 
-export const journalRepositoryDriver = resolveRepositoryDriver();
-
-export const journalRepository = repositoryMap[journalRepositoryDriver];
-export const thinkingReflectionRepository = thinkingRepositoryMap[journalRepositoryDriver];
-export const todoRepository = todoRepositoryMap[journalRepositoryDriver];
+export const repositoryDriver = resolveRepositoryDriver();
+export const thinkingReflectionRepository = thinkingRepositoryMap[repositoryDriver];
+export const todoRepository = todoRepositoryMap[repositoryDriver];

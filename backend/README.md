@@ -1,6 +1,6 @@
 # Backend
 
-Lambda 向けの TypeScript backend です。実装は `API Gateway HTTP API -> Lambda -> DynamoDB` を前提にしています。
+Lambda 向けの TypeScript backend です。`API Gateway HTTP API -> Lambda -> DynamoDB` を前提にしています。
 
 ## Entry Points
 
@@ -11,29 +11,46 @@ Lambda 向けの TypeScript backend です。実装は `API Gateway HTTP API -> 
 
 ## Routes
 
+現在の主要 API は `TODO` と `新版ジャーナリング（/v2/*）` です。
+
+### Common
+
 - `GET /health`
-- `GET /days/:date`
-- `PUT /days/:date`
-- `PUT /days/:date/summary`
-- `POST /days/:date/cards`
-- `PUT /days/:date/cards/:cardId`
-- `DELETE /days/:date/cards/:cardId`
-- `GET /weeks/:weekKey`
-- `PUT /weeks/:weekKey/summary`
-- `GET /months/:monthKey`
-- `PUT /months/:monthKey/summary`
-- `GET /years/:yearKey`
-- `PUT /years/:yearKey/summary`
-- `POST /migration/local-storage-import`
+
+### TODO
+
+- `GET /todos?from=YYYY-MM-DD&to=YYYY-MM-DD`
+- `POST /todos`
+- `PUT /todos/:taskId`
+- `DELETE /todos/:taskId`
+- `POST /todos/reorder`
+- `POST /todo-labels`
+- `PUT /todo-labels/:labelId`
+- `DELETE /todo-labels/:labelId`
+
+### 新版ジャーナリング（v2）
+
+- `GET /v2/days/:date`
+- `GET /v2/months/:monthKey`
+- `GET /v2/weeks/:weekStart`
+- `POST /v2/days/:date/memo-cards`
+- `PUT /v2/days/:date/memo-cards/:memoCardId`
+- `DELETE /v2/days/:date/memo-cards/:memoCardId`
+- `PUT /v2/days/:date/thinking-reflection`
+- `PUT /v2/days/:date/question-responses`
+- `PUT /v2/weeks/:weekStart/reflection`
+- `PUT /v2/weeks/:weekStart/note`
+
+旧版ジャーナリング API（`/days`, `/weeks`, `/months`, `/years`, `/migration/local-storage-import`）は削除済みです。
 
 ## Environment Variables
 
-- `BACKEND_REPOSITORY_DRIVER`
-- `AWS_REGION`
-- `DYNAMODB_ENDPOINT`
-- `JOURNAL_TABLE_NAME`
-- `CORS_ALLOW_ORIGIN`
-- `PORT`
+- `BACKEND_REPOSITORY_DRIVER` (`memory` or `dynamodb`)
+- `PORT`（ローカル実行時, 既定: `4000`）
+- `JOURNAL_TABLE_NAME`（`dynamodb` 利用時に必須）
+- `DYNAMODB_ENDPOINT`（DynamoDB Local 利用時）
+- `AWS_REGION` / `AWS_DEFAULT_REGION`（既定: `ap-northeast-1`）
+- `CORS_ALLOW_ORIGIN`（Lambda/API Gateway 運用時）
 
 ## Local Run
 
@@ -42,20 +59,14 @@ npm install
 BACKEND_REPOSITORY_DRIVER=memory npm run backend:dev
 ```
 
-ローカル server は `x-dev-user-id` ヘッダを指定しない場合、`local-dev-user` を JWT `sub` 相当として扱います。
+ローカル server は `x-dev-user-id` ヘッダ未指定時、`local-dev-user` を JWT `sub` 相当として扱います。
 
-ローカルで AWS 非依存に起動したい場合:
-
-```bash
-BACKEND_REPOSITORY_DRIVER=memory npm run backend:dev
-```
-
-`BACKEND_REPOSITORY_DRIVER` を省略した場合、ローカル server では `memory` が既定値です。Lambda handler 側では `dynamodb` が既定値です。
+`BACKEND_REPOSITORY_DRIVER` を省略した場合、ローカル server の既定は `memory`、Lambda handler 側の既定は `dynamodb` です。
 
 追加開発時の標準フロー:
 
-- まず `localhost` の backend で route / service / repository の挙動を確認する
-- frontend からは `VITE_REPOSITORY_DRIVER=api`, `VITE_AUTH_MODE=local`, `VITE_API_BASE_URL=http://localhost:4000` で接続確認する
+- まず `localhost` で route / service / repository の挙動を確認する
+- frontend は `VITE_REPOSITORY_DRIVER=api`, `VITE_AUTH_MODE=local`, `VITE_API_BASE_URL=http://localhost:4000` で接続確認する
 - その後に AWS 実環境向けの接続確認を行う
 
 ## Local DynamoDB
