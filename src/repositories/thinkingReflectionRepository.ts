@@ -4,6 +4,8 @@ import type {
   ThinkingMonthRecord,
   ThinkingWeekRecord,
   ThinkingReflectionResult,
+  MonthlyReflectionResult,
+  MonthlyUserNote,
   UpdateThinkingMemoCardInput,
   UpsertThinkingQuestionResponseInput,
   WeeklyReflectionResult,
@@ -21,4 +23,6 @@ export interface ThinkingReflectionRepository {
   saveQuestionResponses(date: string, questionResponses: UpsertThinkingQuestionResponseInput[]): Promise<ThinkingDayRecord>;
   saveWeeklyReflection(weekStart: string, reflection: WeeklyReflectionResult): Promise<ThinkingWeekRecord>;
   saveWeeklyUserNote(weekStart: string, userNote: WeeklyUserNote): Promise<ThinkingWeekRecord>;
+  saveMonthlyReflection(monthKey: string, reflection: MonthlyReflectionResult): Promise<ThinkingMonthRecord>;
+  saveMonthlyUserNote(monthKey: string, userNote: MonthlyUserNote): Promise<ThinkingMonthRecord>;
 }

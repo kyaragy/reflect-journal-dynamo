@@ -63,6 +63,8 @@ export type ThinkingDayRecord = {
 export type ThinkingMonthRecord = {
   monthKey: string;
   days: ThinkingDayRecord[];
+  reflection: MonthlyReflectionResult | null;
+  userNote: MonthlyUserNote | null;
 };
 
 export type ThinkingWeekAggregateItem = {
@@ -115,6 +117,33 @@ export type ThinkingWeekRecord = {
   weekEnd: string;
   reflection: WeeklyReflectionResult | null;
   userNote: WeeklyUserNote | null;
+};
+
+export type MonthlyReflectionSourceWeek = {
+  week_start: string;
+  week_end: string;
+};
+
+export type MonthlyReflectionResult = {
+  month_start: string;
+  month_end: string;
+  mode: 'monthly_reflection';
+  monthly_summary: string;
+  looping_patterns: string[];
+  evolving_insights: string[];
+  new_patterns: string[];
+  resolved_or_reduced_patterns: string[];
+  monthly_focus_points: string[];
+  source_weeks: MonthlyReflectionSourceWeek[];
+  importedAt: string;
+  rawJson: string;
+};
+
+export type MonthlyUserNote = {
+  month_start: string;
+  month_end: string;
+  note: string;
+  updated_at: string;
 };
 
 export const createEmptyThinkingDayRecord = (date: string, now = new Date().toISOString()): ThinkingDayRecord => ({
@@ -199,11 +228,45 @@ export const normalizeWeeklyUserNote = (value: WeeklyUserNote): WeeklyUserNote =
   updated_at: normalizeString(value.updated_at) || new Date().toISOString(),
 });
 
+export const normalizeMonthlyReflectionSourceWeek = (value: MonthlyReflectionSourceWeek): MonthlyReflectionSourceWeek => ({
+  week_start: normalizeString(value.week_start),
+  week_end: normalizeString(value.week_end),
+});
+
+export const normalizeMonthlyReflectionResult = (value: MonthlyReflectionResult): MonthlyReflectionResult => ({
+  month_start: normalizeString(value.month_start),
+  month_end: normalizeString(value.month_end),
+  mode: 'monthly_reflection',
+  monthly_summary: normalizeString(value.monthly_summary),
+  looping_patterns: normalizeStringArray(value.looping_patterns),
+  evolving_insights: normalizeStringArray(value.evolving_insights),
+  new_patterns: normalizeStringArray(value.new_patterns),
+  resolved_or_reduced_patterns: normalizeStringArray(value.resolved_or_reduced_patterns),
+  monthly_focus_points: normalizeStringArray(value.monthly_focus_points),
+  source_weeks: Array.isArray(value.source_weeks) ? value.source_weeks.map(normalizeMonthlyReflectionSourceWeek) : [],
+  importedAt: normalizeString(value.importedAt) || new Date().toISOString(),
+  rawJson: normalizeString(value.rawJson),
+});
+
+export const normalizeMonthlyUserNote = (value: MonthlyUserNote): MonthlyUserNote => ({
+  month_start: normalizeString(value.month_start),
+  month_end: normalizeString(value.month_end),
+  note: normalizeString(value.note),
+  updated_at: normalizeString(value.updated_at) || new Date().toISOString(),
+});
+
 export const normalizeThinkingWeekRecord = (value: ThinkingWeekRecord): ThinkingWeekRecord => ({
   weekStart: normalizeString(value.weekStart),
   weekEnd: normalizeString(value.weekEnd),
   reflection: value.reflection ? normalizeWeeklyReflectionResult(value.reflection) : null,
   userNote: value.userNote ? normalizeWeeklyUserNote(value.userNote) : null,
+});
+
+export const normalizeThinkingMonthRecord = (value: ThinkingMonthRecord): ThinkingMonthRecord => ({
+  monthKey: normalizeString(value.monthKey),
+  days: Array.isArray(value.days) ? value.days.map(normalizeThinkingDayRecord) : [],
+  reflection: value.reflection ? normalizeMonthlyReflectionResult(value.reflection) : null,
+  userNote: value.userNote ? normalizeMonthlyUserNote(value.userNote) : null,
 });
 
 export const normalizeThinkingDayRecord = (value: ThinkingDayRecord): ThinkingDayRecord => ({
@@ -253,6 +316,26 @@ export const isWeeklyReflectionResult = (value: unknown): value is WeeklyReflect
   );
 };
 
+export const isMonthlyReflectionResult = (value: unknown): value is MonthlyReflectionResult => {
+  if (!value || typeof value !== 'object') {
+    return false;
+  }
+
+  const candidate = value as Partial<MonthlyReflectionResult>;
+  return (
+    typeof candidate.month_start === 'string' &&
+    typeof candidate.month_end === 'string' &&
+    candidate.mode === 'monthly_reflection' &&
+    typeof candidate.monthly_summary === 'string' &&
+    Array.isArray(candidate.looping_patterns) &&
+    Array.isArray(candidate.evolving_insights) &&
+    Array.isArray(candidate.new_patterns) &&
+    Array.isArray(candidate.resolved_or_reduced_patterns) &&
+    Array.isArray(candidate.monthly_focus_points) &&
+    Array.isArray(candidate.source_weeks)
+  );
+};
+
 export const hasMeaningfulThinkingMemoContent = (value: CreateThinkingMemoCardInput | UpdateThinkingMemoCardInput) =>
   value.trigger.trim().length > 0 && value.body.trim().length > 0;
 
@@ -267,6 +350,13 @@ export const emptyThinkingSnapshot = () => ({
 export const createEmptyThinkingWeekRecord = (weekStart: string, weekEnd: string): ThinkingWeekRecord => ({
   weekStart,
   weekEnd,
+  reflection: null,
+  userNote: null,
+});
+
+export const createEmptyThinkingMonthRecord = (monthKey: string): ThinkingMonthRecord => ({
+  monthKey,
+  days: [],
   reflection: null,
   userNote: null,
 });

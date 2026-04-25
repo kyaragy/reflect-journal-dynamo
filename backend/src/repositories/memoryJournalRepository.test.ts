@@ -146,3 +146,33 @@ test('memory repository stores weekly reflection and user note', async () => {
   assert.equal(week.reflection?.mode, 'weekly_reflection');
   assert.equal(week.userNote?.note, '自分の反応を少し客観視できた週だった。');
 });
+
+test('memory repository stores monthly reflection and user note', async () => {
+  const repository = new MemoryJournalRepository();
+
+  await repository.saveMonthlyReflection('user-a', '2026-04', {
+    month_start: '2026-04-01',
+    month_end: '2026-04-30',
+    mode: 'monthly_reflection',
+    monthly_summary: '4月は初動の解釈と事実確認の差を観察した月だった。',
+    looping_patterns: ['通知直後に最悪想定を置く'],
+    evolving_insights: ['確認を先に置くと落ち着きやすい'],
+    new_patterns: ['問いへの回答を残す習慣'],
+    resolved_or_reduced_patterns: ['通知前の回避行動'],
+    monthly_focus_points: ['初動の解釈と事実確認の差'],
+    source_weeks: [{ week_start: '2026-04-05', week_end: '2026-04-11' }],
+    importedAt: '2026-04-30T10:00:00.000Z',
+    rawJson: '{}',
+  });
+
+  await repository.saveMonthlyUserNote('user-a', '2026-04', {
+    month_start: '2026-04-01',
+    month_end: '2026-04-30',
+    note: '初動反応を観察する癖ができてきた。',
+    updated_at: '2026-04-30T11:00:00.000Z',
+  });
+
+  const month = await repository.getThinkingMonth('user-a', '2026-04');
+  assert.equal(month.reflection?.mode, 'monthly_reflection');
+  assert.equal(month.userNote?.note, '初動反応を観察する癖ができてきた。');
+});

@@ -4,6 +4,8 @@ import type {
   ThinkingMonthRecord,
   ThinkingWeekRecord,
   ThinkingReflectionResult,
+  MonthlyReflectionResult,
+  MonthlyUserNote,
   UpdateThinkingMemoCardInput,
   UpsertThinkingQuestionResponseInput,
   WeeklyReflectionResult,
@@ -77,6 +79,23 @@ export type PutWeeklyUserNoteRequest = {
 
 export type PutWeeklyUserNoteResponse = PutWeeklyReflectionResponse;
 
+export type PutMonthlyReflectionRequest = {
+  reflection: MonthlyReflectionResult;
+};
+
+export type PutMonthlyReflectionResponse = {
+  data: ThinkingMonthRecord;
+  meta?: {
+    requestId?: string;
+  };
+};
+
+export type PutMonthlyUserNoteRequest = {
+  userNote: MonthlyUserNote;
+};
+
+export type PutMonthlyUserNoteResponse = PutMonthlyReflectionResponse;
+
 export type DeleteThinkingMemoCardResponse = {
   data: {
     deleted: true;
@@ -96,6 +115,8 @@ export const thinkingReflectionApiPaths = {
   dayQuestionResponses: (date: string) => `/v2/days/${date}/question-responses`,
   weekReflection: (weekStart: string) => `/v2/weeks/${weekStart}/reflection`,
   weekUserNote: (weekStart: string) => `/v2/weeks/${weekStart}/note`,
+  monthReflection: (monthKey: string) => `/v2/months/${monthKey}/reflection`,
+  monthUserNote: (monthKey: string) => `/v2/months/${monthKey}/note`,
 } as const;
 
 export const assertThinkingDateString = assertDateString;

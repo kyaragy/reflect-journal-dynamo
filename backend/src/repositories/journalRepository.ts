@@ -9,6 +9,8 @@ import type {
 } from '../../../src/domain/journal';
 import type {
   CreateThinkingMemoCardInput,
+  MonthlyReflectionResult,
+  MonthlyUserNote,
   ThinkingDayRecord,
   ThinkingMonthRecord,
   ThinkingWeekRecord,
@@ -52,6 +54,8 @@ export interface JournalDataRepository {
   saveThinkingQuestionResponses(userId: string, date: string, questionResponses: UpsertThinkingQuestionResponseInput[]): Promise<ThinkingDayRecord>;
   saveWeeklyReflection(userId: string, weekStart: string, reflection: WeeklyReflectionResult): Promise<ThinkingWeekRecord>;
   saveWeeklyUserNote(userId: string, weekStart: string, userNote: WeeklyUserNote): Promise<ThinkingWeekRecord>;
+  saveMonthlyReflection(userId: string, monthKey: string, reflection: MonthlyReflectionResult): Promise<ThinkingMonthRecord>;
+  saveMonthlyUserNote(userId: string, monthKey: string, userNote: MonthlyUserNote): Promise<ThinkingMonthRecord>;
   getTodoSnapshot(userId: string, from: string, to: string): Promise<TodoSnapshot>;
   createTodoTask(userId: string, input: CreateTodoTaskInput): Promise<TodoTask>;
   updateTodoTask(userId: string, taskId: string, input: UpdateTodoTaskInput): Promise<TodoTask | null>;

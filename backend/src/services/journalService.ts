@@ -1,6 +1,8 @@
 import type { CreateCardInput, Day, JournalSnapshot } from '../../../src/domain/journal';
 import type {
   CreateThinkingMemoCardInput,
+  MonthlyReflectionResult,
+  MonthlyUserNote,
   ThinkingWeekRecord,
   ThinkingReflectionResult,
   UpdateThinkingMemoCardInput,
@@ -112,6 +114,14 @@ export class JournalService {
 
   saveWeeklyUserNote(userId: string, weekStart: string, userNote: WeeklyUserNote) {
     return this.repository.saveWeeklyUserNote(userId, weekStart, userNote);
+  }
+
+  saveMonthlyReflection(userId: string, monthKey: string, reflection: MonthlyReflectionResult) {
+    return this.repository.saveMonthlyReflection(userId, monthKey, reflection);
+  }
+
+  saveMonthlyUserNote(userId: string, monthKey: string, userNote: MonthlyUserNote) {
+    return this.repository.saveMonthlyUserNote(userId, monthKey, userNote);
   }
 
   getTodoSnapshot(userId: string, from: string, to: string) {

@@ -2,10 +2,12 @@ import { create } from 'zustand';
 import { format } from 'date-fns';
 import {
   createEmptyThinkingDayRecord,
-  createEmptyThinkingWeekRecord,
   replaceThinkingDay,
   type CreateThinkingMemoCardInput,
+  type MonthlyReflectionResult,
+  type MonthlyUserNote,
   type ThinkingDayRecord,
+  type ThinkingMonthRecord,
   type ThinkingReflectionResult,
   type ThinkingWeekRecord,
   type UpdateThinkingMemoCardInput,
@@ -21,6 +23,7 @@ type AsyncStatus = 'idle' | 'loading' | 'ready' | 'error';
 interface ThinkingReflectionState {
   days: ThinkingDayRecord[];
   weeks: ThinkingWeekRecord[];
+  months: ThinkingMonthRecord[];
   loading: boolean;
   saving: boolean;
   initialLoadStatus: AsyncStatus;
@@ -28,6 +31,7 @@ interface ThinkingReflectionState {
   initializeMonth: (monthKey?: string) => Promise<void>;
   refreshDay: (date: string) => Promise<void>;
   refreshWeek: (weekStart: string) => Promise<void>;
+  refreshMonthRecord: (monthKey: string) => Promise<void>;
   addMemoCard: (date: string, input: CreateThinkingMemoCardInput) => Promise<void>;
   updateMemoCard: (date: string, memoCardId: string, input: UpdateThinkingMemoCardInput) => Promise<void>;
   deleteMemoCard: (date: string, memoCardId: string) => Promise<void>;
@@ -35,6 +39,8 @@ interface ThinkingReflectionState {
   saveQuestionResponses: (date: string, questionResponses: UpsertThinkingQuestionResponseInput[]) => Promise<void>;
   saveWeeklyReflection: (weekStart: string, reflection: WeeklyReflectionResult) => Promise<void>;
   saveWeeklyUserNote: (weekStart: string, userNote: WeeklyUserNote) => Promise<void>;
+  saveMonthlyReflection: (monthKey: string, reflection: MonthlyReflectionResult) => Promise<void>;
+  saveMonthlyUserNote: (monthKey: string, userNote: MonthlyUserNote) => Promise<void>;
 }
 
 const toErrorMessage = (error: unknown) => (error instanceof Error ? error.message : 'Unexpected error');
@@ -77,9 +83,13 @@ const withSaving = async (
   }
 };
 
+const replaceMonth = (months: ThinkingMonthRecord[], month: ThinkingMonthRecord) =>
+  [...months.filter((item) => item.monthKey !== month.monthKey), month].sort((left, right) => left.monthKey.localeCompare(right.monthKey));
+
 export const useThinkingReflectionStore = create<ThinkingReflectionState>()((set, get) => ({
   days: [],
   weeks: [],
+  months: [],
   loading: false,
   saving: false,
   initialLoadStatus: 'idle',
@@ -103,6 +113,7 @@ export const useThinkingReflectionStore = create<ThinkingReflectionState>()((set
           ...state.days.filter((day) => !day.date.startsWith(monthKey)),
           ...month.days,
         ].sort((left, right) => left.date.localeCompare(right.date)),
+        months: replaceMonth(state.months, month),
         loading: false,
         initialLoadStatus: 'ready',
         error: null,
@@ -132,6 +143,19 @@ export const useThinkingReflectionStore = create<ThinkingReflectionState>()((set
         weeks: [...state.weeks.filter((item) => item.weekStart !== weekStart), week].sort((left, right) =>
           left.weekStart.localeCompare(right.weekStart)
         ),
+      }));
+    });
+  },
+
+  async refreshMonthRecord(monthKey) {
+    await withLoading(set, async () => {
+      const month = await thinkingReflectionRepository.getMonth(monthKey);
+      set((state) => ({
+        days: [
+          ...state.days.filter((day) => !day.date.startsWith(monthKey)),
+          ...month.days,
+        ].sort((left, right) => left.date.localeCompare(right.date)),
+        months: replaceMonth(state.months, month),
       }));
     });
   },
@@ -216,6 +240,32 @@ export const useThinkingReflectionStore = create<ThinkingReflectionState>()((set
         weeks: [...state.weeks.filter((item) => item.weekStart !== weekStart), week].sort((left, right) =>
           left.weekStart.localeCompare(right.weekStart)
         ),
+      }));
+    });
+  },
+
+  async saveMonthlyReflection(monthKey, reflection) {
+    await withSaving(set, async () => {
+      const month = await thinkingReflectionRepository.saveMonthlyReflection(monthKey, reflection);
+      set((state) => ({
+        days: [
+          ...state.days.filter((day) => !day.date.startsWith(monthKey)),
+          ...month.days,
+        ].sort((left, right) => left.date.localeCompare(right.date)),
+        months: replaceMonth(state.months, month),
+      }));
+    });
+  },
+
+  async saveMonthlyUserNote(monthKey, userNote) {
+    await withSaving(set, async () => {
+      const month = await thinkingReflectionRepository.saveMonthlyUserNote(monthKey, userNote);
+      set((state) => ({
+        days: [
+          ...state.days.filter((day) => !day.date.startsWith(monthKey)),
+          ...month.days,
+        ].sort((left, right) => left.date.localeCompare(right.date)),
+        months: replaceMonth(state.months, month),
       }));
     });
   },

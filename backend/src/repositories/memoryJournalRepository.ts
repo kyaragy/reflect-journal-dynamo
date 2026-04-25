@@ -20,15 +20,19 @@ import {
   type MonthRecord,
 } from '../../../src/domain/journal';
 import {
+  createEmptyThinkingMonthRecord,
   createEmptyThinkingDayRecord,
   createEmptyThinkingWeekRecord,
   hasMeaningfulThinkingMemoContent,
   normalizeThinkingDayRecord,
+  normalizeThinkingMonthRecord,
   normalizeThinkingReflectionResult,
   normalizeThinkingQuestionResponse,
   normalizeThinkingWeekRecord,
   replaceThinkingDay,
   type CreateThinkingMemoCardInput,
+  type MonthlyReflectionResult,
+  type MonthlyUserNote,
   type ThinkingDayRecord,
   type ThinkingMonthRecord,
   type ThinkingWeekRecord,
@@ -104,6 +108,7 @@ export class MemoryJournalRepository implements JournalDataRepository {
   private readonly snapshots = new Map<string, JournalSnapshot>();
   private readonly thinkingSnapshots = new Map<string, ThinkingDayRecord[]>();
   private readonly thinkingWeekSnapshots = new Map<string, ThinkingWeekRecord[]>();
+  private readonly thinkingMonthSnapshots = new Map<string, ThinkingMonthRecord[]>();
   private readonly todoSnapshots = new Map<string, TodoSnapshot>();
 
   private getSnapshot(userId: string) {
@@ -145,6 +150,21 @@ export class MemoryJournalRepository implements JournalDataRepository {
     this.thinkingWeekSnapshots.set(
       userId,
       [...weeks].map(normalizeThinkingWeekRecord).sort((left, right) => left.weekStart.localeCompare(right.weekStart))
+    );
+  }
+
+  private getThinkingMonthSnapshot(userId: string) {
+    if (!this.thinkingMonthSnapshots.has(userId)) {
+      this.thinkingMonthSnapshots.set(userId, []);
+    }
+
+    return this.thinkingMonthSnapshots.get(userId)!;
+  }
+
+  private setThinkingMonthSnapshot(userId: string, months: ThinkingMonthRecord[]) {
+    this.thinkingMonthSnapshots.set(
+      userId,
+      [...months].map(normalizeThinkingMonthRecord).sort((left, right) => left.monthKey.localeCompare(right.monthKey))
     );
   }
 
@@ -387,9 +407,12 @@ export class MemoryJournalRepository implements JournalDataRepository {
   }
 
   async getThinkingMonth(userId: string, monthKey: string): Promise<ThinkingMonthRecord> {
+    const month = this.getThinkingMonthSnapshot(userId).find((item) => item.monthKey === monthKey) ?? createEmptyThinkingMonthRecord(monthKey);
     return {
       monthKey,
       days: clone(this.getThinkingSnapshot(userId).filter((item) => item.date.startsWith(monthKey))),
+      reflection: month.reflection,
+      userNote: month.userNote,
     };
   }
 
@@ -538,6 +561,36 @@ export class MemoryJournalRepository implements JournalDataRepository {
       [...weeks.filter((item) => item.weekStart !== weekStart), nextWeek]
     );
     return clone(nextWeek);
+  }
+
+  async saveMonthlyReflection(userId: string, monthKey: string, reflection: MonthlyReflectionResult) {
+    const current = await this.getThinkingMonth(userId, monthKey);
+    const months = this.getThinkingMonthSnapshot(userId);
+    const nextMonth: ThinkingMonthRecord = {
+      ...current,
+      monthKey,
+      reflection,
+    };
+    this.setThinkingMonthSnapshot(
+      userId,
+      [...months.filter((item) => item.monthKey !== monthKey), nextMonth]
+    );
+    return clone(nextMonth);
+  }
+
+  async saveMonthlyUserNote(userId: string, monthKey: string, userNote: MonthlyUserNote) {
+    const current = await this.getThinkingMonth(userId, monthKey);
+    const months = this.getThinkingMonthSnapshot(userId);
+    const nextMonth: ThinkingMonthRecord = {
+      ...current,
+      monthKey,
+      userNote,
+    };
+    this.setThinkingMonthSnapshot(
+      userId,
+      [...months.filter((item) => item.monthKey !== monthKey), nextMonth]
+    );
+    return clone(nextMonth);
   }
 
   async getTodoSnapshot(userId: string, from: string, to: string) {

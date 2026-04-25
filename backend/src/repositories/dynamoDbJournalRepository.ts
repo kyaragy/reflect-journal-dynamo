@@ -14,14 +14,18 @@ import type {
 } from '../../../src/domain/journal';
 import { createCardStep, createEmptyTrigger, hasMeaningfulCardContent, normalizeCard, normalizeDay, normalizeSnapshot } from '../../../src/domain/journal';
 import {
+  createEmptyThinkingMonthRecord,
   createEmptyThinkingDayRecord,
   createEmptyThinkingWeekRecord,
   hasMeaningfulThinkingMemoContent,
   normalizeThinkingDayRecord,
+  normalizeThinkingMonthRecord,
   normalizeThinkingReflectionResult,
   normalizeThinkingQuestionResponse,
   normalizeThinkingWeekRecord,
   type CreateThinkingMemoCardInput,
+  type MonthlyReflectionResult,
+  type MonthlyUserNote,
   type ThinkingDayRecord,
   type ThinkingMonthRecord,
   type ThinkingWeekRecord,
@@ -117,6 +121,16 @@ type ThinkingWeekItem = {
   updatedAt: string;
 };
 
+type ThinkingMonthItem = {
+  PK: string;
+  SK: string;
+  entityType: 'THINKING_MONTH';
+  monthKey: string;
+  reflection: MonthlyReflectionResult | null;
+  userNote: MonthlyUserNote | null;
+  updatedAt: string;
+};
+
 type TodoTaskItem = {
   PK: string;
   SK: string;
@@ -140,6 +154,7 @@ type JournalItem =
   | YearlySummaryItem
   | ThinkingDayItem
   | ThinkingWeekItem
+  | ThinkingMonthItem
   | TodoTaskItem
   | TodoLabelItem;
 
@@ -150,6 +165,7 @@ const toMonthSk = (monthKey: string) => `MONTH#${monthKey}`;
 const toYearSk = (yearKey: string) => `YEAR#${yearKey}`;
 const toThinkingDaySk = (date: string) => `THINKING_DAY#${date}`;
 const toThinkingWeekSk = (weekStart: string) => `THINKING_WEEK#${weekStart}`;
+const toThinkingMonthSk = (monthKey: string) => `THINKING_MONTH#${monthKey}`;
 const toTodoTaskSk = (taskId: string) => `TODO_TASK#${taskId}`;
 const toTodoLabelSk = (labelId: string) => `TODO_LABEL#${labelId}`;
 
@@ -251,6 +267,24 @@ const toThinkingWeek = (item: ThinkingWeekItem): ThinkingWeekRecord =>
   normalizeThinkingWeekRecord({
     weekStart: item.weekStart,
     weekEnd: item.weekEnd,
+    reflection: item.reflection,
+    userNote: item.userNote,
+  });
+
+const toThinkingMonthItem = (userId: string, month: ThinkingMonthRecord): ThinkingMonthItem => ({
+  PK: toUserPk(userId),
+  SK: toThinkingMonthSk(month.monthKey),
+  entityType: 'THINKING_MONTH',
+  monthKey: month.monthKey,
+  reflection: month.reflection,
+  userNote: month.userNote,
+  updatedAt: month.userNote?.updated_at ?? month.reflection?.importedAt ?? new Date().toISOString(),
+});
+
+const toThinkingMonth = (item: ThinkingMonthItem, days: ThinkingDayRecord[]): ThinkingMonthRecord =>
+  normalizeThinkingMonthRecord({
+    monthKey: item.monthKey,
+    days,
     reflection: item.reflection,
     userNote: item.userNote,
   });
@@ -532,11 +566,22 @@ export class DynamoDbJournalRepository implements JournalDataRepository {
   }
 
   async getThinkingMonth(userId: string, monthKey: string): Promise<ThinkingMonthRecord> {
-    const items = await this.client.queryByPrefix<ThinkingDayItem>(toUserPk(userId), `THINKING_DAY#${monthKey}`);
-    return {
-      monthKey,
-      days: items.map(toThinkingDay).sort((left, right) => left.date.localeCompare(right.date)),
-    };
+    const pk = toUserPk(userId);
+    const [dayItems, monthItem] = await Promise.all([
+      this.client.queryByPrefix<ThinkingDayItem>(pk, `THINKING_DAY#${monthKey}`),
+      this.client.getItem<ThinkingMonthItem>({
+        PK: pk,
+        SK: toThinkingMonthSk(monthKey),
+      }),
+    ]);
+    const days = dayItems.map(toThinkingDay).sort((left, right) => left.date.localeCompare(right.date));
+    if (!monthItem) {
+      return {
+        ...createEmptyThinkingMonthRecord(monthKey),
+        days,
+      };
+    }
+    return toThinkingMonth(monthItem, days);
   }
 
   async getThinkingWeek(userId: string, weekStart: string): Promise<ThinkingWeekRecord> {
@@ -674,6 +719,28 @@ export class DynamoDbJournalRepository implements JournalDataRepository {
     };
     await this.client.putItem(toThinkingWeekItem(userId, nextWeek));
     return nextWeek;
+  }
+
+  async saveMonthlyReflection(userId: string, monthKey: string, reflection: MonthlyReflectionResult) {
+    const current = await this.getThinkingMonth(userId, monthKey);
+    const nextMonth: ThinkingMonthRecord = {
+      ...current,
+      monthKey,
+      reflection,
+    };
+    await this.client.putItem(toThinkingMonthItem(userId, nextMonth));
+    return nextMonth;
+  }
+
+  async saveMonthlyUserNote(userId: string, monthKey: string, userNote: MonthlyUserNote) {
+    const current = await this.getThinkingMonth(userId, monthKey);
+    const nextMonth: ThinkingMonthRecord = {
+      ...current,
+      monthKey,
+      userNote,
+    };
+    await this.client.putItem(toThinkingMonthItem(userId, nextMonth));
+    return nextMonth;
   }
 
   async getTodoSnapshot(userId: string, from: string, to: string): Promise<TodoSnapshot> {

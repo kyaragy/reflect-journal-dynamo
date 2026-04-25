@@ -16,6 +16,7 @@ import V2CalendarPage from './pages/V2CalendarPage';
 import V2DayPage from './pages/V2DayPage';
 import V2ThinkingReflectionPage from './pages/V2ThinkingReflectionPage';
 import V2ThinkingWeekPage from './pages/V2ThinkingWeekPage';
+import V2ThinkingMonthPage from './pages/V2ThinkingMonthPage';
 
 function AppShell() {
   const { isAuthenticated, isLoading: authLoading, isAuthEnabled, login } = useAuth();
@@ -79,6 +80,7 @@ function AppShell() {
             <Route path="/v2/day/:date" element={<V2DayPage />} />
             <Route path="/v2/day/:date/thinking" element={<V2ThinkingReflectionPage />} />
             <Route path="/v2/week/:weekStart/thinking" element={<V2ThinkingWeekPage />} />
+            <Route path="/v2/month/:monthKey/thinking" element={<V2ThinkingMonthPage />} />
             <Route path="*" element={<Navigate to="/v2/calendar" replace />} />
           </Routes>
         </main>

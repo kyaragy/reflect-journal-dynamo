@@ -1,13 +1,17 @@
 import { v4 as uuidv4 } from 'uuid';
 import type { ThinkingReflectionRepository } from './thinkingReflectionRepository';
 import {
+  createEmptyThinkingMonthRecord,
   createEmptyThinkingWeekRecord,
   createEmptyThinkingDayRecord,
   hasMeaningfulThinkingMemoContent,
   normalizeThinkingDayRecord,
+  normalizeThinkingMonthRecord,
   normalizeThinkingWeekRecord,
   replaceThinkingDay,
   type CreateThinkingMemoCardInput,
+  type MonthlyReflectionResult,
+  type MonthlyUserNote,
   type ThinkingDayRecord,
   type ThinkingMonthRecord,
   type ThinkingWeekRecord,
@@ -24,16 +28,17 @@ const STORAGE_KEY = 'reflect-journal-thinking-v2-storage';
 type ThinkingSnapshot = {
   thinkingDays: ThinkingDayRecord[];
   thinkingWeeks: ThinkingWeekRecord[];
+  thinkingMonths: ThinkingMonthRecord[];
 };
 
 const readSnapshot = (): ThinkingSnapshot => {
   if (typeof window === 'undefined') {
-    return { thinkingDays: [], thinkingWeeks: [] };
+    return { thinkingDays: [], thinkingWeeks: [], thinkingMonths: [] };
   }
 
   const raw = window.localStorage.getItem(STORAGE_KEY);
   if (!raw) {
-    return { thinkingDays: [], thinkingWeeks: [] };
+    return { thinkingDays: [], thinkingWeeks: [], thinkingMonths: [] };
   }
 
   try {
@@ -45,9 +50,10 @@ const readSnapshot = (): ThinkingSnapshot => {
     return {
       thinkingDays: Array.isArray(snapshot?.thinkingDays) ? snapshot.thinkingDays.map(normalizeThinkingDayRecord) : [],
       thinkingWeeks: Array.isArray(snapshot?.thinkingWeeks) ? snapshot.thinkingWeeks.map(normalizeThinkingWeekRecord) : [],
+      thinkingMonths: Array.isArray(snapshot?.thinkingMonths) ? snapshot.thinkingMonths.map(normalizeThinkingMonthRecord) : [],
     };
   } catch {
-    return { thinkingDays: [], thinkingWeeks: [] };
+    return { thinkingDays: [], thinkingWeeks: [], thinkingMonths: [] };
   }
 };
 
@@ -74,11 +80,16 @@ const replaceWeek = (weeks: ThinkingWeekRecord[], week: ThinkingWeekRecord) =>
 const getWeekEnd = (weekStart: string) => format(addDays(parseISO(weekStart), 6), 'yyyy-MM-dd');
 
 const getWeekRecord = (snapshot: ThinkingSnapshot, weekStart: string) => snapshot.thinkingWeeks.find((week) => week.weekStart === weekStart) ?? null;
+const getMonthRecord = (snapshot: ThinkingSnapshot, monthKey: string) => snapshot.thinkingMonths.find((month) => month.monthKey === monthKey) ?? null;
+
+const replaceMonth = (months: ThinkingMonthRecord[], month: ThinkingMonthRecord) =>
+  [...months.filter((item) => item.monthKey !== month.monthKey), month].sort((left, right) => left.monthKey.localeCompare(right.monthKey));
 
 const persistDay = (snapshot: ThinkingSnapshot, day: ThinkingDayRecord) => {
   const nextSnapshot = {
     thinkingDays: replaceThinkingDay(snapshot.thinkingDays, day),
     thinkingWeeks: snapshot.thinkingWeeks,
+    thinkingMonths: snapshot.thinkingMonths,
   };
 
   writeSnapshot(nextSnapshot);
@@ -89,10 +100,22 @@ const persistWeek = (snapshot: ThinkingSnapshot, week: ThinkingWeekRecord) => {
   const nextSnapshot = {
     thinkingDays: snapshot.thinkingDays,
     thinkingWeeks: replaceWeek(snapshot.thinkingWeeks, week),
+    thinkingMonths: snapshot.thinkingMonths,
   };
 
   writeSnapshot(nextSnapshot);
   return normalizeThinkingWeekRecord(week);
+};
+
+const persistMonth = (snapshot: ThinkingSnapshot, month: ThinkingMonthRecord) => {
+  const nextSnapshot = {
+    thinkingDays: snapshot.thinkingDays,
+    thinkingWeeks: snapshot.thinkingWeeks,
+    thinkingMonths: replaceMonth(snapshot.thinkingMonths, month),
+  };
+
+  writeSnapshot(nextSnapshot);
+  return normalizeThinkingMonthRecord(month);
 };
 
 export const localStorageThinkingReflectionRepository: ThinkingReflectionRepository = {
@@ -104,9 +127,12 @@ export const localStorageThinkingReflectionRepository: ThinkingReflectionReposit
 
   async getMonth(monthKey) {
     const snapshot = readSnapshot();
+    const month = getMonthRecord(snapshot, monthKey) ?? createEmptyThinkingMonthRecord(monthKey);
     return {
       monthKey,
       days: snapshot.thinkingDays.filter((day) => day.date.startsWith(monthKey)).map(normalizeThinkingDayRecord),
+      reflection: month.reflection,
+      userNote: month.userNote,
     } satisfies ThinkingMonthRecord;
   },
 
@@ -251,5 +277,34 @@ export const localStorageThinkingReflectionRepository: ThinkingReflectionReposit
     };
 
     return persistWeek(snapshot, nextWeek);
+  },
+
+  async saveMonthlyReflection(monthKey, reflection) {
+    const snapshot = readSnapshot();
+    const current = getMonthRecord(snapshot, monthKey) ?? createEmptyThinkingMonthRecord(monthKey);
+    const nextMonth: ThinkingMonthRecord = {
+      ...current,
+      monthKey,
+      days: snapshot.thinkingDays.filter((day) => day.date.startsWith(monthKey)).map(normalizeThinkingDayRecord),
+      reflection: {
+        ...reflection,
+        importedAt: reflection.importedAt || new Date().toISOString(),
+      } as MonthlyReflectionResult,
+    };
+
+    return persistMonth(snapshot, nextMonth);
+  },
+
+  async saveMonthlyUserNote(monthKey, userNote) {
+    const snapshot = readSnapshot();
+    const current = getMonthRecord(snapshot, monthKey) ?? createEmptyThinkingMonthRecord(monthKey);
+    const nextMonth: ThinkingMonthRecord = {
+      ...current,
+      monthKey,
+      days: snapshot.thinkingDays.filter((day) => day.date.startsWith(monthKey)).map(normalizeThinkingDayRecord),
+      userNote: userNote as MonthlyUserNote,
+    };
+
+    return persistMonth(snapshot, nextMonth);
   },
 };

@@ -19,6 +19,8 @@ import type {
   PutThinkingMemoCardRequest,
   PutThinkingReflectionRequest,
   PutThinkingQuestionResponsesRequest,
+  PutMonthlyReflectionRequest,
+  PutMonthlyUserNoteRequest,
   PutWeeklyReflectionRequest,
   PutWeeklyUserNoteRequest,
 } from '../../../src/contracts/thinkingReflectionApi';
@@ -287,6 +289,32 @@ export const routeRequest = async (
     }
 
     return success(await dependencies.journalService.getThinkingMonth(userId, monthKey), requestId);
+  }
+
+  const thinkingMonthReflectionMatch = path.match(/^\/v2\/months\/([^/]+)\/reflection$/);
+  if (thinkingMonthReflectionMatch) {
+    const [, monthKey] = thinkingMonthReflectionMatch;
+    validateThinkingMonthKey(monthKey);
+
+    if (method !== 'PUT') {
+      throw methodNotAllowedError(method, path);
+    }
+
+    const payload = parseJsonBody<PutMonthlyReflectionRequest>(event);
+    return success(await dependencies.journalService.saveMonthlyReflection(userId, monthKey, payload.reflection), requestId);
+  }
+
+  const thinkingMonthUserNoteMatch = path.match(/^\/v2\/months\/([^/]+)\/note$/);
+  if (thinkingMonthUserNoteMatch) {
+    const [, monthKey] = thinkingMonthUserNoteMatch;
+    validateThinkingMonthKey(monthKey);
+
+    if (method !== 'PUT') {
+      throw methodNotAllowedError(method, path);
+    }
+
+    const payload = parseJsonBody<PutMonthlyUserNoteRequest>(event);
+    return success(await dependencies.journalService.saveMonthlyUserNote(userId, monthKey, payload.userNote), requestId);
   }
 
   const thinkingWeekReflectionMatch = path.match(/^\/v2\/weeks\/([^/]+)\/reflection$/);

@@ -9,6 +9,10 @@ import {
   type GetThinkingDayResponse,
   type GetThinkingMonthResponse,
   type GetThinkingWeekResponse,
+  type PutMonthlyReflectionRequest,
+  type PutMonthlyReflectionResponse,
+  type PutMonthlyUserNoteRequest,
+  type PutMonthlyUserNoteResponse,
   type PostThinkingMemoCardRequest,
   type PostThinkingMemoCardResponse,
   type PutThinkingMemoCardRequest,
@@ -24,7 +28,10 @@ import {
 } from '../../contracts/thinkingReflectionApi';
 import {
   normalizeThinkingDayRecord,
+  normalizeThinkingMonthRecord,
   normalizeThinkingWeekRecord,
+  type MonthlyReflectionResult,
+  type MonthlyUserNote,
   type ThinkingReflectionResult,
   type UpdateThinkingMemoCardInput,
   type UpsertThinkingQuestionResponseInput,
@@ -44,10 +51,7 @@ export const apiThinkingReflectionRepository: ThinkingReflectionRepository = {
   async getMonth(monthKey) {
     assertThinkingMonthKey(monthKey);
     const response = await apiClient.get<GetThinkingMonthResponse>(thinkingReflectionApiPaths.month(monthKey));
-    return {
-      monthKey: response.data.monthKey,
-      days: response.data.days.map(normalizeThinkingDayRecord),
-    };
+    return normalizeThinkingMonthRecord(response.data);
   },
 
   async getWeek(weekStart) {
@@ -105,5 +109,19 @@ export const apiThinkingReflectionRepository: ThinkingReflectionRepository = {
     const payload: PutWeeklyUserNoteRequest = { userNote: userNote as WeeklyUserNote };
     const response = await apiClient.put<PutWeeklyUserNoteResponse>(thinkingReflectionApiPaths.weekUserNote(weekStart), payload);
     return normalizeThinkingWeekRecord(response.data);
+  },
+
+  async saveMonthlyReflection(monthKey, reflection) {
+    assertThinkingMonthKey(monthKey);
+    const payload: PutMonthlyReflectionRequest = { reflection: reflection as MonthlyReflectionResult };
+    const response = await apiClient.put<PutMonthlyReflectionResponse>(thinkingReflectionApiPaths.monthReflection(monthKey), payload);
+    return normalizeThinkingMonthRecord(response.data);
+  },
+
+  async saveMonthlyUserNote(monthKey, userNote) {
+    assertThinkingMonthKey(monthKey);
+    const payload: PutMonthlyUserNoteRequest = { userNote: userNote as MonthlyUserNote };
+    const response = await apiClient.put<PutMonthlyUserNoteResponse>(thinkingReflectionApiPaths.monthUserNote(monthKey), payload);
+    return normalizeThinkingMonthRecord(response.data);
   },
 };

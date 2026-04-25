@@ -40,6 +40,8 @@ Lambda 向けの TypeScript backend です。`API Gateway HTTP API -> Lambda -> 
 - `PUT /v2/days/:date/question-responses`
 - `PUT /v2/weeks/:weekStart/reflection`
 - `PUT /v2/weeks/:weekStart/note`
+- `PUT /v2/months/:monthKey/reflection`
+- `PUT /v2/months/:monthKey/note`
 
 旧版ジャーナリング API（`/days`, `/weeks`, `/months`, `/years`, `/migration/local-storage-import`）は削除済みです。
 

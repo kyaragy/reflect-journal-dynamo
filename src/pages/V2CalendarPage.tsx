@@ -116,7 +116,23 @@ export default function V2CalendarPage() {
         <button type="button" onClick={() => setCurrentMonth(subMonths(currentMonth, 1))} className="rounded-full p-2 hover:bg-stone-100">
           <ChevronLeft className="h-5 w-5 text-stone-600" />
         </button>
-        <h2 className="font-serif text-2xl text-stone-900">{format(currentMonth, 'yyyy年 M月', { locale: ja })}</h2>
+        <div className="flex flex-col items-center gap-2">
+          <button
+            type="button"
+            onClick={() => navigate(`/v2/month/${format(currentMonth, 'yyyy-MM')}/thinking`)}
+            className="font-serif text-2xl text-stone-900 underline decoration-sky-300 decoration-2 underline-offset-4 transition-colors hover:text-sky-700"
+          >
+            {format(currentMonth, 'yyyy年 M月', { locale: ja })}
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate(`/v2/month/${format(currentMonth, 'yyyy-MM')}/thinking`)}
+            className="inline-flex items-center gap-1 rounded-full border border-sky-200 bg-sky-50 px-3 py-1 text-xs font-semibold text-sky-700 transition-colors hover:bg-sky-100"
+          >
+            <CalendarRange className="h-3.5 w-3.5" />
+            月次ふりかえり
+          </button>
+        </div>
         <button type="button" onClick={() => setCurrentMonth(addMonths(currentMonth, 1))} className="rounded-full p-2 hover:bg-stone-100">
           <ChevronRight className="h-5 w-5 text-stone-600" />
         </button>
