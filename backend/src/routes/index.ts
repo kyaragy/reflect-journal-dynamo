@@ -3,15 +3,6 @@ import {
   assertDateString,
   assertMonthKey,
   assertWeekKey,
-  assertYearKey,
-  type ImportLocalStorageSnapshotRequest,
-  type PostCardRequest,
-  type PutCardRequest,
-  type PutDayRequest,
-  type PutDaySummaryRequest,
-  type PutMonthSummaryRequest,
-  type PutWeekSummaryRequest,
-  type PutYearSummaryRequest,
 } from '../../../src/contracts/journalApi';
 import {
   assertTodoDate,
@@ -80,14 +71,6 @@ const validateMonthKey = (value: string) => {
 
 const validateThinkingMonthKey = validateMonthKey;
 
-const validateYearKey = (value: string) => {
-  try {
-    assertYearKey(value);
-  } catch {
-    throw validationError('INVALID_YEAR_KEY', 'Invalid yearKey: expected YYYY', { yearKey: value });
-  }
-};
-
 const validateCardId = (value: string) => {
   try {
     assertCardId(value);
@@ -121,14 +104,6 @@ const validateTodoLabelId = (value: string) => {
 };
 
 const parseQuery = (event: ApiGatewayHttpEvent) => new URLSearchParams(event.rawQueryString ?? '');
-
-const assertSummaryBody = (value: unknown): string => {
-  if (typeof value !== 'string') {
-    throw validationError('INVALID_REQUEST_BODY', 'summary must be a string');
-  }
-
-  return value;
-};
 
 export const routeRequest = async (
   event: ApiGatewayHttpEvent,
@@ -350,152 +325,6 @@ export const routeRequest = async (
     }
 
     return success(await dependencies.journalService.getThinkingWeek(userId, weekStart), requestId);
-  }
-
-  if (path === '/migration/local-storage-import') {
-    if (method !== 'POST') {
-      throw methodNotAllowedError(method, path);
-    }
-
-    const payload = parseJsonBody<ImportLocalStorageSnapshotRequest>(event);
-    return success(await dependencies.journalService.importSnapshot(userId, payload.snapshot), requestId);
-  }
-
-  const dayCardMatch = path.match(/^\/days\/([^/]+)\/cards\/([^/]+)$/);
-  if (dayCardMatch) {
-    const [, date, cardId] = dayCardMatch;
-    validateDate(date);
-    validateCardId(cardId);
-
-    if (method === 'PUT') {
-      const payload = parseJsonBody<PutCardRequest>(event);
-      return success(await dependencies.journalService.updateCard(userId, date, cardId, payload), requestId);
-    }
-
-    if (method === 'DELETE') {
-      await dependencies.journalService.deleteCard(userId, date, cardId);
-      return success({ deleted: true }, requestId);
-    }
-
-    throw methodNotAllowedError(method, path);
-  }
-
-  const dayCardsMatch = path.match(/^\/days\/([^/]+)\/cards$/);
-  if (dayCardsMatch) {
-    const [, date] = dayCardsMatch;
-    validateDate(date);
-
-    if (method !== 'POST') {
-      throw methodNotAllowedError(method, path);
-    }
-
-    const payload = parseJsonBody<PostCardRequest>(event);
-    return success(await dependencies.journalService.createCard(userId, date, payload), requestId);
-  }
-
-  const daySummaryMatch = path.match(/^\/days\/([^/]+)\/summary$/);
-  if (daySummaryMatch) {
-    const [, date] = daySummaryMatch;
-    validateDate(date);
-
-    if (method !== 'PUT') {
-      throw methodNotAllowedError(method, path);
-    }
-
-    const payload = parseJsonBody<PutDaySummaryRequest>(event);
-    return success(await dependencies.journalService.saveDailySummary(userId, date, assertSummaryBody(payload.dailySummary)), requestId);
-  }
-
-  const dayMatch = path.match(/^\/days\/([^/]+)$/);
-  if (dayMatch) {
-    const [, date] = dayMatch;
-    validateDate(date);
-
-    if (method === 'GET') {
-      return success(await dependencies.journalService.getDay(userId, date), requestId);
-    }
-
-    if (method === 'PUT') {
-      const payload = parseJsonBody<PutDayRequest>(event);
-      return success(await dependencies.journalService.saveDay(userId, date, payload), requestId);
-    }
-
-    throw methodNotAllowedError(method, path);
-  }
-
-  const weekSummaryMatch = path.match(/^\/weeks\/([^/]+)\/summary$/);
-  if (weekSummaryMatch) {
-    const [, weekKey] = weekSummaryMatch;
-    validateWeekKey(weekKey);
-
-    if (method !== 'PUT') {
-      throw methodNotAllowedError(method, path);
-    }
-
-    const payload = parseJsonBody<PutWeekSummaryRequest>(event);
-    return success(await dependencies.journalService.saveWeekSummary(userId, weekKey, assertSummaryBody(payload.summary)), requestId);
-  }
-
-  const weekMatch = path.match(/^\/weeks\/([^/]+)$/);
-  if (weekMatch) {
-    const [, weekKey] = weekMatch;
-    validateWeekKey(weekKey);
-
-    if (method !== 'GET') {
-      throw methodNotAllowedError(method, path);
-    }
-
-    return success(await dependencies.journalService.getWeek(userId, weekKey), requestId);
-  }
-
-  const monthSummaryMatch = path.match(/^\/months\/([^/]+)\/summary$/);
-  if (monthSummaryMatch) {
-    const [, monthKey] = monthSummaryMatch;
-    validateMonthKey(monthKey);
-
-    if (method !== 'PUT') {
-      throw methodNotAllowedError(method, path);
-    }
-
-    const payload = parseJsonBody<PutMonthSummaryRequest>(event);
-    return success(await dependencies.journalService.saveMonthSummary(userId, monthKey, assertSummaryBody(payload.summary)), requestId);
-  }
-
-  const monthMatch = path.match(/^\/months\/([^/]+)$/);
-  if (monthMatch) {
-    const [, monthKey] = monthMatch;
-    validateMonthKey(monthKey);
-
-    if (method !== 'GET') {
-      throw methodNotAllowedError(method, path);
-    }
-
-    return success(await dependencies.journalService.getMonth(userId, monthKey), requestId);
-  }
-
-  const yearSummaryMatch = path.match(/^\/years\/([^/]+)\/summary$/);
-  if (yearSummaryMatch) {
-    const [, yearKey] = yearSummaryMatch;
-    validateYearKey(yearKey);
-
-    if (method !== 'PUT') {
-      throw methodNotAllowedError(method, path);
-    }
-
-    const payload = parseJsonBody<PutYearSummaryRequest>(event);
-    return success(await dependencies.journalService.saveYearSummary(userId, yearKey, assertSummaryBody(payload.summary)), requestId);
-  }
-
-  const yearMatch = path.match(/^\/years\/([^/]+)$/);
-  if (yearMatch) {
-    const [, yearKey] = yearMatch;
-    validateYearKey(yearKey);
-
-    if (method !== 'GET') {
-      throw methodNotAllowedError(method, path);
-    }
-
-    return success(await dependencies.journalService.getYear(userId, yearKey), requestId);
   }
 
   throw notFoundError('Route not found', { path });
