@@ -68,7 +68,18 @@ const formatUpcomingSectionLabel = (dateKey: string) => {
   return `${format(date, 'M月d日')}・${format(date, 'EEEE', { locale: ja })}`;
 };
 
-const formatTableDate = (date: string | null) => (date ? date : '-');
+const formatCompletedSectionLabel = (dateKey: string) => {
+  const date = parseISO(dateKey);
+  const today = todayKey();
+  const yesterday = toDateKey(addDays(new Date(), -1));
+  if (dateKey === today) {
+    return `${format(date, 'M月d日')}・今日・${format(date, 'EEEE', { locale: ja })}`;
+  }
+  if (dateKey === yesterday) {
+    return `${format(date, 'M月d日')}・昨日・${format(date, 'EEEE', { locale: ja })}`;
+  }
+  return `${format(date, 'M月d日')}・${format(date, 'EEEE', { locale: ja })}`;
+};
 
 const getLabelMap = (labels: TodoLabel[]) => new Map(labels.map((label) => [label.id, label]));
 const areStringArraysEqual = (left: string[], right: string[]) =>
@@ -618,56 +629,87 @@ function TaskList({
   );
 }
 
-type CompletedTaskTableProps = {
+type CompletedTaskSectionListProps = {
   tasks: TodoTask[];
   selectedTaskId: string | null;
   onSelectTask: (task: TodoTask) => void;
   onToggleTask: (taskId: string) => void;
 };
 
-function CompletedTaskTable({ tasks, selectedTaskId, onSelectTask, onToggleTask }: CompletedTaskTableProps) {
+function CompletedTaskSectionList({ tasks, selectedTaskId, onSelectTask, onToggleTask }: CompletedTaskSectionListProps) {
   if (tasks.length === 0) {
     return <div className="border-y border-stone-100 py-6 text-sm text-stone-400">完了済みのTODOはありません。</div>;
   }
 
+  const groupedTasks = tasks.reduce<Map<string, TodoTask[]>>((map, task) => {
+    const completedDate = task.completedDate ?? '__unknown__';
+    const group = map.get(completedDate) ?? [];
+    group.push(task);
+    map.set(completedDate, group);
+    return map;
+  }, new Map<string, TodoTask[]>());
+
+  const sectionEntries = [...groupedTasks.entries()].sort(([leftDate], [rightDate]) => {
+    if (leftDate === '__unknown__') {
+      return 1;
+    }
+    if (rightDate === '__unknown__') {
+      return -1;
+    }
+    return rightDate.localeCompare(leftDate);
+  });
+
   return (
-    <div className="overflow-x-auto rounded-md border border-stone-200">
-      <table className="min-w-full border-collapse text-sm">
-        <thead className="bg-stone-100/70 text-left text-xs font-semibold text-stone-600">
-          <tr>
-            <th className="px-3 py-2">タスク名</th>
-            <th className="px-3 py-2">登録日</th>
-            <th className="px-3 py-2">実施予定日</th>
-            <th className="px-3 py-2">期限</th>
-            <th className="px-3 py-2">完了日</th>
-            <th className="w-16 px-3 py-2 text-center">操作</th>
-          </tr>
-        </thead>
-        <tbody>
-          {tasks.map((task) => (
-            <tr key={task.id} className={[selectedTaskId === task.id ? 'bg-red-50' : 'bg-white', 'border-t border-stone-100'].join(' ')}>
-              <td className="px-3 py-2">
-                <button type="button" onClick={() => onSelectTask(task)} className="truncate text-left text-stone-800 hover:text-red-700">
-                  {task.title}
+    <div className="space-y-8">
+      {sectionEntries.map(([completedDate, sectionTasks]) => (
+        <section key={completedDate}>
+          <h3 className="mb-2 text-2xl font-semibold text-stone-800">
+            {completedDate === '__unknown__' ? '完了日未設定' : formatCompletedSectionLabel(completedDate)}
+          </h3>
+          <div className="border-t border-stone-100">
+            {sectionTasks.map((task) => (
+              <article
+                key={task.id}
+                className={[
+                  'grid gap-3 border-b border-stone-100 px-1 py-3 sm:grid-cols-[1fr_auto] sm:items-center',
+                  selectedTaskId === task.id ? 'bg-red-50/40' : 'bg-white',
+                ].join(' ')}
+              >
+                <button type="button" onClick={() => onSelectTask(task)} className="min-w-0 text-left">
+                  <div className="truncate text-sm leading-6 text-stone-900 hover:text-red-700">{task.title}</div>
+                  <dl className="mt-1 grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-stone-500 sm:grid-cols-4">
+                    <div className="min-w-0">
+                      <dt className="text-stone-400">登録日</dt>
+                      <dd className="truncate text-stone-600">{task.registeredDate}</dd>
+                    </div>
+                    <div className="min-w-0">
+                      <dt className="text-stone-400">実施予定日</dt>
+                      <dd className="truncate text-stone-600">{task.scheduledDate}</dd>
+                    </div>
+                    <div className="min-w-0">
+                      <dt className="text-stone-400">期限</dt>
+                      <dd className="truncate text-stone-600">{task.dueDate ?? '-'}</dd>
+                    </div>
+                    <div className="min-w-0">
+                      <dt className="text-stone-400">完了日</dt>
+                      <dd className="truncate text-stone-600">{task.completedDate ?? '-'}</dd>
+                    </div>
+                  </dl>
                 </button>
-              </td>
-              <td className="px-3 py-2 text-stone-600">{formatTableDate(task.registeredDate)}</td>
-              <td className="px-3 py-2 text-stone-600">{formatTableDate(task.scheduledDate)}</td>
-              <td className="px-3 py-2 text-stone-600">{formatTableDate(task.dueDate)}</td>
-              <td className="px-3 py-2 text-stone-600">{formatTableDate(task.completedDate)}</td>
-              <td className="px-3 py-2 text-center">
-                <button
-                  type="button"
-                  onClick={() => onToggleTask(task.id)}
-                  className="rounded-md border border-stone-300 px-2 py-1 text-xs text-stone-700 hover:bg-stone-100"
-                >
-                  戻す
-                </button>
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+                <div className="sm:justify-self-end">
+                  <button
+                    type="button"
+                    onClick={() => onToggleTask(task.id)}
+                    className="rounded-md border border-stone-300 px-2 py-1 text-xs text-stone-700 hover:bg-stone-100"
+                  >
+                    戻す
+                  </button>
+                </div>
+              </article>
+            ))}
+          </div>
+        </section>
+      ))}
     </div>
   );
 }
@@ -984,13 +1026,13 @@ export default function TodoPage() {
         .sort((left, right) => (right.completedAt ?? '').localeCompare(left.completedAt ?? '') || right.updatedAt.localeCompare(left.updatedAt)),
     [visibleTasks]
   );
-  const completedTableTasks = useMemo(
+  const completedSectionTasks = useMemo(
     () =>
       [...completedTasks].sort(
         (left, right) =>
-          left.scheduledDate.localeCompare(right.scheduledDate) ||
-          left.registeredDate.localeCompare(right.registeredDate) ||
-          left.createdAt.localeCompare(right.createdAt)
+          (right.completedDate ?? '').localeCompare(left.completedDate ?? '') ||
+          (right.completedAt ?? '').localeCompare(left.completedAt ?? '') ||
+          right.updatedAt.localeCompare(left.updatedAt)
       ),
     [completedTasks]
   );
@@ -1435,10 +1477,10 @@ export default function TodoPage() {
             <section className="mb-8">
               <div className="mb-2 flex items-center justify-between">
                 <h3 className="text-sm font-semibold text-stone-700">完了タスク一覧</h3>
-                <span className="text-xs text-stone-400">{completedTableTasks.length}</span>
+                <span className="text-xs text-stone-400">{completedSectionTasks.length}</span>
               </div>
-              <CompletedTaskTable
-                tasks={completedTableTasks}
+              <CompletedTaskSectionList
+                tasks={completedSectionTasks}
                 selectedTaskId={selectedTaskId}
                 onSelectTask={(task) => setSelectedTaskId(task.id)}
                 onToggleTask={(taskId) => void toggleTask(taskId)}
