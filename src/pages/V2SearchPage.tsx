@@ -82,7 +82,7 @@ export default function V2SearchPage() {
           <input
             value={tagQuery}
             onChange={(event) => setTagQuery(event.target.value)}
-            placeholder="タグで検索（例: #仕事）"
+            placeholder="タグで検索（例: 仕事）"
             className="w-full rounded-2xl border border-stone-200 px-4 py-3 text-sm outline-none focus:border-sky-400 focus:ring-2 focus:ring-sky-100"
           />
           <select
@@ -134,7 +134,7 @@ export default function V2SearchPage() {
               </button>
             </div>
             <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-stone-700">{hit.body}</p>
-            {hit.tags?.length ? <p className="mt-2 text-xs text-stone-500">{hit.tags.map((tag) => `#${tag}`).join(' ')}</p> : null}
+            {hit.tags?.length ? <p className="mt-2 text-xs text-stone-500">{hit.tags.map((tag) => `${tag}`).join(' ')}</p> : null}
             {hit.mood ? <p className="mt-1 text-xs text-stone-500">mood: {hit.mood}</p> : null}
           </article>
         ))}

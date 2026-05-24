@@ -221,8 +221,20 @@ export const localStorageThinkingReflectionRepository: ThinkingReflectionReposit
     const snapshot = readSnapshot();
     const now = new Date().toISOString();
     const current = getDayRecord(snapshot, date) ?? createEmptyThinkingDayRecord(date, now);
+    const cardMap = new Map(reflection.cards.map((card) => [card.card_id, card]));
     const nextDay: ThinkingDayRecord = {
       ...current,
+      entries: current.entries.map((entry) => {
+        const card = cardMap.get(entry.id);
+        if (!card) {
+          return entry;
+        }
+        return {
+          ...entry,
+          tags: card.tags.length > 0 ? card.tags : entry.tags,
+          updatedAt: now,
+        };
+      }),
       thinkingReflection: {
         ...reflection,
         importedAt: reflection.importedAt || now,

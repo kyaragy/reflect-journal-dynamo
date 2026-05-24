@@ -8,6 +8,7 @@ import ThinkingMemoFormModal from '../components/thinking/ThinkingMemoFormModal'
 import ThinkingPromptModal from '../components/thinking/ThinkingPromptModal';
 import ThinkingImportModal from '../components/thinking/ThinkingImportModal';
 import ThinkingQuestionResponseModal from '../components/thinking/ThinkingQuestionResponseModal';
+import ThinkingTagManagerModal from '../components/thinking/ThinkingTagManagerModal';
 import { generateThinkingReflectionPrompt } from '../lib/thinkingReflectionPrompt';
 import type { ThinkingEntry } from '../domain/thinkingReflection';
 
@@ -17,6 +18,7 @@ export default function V2DayPage() {
   const [isMemoModalOpen, setIsMemoModalOpen] = useState(false);
   const [isPromptModalOpen, setIsPromptModalOpen] = useState(false);
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const [isTagManagerOpen, setIsTagManagerOpen] = useState(false);
   const [selectedQuestion, setSelectedQuestion] = useState<string | null>(null);
   const [editingEntry, setEditingEntry] = useState<ThinkingEntry | null>(null);
   const swipeStartRef = useRef<{ x: number; y: number } | null>(null);
@@ -168,6 +170,13 @@ export default function V2DayPage() {
             <Upload className="h-4 w-4" />
             JSONを取り込む
           </button>
+          <button
+            type="button"
+            onClick={() => setIsTagManagerOpen(true)}
+            className="inline-flex items-center gap-2 rounded-2xl border border-stone-300 bg-stone-100 px-4 py-3 text-sm font-medium text-stone-700 transition-colors hover:bg-stone-200"
+          >
+            タグ管理
+          </button>
           {reflection ? (
             <button
               type="button"
@@ -271,7 +280,7 @@ export default function V2DayPage() {
                 </p>
               ) : null}
               <p className="mt-4 whitespace-pre-wrap text-base leading-8 text-stone-700">{entry.body}</p>
-              {entry.tags?.length ? <p className="mt-3 text-sm text-stone-500">{entry.tags.map((tag) => `#${tag}`).join(' ')}</p> : null}
+              {entry.tags?.length ? <p className="mt-3 text-sm text-stone-500">{entry.tags.join(' ')}</p> : null}
               {entry.mood ? <p className="mt-2 text-sm text-stone-500">mood: {entry.mood}</p> : null}
             </article>
           ))
@@ -325,6 +334,52 @@ export default function V2DayPage() {
             await saveThinkingReflection(date, nextReflection);
             setIsImportModalOpen(false);
             navigate(`/v2/day/${date}/thinking`);
+          }}
+        />
+      ) : null}
+
+      {isTagManagerOpen ? (
+        <ThinkingTagManagerModal
+          days={days}
+          saving={saving}
+          onClose={() => setIsTagManagerOpen(false)}
+          onRenameTag={async (from, to) => {
+            const updates = days.flatMap((item) =>
+              item.entries
+                .filter((entry) => entry.tags?.includes(from))
+                .map((entry) => ({
+                  date: item.date,
+                  entry,
+                }))
+            );
+            for (const update of updates) {
+              const nextTags = (update.entry.tags ?? []).map((tag) => (tag === from ? to : tag));
+              await updateEntry(update.date, update.entry.id, {
+                trigger: update.entry.trigger,
+                body: update.entry.body,
+                tags: Array.from(new Set(nextTags)),
+                mood: update.entry.mood,
+              });
+            }
+          }}
+          onDeleteTag={async (tag) => {
+            const updates = days.flatMap((item) =>
+              item.entries
+                .filter((entry) => entry.tags?.includes(tag))
+                .map((entry) => ({
+                  date: item.date,
+                  entry,
+                }))
+            );
+            for (const update of updates) {
+              const nextTags = (update.entry.tags ?? []).filter((item) => item !== tag);
+              await updateEntry(update.date, update.entry.id, {
+                trigger: update.entry.trigger,
+                body: update.entry.body,
+                tags: nextTags.length > 0 ? nextTags : undefined,
+                mood: update.entry.mood,
+              });
+            }
           }}
         />
       ) : null}

@@ -504,8 +504,20 @@ export class MemoryJournalRepository implements JournalDataRepository {
     const now = new Date().toISOString();
     const days = this.getThinkingSnapshot(userId);
     const current = days.find((item) => item.date === date) ?? createEmptyThinkingDayRecord(date, now);
+    const cardMap = new Map(reflection.cards.map((card) => [card.card_id, card]));
     const nextDay: ThinkingDayRecord = {
       ...current,
+      entries: current.entries.map((entry) => {
+        const card = cardMap.get(entry.id);
+        if (!card) {
+          return entry;
+        }
+        return {
+          ...entry,
+          tags: card.tags.length > 0 ? card.tags : entry.tags,
+          updatedAt: now,
+        };
+      }),
       thinkingReflection: normalizeThinkingReflectionResult(reflection),
       updatedAt: now,
     };
