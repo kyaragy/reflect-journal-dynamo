@@ -56,7 +56,7 @@ const clearCallbackUrl = () => {
     return;
   }
 
-  const postLoginHash = window.sessionStorage.getItem(getPostLoginHashStorageKey()) ?? '#/v2/calendar';
+  const postLoginHash = window.sessionStorage.getItem(getPostLoginHashStorageKey()) ?? '#/v2/home';
   window.sessionStorage.removeItem(getPostLoginHashStorageKey());
   window.history.replaceState({}, document.title, `${window.location.pathname}${postLoginHash}`);
 };

@@ -33,9 +33,9 @@ Lambda 向けの TypeScript backend です。`API Gateway HTTP API -> Lambda -> 
 - `GET /v2/days/:date`
 - `GET /v2/months/:monthKey`
 - `GET /v2/weeks/:weekStart`
-- `POST /v2/days/:date/memo-cards`
-- `PUT /v2/days/:date/memo-cards/:memoCardId`
-- `DELETE /v2/days/:date/memo-cards/:memoCardId`
+- `POST /v2/days/:date/entrys`
+- `PUT /v2/days/:date/entrys/:memoCardId`
+- `DELETE /v2/days/:date/entrys/:memoCardId`
 - `PUT /v2/days/:date/thinking-reflection`
 - `PUT /v2/days/:date/question-responses`
 - `PUT /v2/weeks/:weekStart/reflection`

@@ -2,19 +2,18 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { parseThinkingReflectionImport } from './thinkingReflectionImport';
 import { generateThinkingReflectionPrompt } from './thinkingReflectionPrompt';
-import type { ThinkingMemoCard } from '../domain/thinkingReflection';
+import type { ThinkingEntry } from '../domain/thinkingReflection';
 
-const cards: ThinkingMemoCard[] = [
+const cards: ThinkingEntry[] = [
   {
     id: 'card-1',
-    trigger: 'Teamsの通知が来た',
+    trigger: '朝会前にTeams通知が来た',
     body: 'また急ぎ依頼かと思って少し身構えた。',
     createdAt: '2026-04-10T15:10:00.000Z',
     updatedAt: '2026-04-10T15:10:00.000Z',
   },
   {
     id: 'card-2',
-    trigger: '勉強を始めようとした',
     body: '10分だけでも進めようと思った。',
     createdAt: '2026-04-10T21:05:00.000Z',
     updatedAt: '2026-04-10T21:05:00.000Z',
@@ -26,7 +25,8 @@ test('generateThinkingReflectionPrompt renders fixed prompt with card payloads',
 
   assert.match(prompt, /date: 2026-04-10/);
   assert.match(prompt, /## card_id: card-1/);
-  assert.match(prompt, /trigger: Teamsの通知が来た/);
+  assert.match(prompt, /trigger: 朝会前にTeams通知が来た/);
+  assert.match(prompt, /## card_id: card-2[\s\S]*trigger: \(none\)/);
   assert.match(prompt, /body:\nまた急ぎ依頼かと思って少し身構えた。/);
 });
 
@@ -40,6 +40,7 @@ test('parseThinkingReflectionImport accepts a valid code block payload', () => {
     {
       "card_id": "card-1",
       "trigger": "Teamsの通知が来た",
+      "tags": ["仕事"],
       "thoughts": ["通知が来ると悪い内容を想定しがち"],
       "emotions": ["身構えた"],
       "body_reactions": [],
@@ -48,6 +49,7 @@ test('parseThinkingReflectionImport accepts a valid code block payload', () => {
     {
       "card_id": "card-2",
       "trigger": "勉強を始めようとした",
+      "tags": ["学習"],
       "thoughts": ["10分だけでも進めればよい"],
       "emotions": ["少し気が重い"],
       "body_reactions": ["頭が重い"],
@@ -68,7 +70,7 @@ test('parseThinkingReflectionImport accepts a valid code block payload', () => {
   assert.equal(reflection.daily_patterns.length, 2);
 });
 
-test('parseThinkingReflectionImport rejects mismatched triggers', () => {
+test('parseThinkingReflectionImport rejects unknown card id', () => {
   assert.throws(
     () =>
       parseThinkingReflectionImport(
@@ -77,8 +79,9 @@ test('parseThinkingReflectionImport rejects mismatched triggers', () => {
           mode: 'thinking',
           cards: [
             {
-              card_id: 'card-1',
+              card_id: 'unknown-card',
               trigger: '別のきっかけ',
+              tags: [],
               thoughts: ['a'],
               emotions: ['b'],
               body_reactions: [],
@@ -87,6 +90,7 @@ test('parseThinkingReflectionImport rejects mismatched triggers', () => {
             {
               card_id: 'card-2',
               trigger: '勉強を始めようとした',
+              tags: [],
               thoughts: ['a'],
               emotions: ['b'],
               body_reactions: [],
@@ -100,6 +104,6 @@ test('parseThinkingReflectionImport rejects mismatched triggers', () => {
         '2026-04-10',
         cards
       ),
-    /trigger must match/
+    /Unknown card_id/
   );
 });

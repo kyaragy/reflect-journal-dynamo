@@ -17,6 +17,7 @@ export default function V2ThinkingMonthPage() {
   const [userNoteDraft, setUserNoteDraft] = useState('');
 
   const weeks = useThinkingReflectionStore((state) => state.weeks);
+  const days = useThinkingReflectionStore((state) => state.days);
   const months = useThinkingReflectionStore((state) => state.months);
   const refreshWeek = useThinkingReflectionStore((state) => state.refreshWeek);
   const refreshMonthRecord = useThinkingReflectionStore((state) => state.refreshMonthRecord);
@@ -74,9 +75,9 @@ export default function V2ThinkingMonthPage() {
 
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <button onClick={() => navigate('/v2/calendar')} className="mb-6 flex items-center text-stone-500 transition-colors hover:text-stone-800">
+      <button onClick={() => navigate('/v2/home')} className="mb-6 flex items-center text-stone-500 transition-colors hover:text-stone-800">
         <ArrowLeft className="mr-2 h-4 w-4" />
-        新版カレンダーへ戻る
+        ホームへ戻る
       </button>
 
       <header className="mb-8 flex flex-col gap-4 rounded-3xl border border-stone-200 bg-white p-6 shadow-sm lg:flex-row lg:items-end lg:justify-between">
@@ -122,7 +123,7 @@ export default function V2ThinkingMonthPage() {
       </header>
 
       {reflection ? (
-        <MonthlyReflectionPreview reflection={reflection} sourceWeeks={sourceWeeks} />
+        <MonthlyReflectionPreview reflection={reflection} sourceWeeks={sourceWeeks} sourceDays={days} />
       ) : (
         <section className="rounded-3xl border-2 border-dashed border-stone-200 px-4 py-16 text-center text-sm text-stone-400">
           この月の月次ふりかえりはまだ保存されていません。まずは週次材料を ChatGPT 用に出力し、返却JSONを取り込んでください。

@@ -17,7 +17,7 @@ function SectionCard({ title, items, icon: Icon }: { title: string; items: strin
       </div>
       <ul className="mt-4 space-y-2.5">
         {items.map((item) => (
-          <li key={item} className="rounded-2xl bg-stone-50 px-4 py-3 text-sm leading-7 text-stone-700">
+          <li key={item} className="rounded-2xl bg-stone-50 px-4 py-3 text-base leading-8 text-stone-700">
             {item}
           </li>
         ))}
@@ -34,7 +34,7 @@ export default function WeeklyReflectionPreview({ reflection, sourceDays }: Prop
       <section className="rounded-[2rem] border border-sky-200 bg-linear-to-br from-sky-50 via-white to-cyan-50 p-6 shadow-sm">
         <p className="text-[11px] font-semibold uppercase tracking-[0.24em] text-sky-600">Weekly Summary</p>
         <h3 className="mt-3 text-2xl font-semibold text-stone-950">今週の要約</h3>
-        <p className="mt-4 whitespace-pre-wrap text-sm leading-8 text-stone-700">{reflection.weekly_summary}</p>
+        <p className="mt-4 whitespace-pre-wrap text-base leading-8 text-stone-700">{reflection.weekly_summary}</p>
       </section>
 
       <section className="rounded-3xl border border-stone-200 bg-white p-5 shadow-sm">
@@ -47,7 +47,7 @@ export default function WeeklyReflectionPreview({ reflection, sourceDays }: Prop
         <div className="mt-4 space-y-3">
           {reflection.repeated_patterns.map((item) => (
             <div key={`${item.pattern}-${item.count}`} className="flex items-center justify-between rounded-2xl bg-sky-50 px-4 py-3">
-              <p className="text-sm leading-7 text-sky-950">{item.pattern}</p>
+              <p className="text-base leading-8 text-sky-950">{item.pattern}</p>
               <span className="rounded-full bg-white px-2.5 py-1 text-[11px] font-semibold text-sky-700">{item.count}回</span>
             </div>
           ))}
@@ -76,6 +76,7 @@ export default function WeeklyReflectionPreview({ reflection, sourceDays }: Prop
             const day = sourceDayMap.get(sourceDay.date);
             const daily = day?.thinkingReflection;
             const answerMemos = day?.questionResponses.map((item) => item.response).filter((item) => item.trim().length > 0) ?? [];
+            const dayTags = Array.from(new Set(day?.entries.flatMap((entry) => entry.tags ?? []) ?? []));
 
             return (
               <details key={sourceDay.date} className="rounded-2xl border border-stone-200 bg-stone-50/70 px-4 py-3">
@@ -84,27 +85,35 @@ export default function WeeklyReflectionPreview({ reflection, sourceDays }: Prop
                 </summary>
                 {daily ? (
                   <div className="mt-4 grid gap-3 md:grid-cols-2">
+                    <div className="rounded-2xl bg-white p-4 md:col-span-2">
+                      <p className="text-xs font-semibold uppercase tracking-[0.2em] text-stone-400">record_tags</p>
+                      {dayTags.length > 0 ? (
+                        <p className="mt-2 text-base leading-8 text-stone-700">{dayTags.map((tag) => `#${tag}`).join(' ')}</p>
+                      ) : (
+                        <p className="mt-2 text-base leading-8 text-stone-400">タグなし</p>
+                      )}
+                    </div>
                     <div className="rounded-2xl bg-white p-4">
                       <p className="text-xs font-semibold uppercase tracking-[0.2em] text-stone-400">daily_summary</p>
-                      <p className="mt-2 whitespace-pre-wrap text-sm leading-7 text-stone-700">
+                      <p className="mt-2 whitespace-pre-wrap text-base leading-8 text-stone-700">
                         {daily.daily_patterns.join('\n')}
                       </p>
                     </div>
                     <div className="rounded-2xl bg-white p-4">
                       <p className="text-xs font-semibold uppercase tracking-[0.2em] text-stone-400">insight_candidates</p>
-                      <ul className="mt-2 space-y-2 text-sm leading-7 text-stone-700">
+                      <ul className="mt-2 space-y-2 text-base leading-8 text-stone-700">
                         {daily.insight_candidates.map((item) => <li key={item}>{item}</li>)}
                       </ul>
                     </div>
                     <div className="rounded-2xl bg-white p-4">
                       <p className="text-xs font-semibold uppercase tracking-[0.2em] text-stone-400">questions</p>
-                      <ul className="mt-2 space-y-2 text-sm leading-7 text-stone-700">
+                      <ul className="mt-2 space-y-2 text-base leading-8 text-stone-700">
                         {daily.questions.map((item) => <li key={item}>{item}</li>)}
                       </ul>
                     </div>
                     <div className="rounded-2xl bg-white p-4">
                       <p className="text-xs font-semibold uppercase tracking-[0.2em] text-stone-400">answer_memos</p>
-                      <ul className="mt-2 space-y-2 text-sm leading-7 text-stone-700">
+                      <ul className="mt-2 space-y-2 text-base leading-8 text-stone-700">
                         {answerMemos.length > 0 ? answerMemos.map((item) => <li key={item}>{item}</li>) : <li>なし</li>}
                       </ul>
                     </div>

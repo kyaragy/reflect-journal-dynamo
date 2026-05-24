@@ -4,19 +4,19 @@ import {
   createEmptyThinkingMonthRecord,
   createEmptyThinkingWeekRecord,
   createEmptyThinkingDayRecord,
-  hasMeaningfulThinkingMemoContent,
+  hasMeaningfulThinkingEntryContent,
   normalizeThinkingDayRecord,
   normalizeThinkingMonthRecord,
   normalizeThinkingWeekRecord,
   replaceThinkingDay,
-  type CreateThinkingMemoCardInput,
+  type CreateThinkingEntryInput,
   type MonthlyReflectionResult,
   type MonthlyUserNote,
   type ThinkingDayRecord,
   type ThinkingMonthRecord,
   type ThinkingWeekRecord,
   type ThinkingReflectionResult,
-  type UpdateThinkingMemoCardInput,
+  type UpdateThinkingEntryInput,
   type UpsertThinkingQuestionResponseInput,
   type WeeklyReflectionResult,
   type WeeklyUserNote,
@@ -141,9 +141,9 @@ export const localStorageThinkingReflectionRepository: ThinkingReflectionReposit
     return getWeekRecord(snapshot, weekStart) ?? createEmptyThinkingWeekRecord(weekStart, getWeekEnd(weekStart));
   },
 
-  async createMemoCard(date, input) {
-    if (!hasMeaningfulThinkingMemoContent(input)) {
-      throw new Error('Memo card must include both trigger and body');
+  async createEntry(date, input) {
+    if (!hasMeaningfulThinkingEntryContent(input)) {
+      throw new Error('Entry body is required');
     }
 
     const snapshot = readSnapshot();
@@ -151,12 +151,14 @@ export const localStorageThinkingReflectionRepository: ThinkingReflectionReposit
     const current = getDayRecord(snapshot, date) ?? createEmptyThinkingDayRecord(date, now);
     const nextDay: ThinkingDayRecord = {
       ...current,
-      memoCards: [
-        ...current.memoCards,
+      entries: [
+        ...current.entries,
         {
           id: uuidv4(),
-          trigger: input.trigger.trim(),
+          trigger: input.trigger?.trim() || undefined,
           body: input.body.trim(),
+          tags: input.tags,
+          mood: input.mood,
           createdAt: now,
           updatedAt: now,
         },
@@ -167,29 +169,31 @@ export const localStorageThinkingReflectionRepository: ThinkingReflectionReposit
     return persistDay(snapshot, nextDay);
   },
 
-  async updateMemoCard(date, memoCardId, input) {
-    if (!hasMeaningfulThinkingMemoContent(input)) {
-      throw new Error('Memo card must include both trigger and body');
+  async updateEntry(date, entryId, input) {
+    if (!hasMeaningfulThinkingEntryContent(input)) {
+      throw new Error('Entry body is required');
     }
 
     const snapshot = readSnapshot();
     const current = getDayRecord(snapshot, date);
-    if (!current?.memoCards.some((card) => card.id === memoCardId)) {
-      throw new Error('Thinking memo card not found');
+    if (!current?.entries.some((entry) => entry.id === entryId)) {
+      throw new Error('Thinking entry not found');
     }
 
     const now = new Date().toISOString();
     const nextDay: ThinkingDayRecord = {
       ...current,
-      memoCards: current.memoCards.map((card) =>
-        card.id === memoCardId
+      entries: current.entries.map((entry) =>
+        entry.id === entryId
           ? {
-              ...card,
-              trigger: input.trigger.trim(),
+              ...entry,
+              trigger: input.trigger?.trim() || undefined,
               body: input.body.trim(),
+              tags: input.tags,
+              mood: input.mood,
               updatedAt: now,
             }
-          : card
+          : entry
       ),
       updatedAt: now,
     };
@@ -197,7 +201,7 @@ export const localStorageThinkingReflectionRepository: ThinkingReflectionReposit
     return persistDay(snapshot, nextDay);
   },
 
-  async deleteMemoCard(date, memoCardId) {
+  async deleteEntry(date, entryId) {
     const snapshot = readSnapshot();
     const current = getDayRecord(snapshot, date);
     if (!current) {
@@ -206,7 +210,7 @@ export const localStorageThinkingReflectionRepository: ThinkingReflectionReposit
 
     const nextDay: ThinkingDayRecord = {
       ...current,
-      memoCards: current.memoCards.filter((card) => card.id !== memoCardId),
+      entries: current.entries.filter((entry) => entry.id !== entryId),
       updatedAt: new Date().toISOString(),
     };
 

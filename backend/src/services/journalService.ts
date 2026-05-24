@@ -1,11 +1,11 @@
 import type { CreateCardInput, Day, JournalSnapshot } from '../../../src/domain/journal';
 import type {
-  CreateThinkingMemoCardInput,
+  CreateThinkingEntryInput,
   MonthlyReflectionResult,
   MonthlyUserNote,
   ThinkingWeekRecord,
   ThinkingReflectionResult,
-  UpdateThinkingMemoCardInput,
+  UpdateThinkingEntryInput,
   UpsertThinkingQuestionResponseInput,
   WeeklyReflectionResult,
   WeeklyUserNote,
@@ -88,16 +88,16 @@ export class JournalService {
     return this.repository.getThinkingWeek(userId, weekStart);
   }
 
-  createThinkingMemoCard(userId: string, date: string, input: CreateThinkingMemoCardInput) {
-    return this.repository.createThinkingMemoCard(userId, date, input);
+  createThinkingEntry(userId: string, date: string, input: CreateThinkingEntryInput) {
+    return this.repository.createThinkingEntry(userId, date, input);
   }
 
-  updateThinkingMemoCard(userId: string, date: string, memoCardId: string, input: UpdateThinkingMemoCardInput) {
-    return this.repository.updateThinkingMemoCard(userId, date, memoCardId, input);
+  updateThinkingEntry(userId: string, date: string, entryId: string, input: UpdateThinkingEntryInput) {
+    return this.repository.updateThinkingEntry(userId, date, entryId, input);
   }
 
-  deleteThinkingMemoCard(userId: string, date: string, memoCardId: string) {
-    return this.repository.deleteThinkingMemoCard(userId, date, memoCardId);
+  deleteThinkingEntry(userId: string, date: string, entryId: string) {
+    return this.repository.deleteThinkingEntry(userId, date, entryId);
   }
 
   saveThinkingReflection(userId: string, date: string, reflection: ThinkingReflectionResult) {

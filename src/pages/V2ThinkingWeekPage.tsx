@@ -54,9 +54,9 @@ export default function V2ThinkingWeekPage() {
 
   return (
     <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-      <button onClick={() => navigate('/v2/calendar')} className="mb-6 flex items-center text-stone-500 transition-colors hover:text-stone-800">
+      <button onClick={() => navigate('/v2/home')} className="mb-6 flex items-center text-stone-500 transition-colors hover:text-stone-800">
         <ArrowLeft className="mr-2 h-4 w-4" />
-        新版カレンダーへ戻る
+        ホームへ戻る
       </button>
 
       <header className="mb-8 flex flex-col gap-4 rounded-3xl border border-stone-200 bg-white p-6 shadow-sm lg:flex-row lg:items-end lg:justify-between">

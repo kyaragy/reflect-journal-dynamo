@@ -1,5 +1,6 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import type { ThinkingDayRecord, WeeklyReflectionResult } from '../../domain/thinkingReflection';
+import { appendImportHistory, getImportHistory, type ImportHistoryRecord } from '../../lib/importHistory';
 import { parseWeeklyReflectionImport } from '../../lib/weeklyReflectionImport';
 import WeeklyReflectionPreview from './WeeklyReflectionPreview';
 
@@ -14,6 +15,11 @@ type Props = {
 export default function WeeklyReflectionImportModal({ weekStart, sourceDays, saving, onClose, onSave }: Props) {
   const [rawInput, setRawInput] = useState('');
   const [submitted, setSubmitted] = useState(false);
+  const [history, setHistory] = useState<ImportHistoryRecord[]>([]);
+
+  useEffect(() => {
+    setHistory(getImportHistory('weekly', weekStart));
+  }, [weekStart]);
 
   const parsed = useMemo(() => {
     if (!rawInput.trim()) {
@@ -59,7 +65,10 @@ export default function WeeklyReflectionImportModal({ weekStart, sourceDays, sav
               className="min-h-[360px] w-full rounded-2xl border border-stone-200 bg-white px-4 py-3 font-mono text-sm leading-7 text-stone-800 outline-none transition-colors focus:border-sky-400 focus:ring-2 focus:ring-sky-100"
             />
             {submitted && parsed.error ? (
-              <p className="rounded-2xl bg-rose-50 px-4 py-3 text-sm text-rose-700">{parsed.error}</p>
+              <div className="rounded-2xl bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                <p>{parsed.error}</p>
+                <p className="mt-1 text-xs text-rose-600">形式: JSON構文 / schema / week_start・source_days整合 を確認してください。</p>
+              </div>
             ) : null}
             <div className="flex justify-end">
               <button
@@ -67,10 +76,24 @@ export default function WeeklyReflectionImportModal({ weekStart, sourceDays, sav
                 disabled={saving || !parsed.reflection}
                 onClick={async () => {
                   setSubmitted(true);
-                  if (!parsed.reflection) {
+                  if (!parsed.reflection || parsed.error) {
+                    appendImportHistory({
+                      scope: 'weekly',
+                      target: weekStart,
+                      success: false,
+                      message: parsed.error ?? '不明なエラー',
+                    });
+                    setHistory(getImportHistory('weekly', weekStart));
                     return;
                   }
                   await onSave(parsed.reflection);
+                  appendImportHistory({
+                    scope: 'weekly',
+                    target: weekStart,
+                    success: true,
+                    message: 'import成功',
+                  });
+                  setHistory(getImportHistory('weekly', weekStart));
                 }}
                 className="rounded-2xl bg-sky-700 px-5 py-3 text-sm font-medium text-white transition-colors hover:bg-sky-600 disabled:opacity-60"
               >
@@ -92,6 +115,18 @@ export default function WeeklyReflectionImportModal({ weekStart, sourceDays, sav
             </div>
           </section>
         </div>
+
+        <section className="mt-6 rounded-3xl border border-stone-200 bg-white p-4">
+          <h4 className="text-sm font-semibold text-stone-800">import履歴</h4>
+          <div className="mt-3 space-y-2">
+            {history.length === 0 ? <p className="text-sm text-stone-400">履歴はまだありません。</p> : null}
+            {history.map((item) => (
+              <p key={item.id} className={`rounded-xl px-3 py-2 text-xs ${item.success ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`}>
+                {item.createdAt} / {item.success ? '成功' : '失敗'} / {item.message}
+              </p>
+            ))}
+          </div>
+        </section>
       </div>
     </div>
   );

@@ -25,7 +25,7 @@ export default function EntryPage() {
             きっかけと自由記述だけを軽く保存し、ChatGPT で思考振り返りJSONを生成して取り込むPoCです。
           </p>
           <Link
-            to="/v2/calendar"
+            to="/v2/home"
             className="mt-8 inline-flex rounded-2xl bg-sky-700 px-5 py-3 text-sm font-medium text-white transition-colors hover:bg-sky-600"
           >
             ジャーナリングを開く

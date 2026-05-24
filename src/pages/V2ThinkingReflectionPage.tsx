@@ -62,7 +62,7 @@ export default function V2ThinkingReflectionPage() {
       {day && reflection ? (
         <ThinkingReflectionPreview
           reflection={reflection}
-          memoCards={day.memoCards}
+          entries={day.entries}
           questionResponses={questionResponseMap}
           onQuestionSelect={setSelectedQuestion}
         />

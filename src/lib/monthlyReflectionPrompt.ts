@@ -1,5 +1,6 @@
 import { eachWeekOfInterval, endOfMonth, format, parseISO, startOfMonth } from 'date-fns';
 import type { ThinkingWeekRecord } from '../domain/thinkingReflection';
+import { buildReflectionExportMarkdown } from './reflectionExportTemplate';
 
 const MONTHLY_PROMPT_HEADER = `以下は、ある1ヶ月分の週次振り返りデータです。
 あなたの役割は、この記録を「月次振り返り」用に整理し、指定されたJSON形式のみを返すことです。
@@ -126,11 +127,17 @@ ${renderBulletList(week.growing_insights)}`
     )
     .join('\n\n');
 
-  return `${MONTHLY_PROMPT_HEADER}
+  const rawPrompt = `${MONTHLY_PROMPT_HEADER}
 
 【入力データ】
 month_start: ${monthStart}
 month_end: ${monthEnd}
 
 ${renderedWeeks}`;
+
+  return buildReflectionExportMarkdown({
+    scope: 'monthly',
+    targetLabel: monthKey,
+    body: rawPrompt,
+  });
 };

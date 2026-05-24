@@ -19,7 +19,7 @@ export default function AppVersionSwitcher() {
         TODO管理
       </Link>
       <Link
-        to="/v2/calendar"
+        to="/v2/home"
         className={[
           baseButtonClass,
           !isTodo ? 'bg-sky-700 text-white' : 'bg-sky-50 text-sky-700 hover:bg-sky-100',

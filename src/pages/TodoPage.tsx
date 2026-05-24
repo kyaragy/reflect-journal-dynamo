@@ -979,7 +979,7 @@ export default function TodoPage() {
   const createLabel = useTodoStore((state) => state.createLabel);
   const deleteLabel = useTodoStore((state) => state.deleteLabel);
   const thinkingSaving = useThinkingReflectionStore((state) => state.saving);
-  const addMemoCard = useThinkingReflectionStore((state) => state.addMemoCard);
+  const addEntry = useThinkingReflectionStore((state) => state.addEntry);
 
   useEffect(() => {
     void initialize();
@@ -1635,8 +1635,7 @@ export default function TodoPage() {
         <ThinkingMemoFormModal
           saving={thinkingSaving}
           initialValue={{
-            trigger: `${journalSourceTask.task.title}をやっていた気になったこと`,
-            body: '',
+            body: `${journalSourceTask.task.title}について感じたこと`,
           }}
           saveDate={journalSourceTask.saveDate}
           onSaveDateChange={(date) =>
@@ -1644,7 +1643,7 @@ export default function TodoPage() {
           }
           onClose={() => setJournalSourceTask(null)}
           onSave={async (input) => {
-            await addMemoCard(journalSourceTask.saveDate, input);
+            await addEntry(journalSourceTask.saveDate, input);
             setJournalSourceTask(null);
           }}
         />

@@ -1,12 +1,12 @@
 import type {
-  CreateThinkingMemoCardInput,
+  CreateThinkingEntryInput,
   ThinkingDayRecord,
   ThinkingMonthRecord,
   ThinkingWeekRecord,
   ThinkingReflectionResult,
   MonthlyReflectionResult,
   MonthlyUserNote,
-  UpdateThinkingMemoCardInput,
+  UpdateThinkingEntryInput,
   UpsertThinkingQuestionResponseInput,
   WeeklyReflectionResult,
   WeeklyUserNote,
@@ -16,9 +16,9 @@ export interface ThinkingReflectionRepository {
   getDay(date: string): Promise<ThinkingDayRecord | null>;
   getMonth(monthKey: string): Promise<ThinkingMonthRecord>;
   getWeek(weekStart: string): Promise<ThinkingWeekRecord>;
-  createMemoCard(date: string, input: CreateThinkingMemoCardInput): Promise<ThinkingDayRecord>;
-  updateMemoCard(date: string, memoCardId: string, input: UpdateThinkingMemoCardInput): Promise<ThinkingDayRecord>;
-  deleteMemoCard(date: string, memoCardId: string): Promise<void>;
+  createEntry(date: string, input: CreateThinkingEntryInput): Promise<ThinkingDayRecord>;
+  updateEntry(date: string, entryId: string, input: UpdateThinkingEntryInput): Promise<ThinkingDayRecord>;
+  deleteEntry(date: string, entryId: string): Promise<void>;
   saveThinkingReflection(date: string, reflection: ThinkingReflectionResult): Promise<ThinkingDayRecord>;
   saveQuestionResponses(date: string, questionResponses: UpsertThinkingQuestionResponseInput[]): Promise<ThinkingDayRecord>;
   saveWeeklyReflection(weekStart: string, reflection: WeeklyReflectionResult): Promise<ThinkingWeekRecord>;

@@ -17,22 +17,22 @@ import {
   createEmptyThinkingMonthRecord,
   createEmptyThinkingDayRecord,
   createEmptyThinkingWeekRecord,
-  hasMeaningfulThinkingMemoContent,
+  hasMeaningfulThinkingEntryContent,
   normalizeThinkingDayRecord,
   normalizeThinkingMonthRecord,
   normalizeThinkingReflectionResult,
   normalizeThinkingQuestionResponse,
   normalizeThinkingWeekRecord,
-  type CreateThinkingMemoCardInput,
+  type CreateThinkingEntryInput,
   type MonthlyReflectionResult,
   type MonthlyUserNote,
   type ThinkingDayRecord,
   type ThinkingMonthRecord,
   type ThinkingWeekRecord,
   type ThinkingReflectionResult,
-  type ThinkingMemoCard,
+  type ThinkingEntry,
   type ThinkingQuestionResponse,
-  type UpdateThinkingMemoCardInput,
+  type UpdateThinkingEntryInput,
   type UpsertThinkingQuestionResponseInput,
   type WeeklyReflectionResult,
   type WeeklyUserNote,
@@ -103,7 +103,7 @@ type ThinkingDayItem = {
   SK: string;
   entityType: 'THINKING_DAY';
   date: string;
-  memoCards: ThinkingMemoCard[];
+  entries: ThinkingEntry[];
   thinkingReflection: ThinkingReflectionResult | null;
   questionResponses: ThinkingQuestionResponse[];
   createdAt: string;
@@ -235,7 +235,7 @@ const toThinkingDayItem = (userId: string, day: ThinkingDayRecord): ThinkingDayI
   SK: toThinkingDaySk(day.date),
   entityType: 'THINKING_DAY',
   date: day.date,
-  memoCards: day.memoCards,
+  entries: day.entries,
   thinkingReflection: day.thinkingReflection,
   questionResponses: day.questionResponses,
   createdAt: day.createdAt,
@@ -245,7 +245,7 @@ const toThinkingDayItem = (userId: string, day: ThinkingDayRecord): ThinkingDayI
 const toThinkingDay = (item: ThinkingDayItem): ThinkingDayRecord =>
   normalizeThinkingDayRecord({
     date: item.date,
-    memoCards: item.memoCards ?? [],
+    entries: item.entries ?? [],
     thinkingReflection: item.thinkingReflection ?? null,
     questionResponses: item.questionResponses ?? [],
     createdAt: item.createdAt,
@@ -593,21 +593,23 @@ export class DynamoDbJournalRepository implements JournalDataRepository {
     return item ? toThinkingWeek(item) : createEmptyThinkingWeekRecord(weekStart, weekEnd);
   }
 
-  async createThinkingMemoCard(userId: string, date: string, input: CreateThinkingMemoCardInput) {
-    if (!hasMeaningfulThinkingMemoContent(input)) {
-      throw validationError('INVALID_REQUEST_BODY', 'Memo card must include both trigger and body');
+  async createThinkingEntry(userId: string, date: string, input: CreateThinkingEntryInput) {
+    if (!hasMeaningfulThinkingEntryContent(input)) {
+      throw validationError('INVALID_REQUEST_BODY', 'Entry body is required');
     }
 
     const now = new Date().toISOString();
     const current = (await this.getThinkingDay(userId, date)) ?? createEmptyThinkingDayRecord(date, now);
     const nextDay: ThinkingDayRecord = {
       ...current,
-      memoCards: [
-        ...current.memoCards,
+      entries: [
+        ...current.entries,
         {
           id: crypto.randomUUID(),
-          trigger: input.trigger.trim(),
+          trigger: input.trigger?.trim() || undefined,
           body: input.body.trim(),
+          tags: input.tags,
+          mood: input.mood,
           createdAt: now,
           updatedAt: now,
         },
@@ -619,25 +621,27 @@ export class DynamoDbJournalRepository implements JournalDataRepository {
     return nextDay;
   }
 
-  async updateThinkingMemoCard(userId: string, date: string, memoCardId: string, input: UpdateThinkingMemoCardInput) {
-    if (!hasMeaningfulThinkingMemoContent(input)) {
-      throw validationError('INVALID_REQUEST_BODY', 'Memo card must include both trigger and body');
+  async updateThinkingEntry(userId: string, date: string, entryId: string, input: UpdateThinkingEntryInput) {
+    if (!hasMeaningfulThinkingEntryContent(input)) {
+      throw validationError('INVALID_REQUEST_BODY', 'Entry body is required');
     }
 
     const current = await this.getThinkingDay(userId, date);
-    if (!current?.memoCards.some((item) => item.id === memoCardId)) {
-      throw notFoundError('Thinking memo card not found', { date, memoCardId });
+    if (!current?.entries.some((item) => item.id === entryId)) {
+      throw notFoundError('Thinking entry not found', { date, entryId });
     }
 
     const now = new Date().toISOString();
     const nextDay: ThinkingDayRecord = {
       ...current,
-      memoCards: current.memoCards.map((item) =>
-        item.id === memoCardId
+      entries: current.entries.map((item) =>
+        item.id === entryId
           ? {
               ...item,
-              trigger: input.trigger.trim(),
+              trigger: input.trigger?.trim() || undefined,
               body: input.body.trim(),
+              tags: input.tags,
+              mood: input.mood,
               updatedAt: now,
             }
           : item
@@ -649,15 +653,15 @@ export class DynamoDbJournalRepository implements JournalDataRepository {
     return nextDay;
   }
 
-  async deleteThinkingMemoCard(userId: string, date: string, memoCardId: string) {
+  async deleteThinkingEntry(userId: string, date: string, entryId: string) {
     const current = await this.getThinkingDay(userId, date);
-    if (!current?.memoCards.some((item) => item.id === memoCardId)) {
-      throw notFoundError('Thinking memo card not found', { date, memoCardId });
+    if (!current?.entries.some((item) => item.id === entryId)) {
+      throw notFoundError('Thinking entry not found', { date, entryId });
     }
 
     const nextDay: ThinkingDayRecord = {
       ...current,
-      memoCards: current.memoCards.filter((item) => item.id !== memoCardId),
+      entries: current.entries.filter((item) => item.id !== entryId),
       updatedAt: new Date().toISOString(),
     };
 
