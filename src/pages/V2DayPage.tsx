@@ -20,6 +20,7 @@ export default function V2DayPage() {
   const [selectedQuestion, setSelectedQuestion] = useState<string | null>(null);
   const [editingEntry, setEditingEntry] = useState<ThinkingEntry | null>(null);
   const swipeStartRef = useRef<{ x: number; y: number } | null>(null);
+  const swipePointerIdRef = useRef<number | null>(null);
 
   const days = useThinkingReflectionStore((state) => state.days);
   const saving = useThinkingReflectionStore((state) => state.saving);
@@ -54,6 +55,7 @@ export default function V2DayPage() {
   ).sort((left, right) => left.localeCompare(right));
   const prompt = generateThinkingReflectionPrompt(date, entries, existingTags);
   const weekStart = format(startOfWeek(parsedDate, { weekStartsOn: 0 }), 'yyyy-MM-dd');
+  const monthKey = format(parsedDate, 'yyyy-MM');
   const questionResponseMap = Object.fromEntries((day?.questionResponses ?? []).map((item) => [item.question, item.response]));
   const reflectionCardMap = new Map((reflection?.cards ?? []).map((card) => [card.card_id, card]));
   const SWIPE_THRESHOLD = 60;
@@ -74,32 +76,31 @@ export default function V2DayPage() {
   return (
     <div
       className="animate-in fade-in slide-in-from-bottom-4 duration-500"
-      onTouchStart={(event) => {
-        const touch = event.changedTouches[0];
-        if (!touch) {
-          return;
-        }
-        swipeStartRef.current = { x: touch.clientX, y: touch.clientY };
-      }}
-      onTouchEnd={(event) => {
-        const touch = event.changedTouches[0];
-        const start = swipeStartRef.current;
-        swipeStartRef.current = null;
-        if (!touch || !start) {
-          return;
-        }
-        handleSwipe(start.x, start.y, touch.clientX, touch.clientY);
-      }}
       onPointerDown={(event) => {
+        if (event.pointerType !== 'touch') {
+          return;
+        }
+        swipePointerIdRef.current = event.pointerId;
         swipeStartRef.current = { x: event.clientX, y: event.clientY };
       }}
       onPointerUp={(event) => {
+        if (event.pointerType !== 'touch' || swipePointerIdRef.current !== event.pointerId) {
+          return;
+        }
         const start = swipeStartRef.current;
+        swipePointerIdRef.current = null;
         swipeStartRef.current = null;
         if (!start) {
           return;
         }
         handleSwipe(start.x, start.y, event.clientX, event.clientY);
+      }}
+      onPointerCancel={(event) => {
+        if (swipePointerIdRef.current !== event.pointerId) {
+          return;
+        }
+        swipePointerIdRef.current = null;
+        swipeStartRef.current = null;
       }}
     >
       <nav className="mb-6">
@@ -184,6 +185,14 @@ export default function V2DayPage() {
           >
             <CalendarRange className="h-4 w-4" />
             週次集約を見る
+          </button>
+          <button
+            type="button"
+            onClick={() => navigate('/v2/calendar')}
+            className="inline-flex items-center gap-2 rounded-2xl border border-stone-300 bg-stone-100 px-4 py-3 text-sm font-medium text-stone-700 transition-colors hover:bg-stone-200"
+          >
+            <CalendarRange className="h-4 w-4" />
+            月カレンダーを見る（{monthKey}）
           </button>
         </div>
       </header>
