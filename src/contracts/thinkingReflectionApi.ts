@@ -1,12 +1,12 @@
 import type {
-  CreateThinkingMemoCardInput,
+  CreateThinkingEntryInput,
   ThinkingDayRecord,
   ThinkingMonthRecord,
   ThinkingWeekRecord,
   ThinkingReflectionResult,
   MonthlyReflectionResult,
   MonthlyUserNote,
-  UpdateThinkingMemoCardInput,
+  UpdateThinkingEntryInput,
   UpsertThinkingQuestionResponseInput,
   WeeklyReflectionResult,
   WeeklyUserNote,
@@ -34,16 +34,16 @@ export type GetThinkingWeekResponse = {
   };
 };
 
-export type PostThinkingMemoCardRequest = CreateThinkingMemoCardInput;
-export type PostThinkingMemoCardResponse = {
+export type PostThinkingEntryRequest = CreateThinkingEntryInput;
+export type PostThinkingEntryResponse = {
   data: ThinkingDayRecord;
   meta?: {
     requestId?: string;
   };
 };
 
-export type PutThinkingMemoCardRequest = UpdateThinkingMemoCardInput;
-export type PutThinkingMemoCardResponse = PostThinkingMemoCardResponse;
+export type PutThinkingEntryRequest = UpdateThinkingEntryInput;
+export type PutThinkingEntryResponse = PostThinkingEntryResponse;
 
 export type PutThinkingReflectionRequest = {
   reflection: ThinkingReflectionResult;
@@ -96,7 +96,7 @@ export type PutMonthlyUserNoteRequest = {
 
 export type PutMonthlyUserNoteResponse = PutMonthlyReflectionResponse;
 
-export type DeleteThinkingMemoCardResponse = {
+export type DeleteThinkingEntryResponse = {
   data: {
     deleted: true;
   };
@@ -109,8 +109,8 @@ export const thinkingReflectionApiPaths = {
   day: (date: string) => `/v2/days/${date}`,
   month: (monthKey: string) => `/v2/months/${monthKey}`,
   week: (weekStart: string) => `/v2/weeks/${weekStart}`,
-  dayMemoCards: (date: string) => `/v2/days/${date}/memo-cards`,
-  dayMemoCard: (date: string, memoCardId: string) => `/v2/days/${date}/memo-cards/${memoCardId}`,
+  dayEntries: (date: string) => `/v2/days/${date}/entries`,
+  dayEntry: (date: string, entryId: string) => `/v2/days/${date}/entries/${entryId}`,
   dayThinkingReflection: (date: string) => `/v2/days/${date}/thinking-reflection`,
   dayQuestionResponses: (date: string) => `/v2/days/${date}/question-responses`,
   weekReflection: (weekStart: string) => `/v2/weeks/${weekStart}/reflection`,

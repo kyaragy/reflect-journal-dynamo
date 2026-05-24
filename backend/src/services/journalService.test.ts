@@ -62,13 +62,13 @@ const createRepositoryStub = (): JournalDataRepository => ({
   async getThinkingWeek() {
     return createEmptyThinkingWeekRecord('2026-03-08', '2026-03-14');
   },
-  async createThinkingMemoCard() {
+  async createThinkingEntry() {
     return createEmptyThinkingDayRecord('2026-03-10');
   },
-  async updateThinkingMemoCard() {
+  async updateThinkingEntry() {
     return createEmptyThinkingDayRecord('2026-03-10');
   },
-  async deleteThinkingMemoCard() {},
+  async deleteThinkingEntry() {},
   async saveThinkingReflection() {
     return createEmptyThinkingDayRecord('2026-03-10');
   },

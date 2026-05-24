@@ -3,14 +3,14 @@ import { format } from 'date-fns';
 import {
   createEmptyThinkingDayRecord,
   replaceThinkingDay,
-  type CreateThinkingMemoCardInput,
+  type CreateThinkingEntryInput,
   type MonthlyReflectionResult,
   type MonthlyUserNote,
   type ThinkingDayRecord,
   type ThinkingMonthRecord,
   type ThinkingReflectionResult,
   type ThinkingWeekRecord,
-  type UpdateThinkingMemoCardInput,
+  type UpdateThinkingEntryInput,
   type UpsertThinkingQuestionResponseInput,
   type WeeklyReflectionResult,
   type WeeklyUserNote,
@@ -32,9 +32,9 @@ interface ThinkingReflectionState {
   refreshDay: (date: string) => Promise<void>;
   refreshWeek: (weekStart: string) => Promise<void>;
   refreshMonthRecord: (monthKey: string) => Promise<void>;
-  addMemoCard: (date: string, input: CreateThinkingMemoCardInput) => Promise<void>;
-  updateMemoCard: (date: string, memoCardId: string, input: UpdateThinkingMemoCardInput) => Promise<void>;
-  deleteMemoCard: (date: string, memoCardId: string) => Promise<void>;
+  addEntry: (date: string, input: CreateThinkingEntryInput) => Promise<void>;
+  updateEntry: (date: string, entryId: string, input: UpdateThinkingEntryInput) => Promise<void>;
+  deleteEntry: (date: string, entryId: string) => Promise<void>;
   saveThinkingReflection: (date: string, reflection: ThinkingReflectionResult) => Promise<void>;
   saveQuestionResponses: (date: string, questionResponses: UpsertThinkingQuestionResponseInput[]) => Promise<void>;
   saveWeeklyReflection: (weekStart: string, reflection: WeeklyReflectionResult) => Promise<void>;
@@ -160,27 +160,27 @@ export const useThinkingReflectionStore = create<ThinkingReflectionState>()((set
     });
   },
 
-  async addMemoCard(date, input) {
+  async addEntry(date, input) {
     await withSaving(set, async () => {
-      const day = await thinkingReflectionRepository.createMemoCard(date, input);
+      const day = await thinkingReflectionRepository.createEntry(date, input);
       set((state) => ({
         days: replaceThinkingDay(state.days, day),
       }));
     });
   },
 
-  async updateMemoCard(date, memoCardId, input) {
+  async updateEntry(date, entryId, input) {
     await withSaving(set, async () => {
-      const day = await thinkingReflectionRepository.updateMemoCard(date, memoCardId, input);
+      const day = await thinkingReflectionRepository.updateEntry(date, entryId, input);
       set((state) => ({
         days: replaceThinkingDay(state.days, day),
       }));
     });
   },
 
-  async deleteMemoCard(date, memoCardId) {
+  async deleteEntry(date, entryId) {
     await withSaving(set, async () => {
-      await thinkingReflectionRepository.deleteMemoCard(date, memoCardId);
+      await thinkingReflectionRepository.deleteEntry(date, entryId);
       set((state) => {
         const current = state.days.find((item) => item.date === date);
         if (!current) {
@@ -189,11 +189,11 @@ export const useThinkingReflectionStore = create<ThinkingReflectionState>()((set
 
         const now = new Date().toISOString();
         const nextDay =
-          current.memoCards.length <= 1 && !current.thinkingReflection
+          current.entries.length <= 1 && !current.thinkingReflection
             ? null
             : {
                 ...current,
-                memoCards: current.memoCards.filter((card) => card.id !== memoCardId),
+                entries: current.entries.filter((entry) => entry.id !== entryId),
                 updatedAt: now,
               };
 

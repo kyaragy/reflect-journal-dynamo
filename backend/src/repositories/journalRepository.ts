@@ -8,14 +8,14 @@ import type {
   YearRecord,
 } from '../../../src/domain/journal';
 import type {
-  CreateThinkingMemoCardInput,
+  CreateThinkingEntryInput,
   MonthlyReflectionResult,
   MonthlyUserNote,
   ThinkingDayRecord,
   ThinkingMonthRecord,
   ThinkingWeekRecord,
   ThinkingReflectionResult,
-  UpdateThinkingMemoCardInput,
+  UpdateThinkingEntryInput,
   UpsertThinkingQuestionResponseInput,
   WeeklyReflectionResult,
   WeeklyUserNote,
@@ -47,9 +47,9 @@ export interface JournalDataRepository {
   getThinkingDay(userId: string, date: string): Promise<ThinkingDayRecord | null>;
   getThinkingMonth(userId: string, monthKey: string): Promise<ThinkingMonthRecord>;
   getThinkingWeek(userId: string, weekStart: string): Promise<ThinkingWeekRecord>;
-  createThinkingMemoCard(userId: string, date: string, input: CreateThinkingMemoCardInput): Promise<ThinkingDayRecord>;
-  updateThinkingMemoCard(userId: string, date: string, memoCardId: string, input: UpdateThinkingMemoCardInput): Promise<ThinkingDayRecord>;
-  deleteThinkingMemoCard(userId: string, date: string, memoCardId: string): Promise<void>;
+  createThinkingEntry(userId: string, date: string, input: CreateThinkingEntryInput): Promise<ThinkingDayRecord>;
+  updateThinkingEntry(userId: string, date: string, entryId: string, input: UpdateThinkingEntryInput): Promise<ThinkingDayRecord>;
+  deleteThinkingEntry(userId: string, date: string, entryId: string): Promise<void>;
   saveThinkingReflection(userId: string, date: string, reflection: ThinkingReflectionResult): Promise<ThinkingDayRecord>;
   saveThinkingQuestionResponses(userId: string, date: string, questionResponses: UpsertThinkingQuestionResponseInput[]): Promise<ThinkingDayRecord>;
   saveWeeklyReflection(userId: string, weekStart: string, reflection: WeeklyReflectionResult): Promise<ThinkingWeekRecord>;

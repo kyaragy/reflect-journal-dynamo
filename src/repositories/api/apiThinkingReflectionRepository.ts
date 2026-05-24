@@ -5,7 +5,7 @@ import {
 import {
   assertThinkingMonthKey,
   thinkingReflectionApiPaths,
-  type DeleteThinkingMemoCardResponse,
+  type DeleteThinkingEntryResponse,
   type GetThinkingDayResponse,
   type GetThinkingMonthResponse,
   type GetThinkingWeekResponse,
@@ -13,10 +13,10 @@ import {
   type PutMonthlyReflectionResponse,
   type PutMonthlyUserNoteRequest,
   type PutMonthlyUserNoteResponse,
-  type PostThinkingMemoCardRequest,
-  type PostThinkingMemoCardResponse,
-  type PutThinkingMemoCardRequest,
-  type PutThinkingMemoCardResponse,
+  type PostThinkingEntryRequest,
+  type PostThinkingEntryResponse,
+  type PutThinkingEntryRequest,
+  type PutThinkingEntryResponse,
   type PutThinkingReflectionRequest,
   type PutThinkingReflectionResponse,
   type PutThinkingQuestionResponsesRequest,
@@ -33,7 +33,7 @@ import {
   type MonthlyReflectionResult,
   type MonthlyUserNote,
   type ThinkingReflectionResult,
-  type UpdateThinkingMemoCardInput,
+  type UpdateThinkingEntryInput,
   type UpsertThinkingQuestionResponseInput,
   type WeeklyReflectionResult,
   type WeeklyUserNote,
@@ -60,25 +60,25 @@ export const apiThinkingReflectionRepository: ThinkingReflectionRepository = {
     return normalizeThinkingWeekRecord(response.data);
   },
 
-  async createMemoCard(date, input) {
+  async createEntry(date, input) {
     assertDateString(date);
-    const payload: PostThinkingMemoCardRequest = input;
-    const response = await apiClient.post<PostThinkingMemoCardResponse>(thinkingReflectionApiPaths.dayMemoCards(date), payload);
+    const payload: PostThinkingEntryRequest = input;
+    const response = await apiClient.post<PostThinkingEntryResponse>(thinkingReflectionApiPaths.dayEntries(date), payload);
     return normalizeThinkingDayRecord(response.data);
   },
 
-  async updateMemoCard(date, memoCardId, input) {
+  async updateEntry(date, entryId, input) {
     assertDateString(date);
-    assertCardId(memoCardId);
-    const payload: PutThinkingMemoCardRequest = input as UpdateThinkingMemoCardInput;
-    const response = await apiClient.put<PutThinkingMemoCardResponse>(thinkingReflectionApiPaths.dayMemoCard(date, memoCardId), payload);
+    assertCardId(entryId);
+    const payload: PutThinkingEntryRequest = input as UpdateThinkingEntryInput;
+    const response = await apiClient.put<PutThinkingEntryResponse>(thinkingReflectionApiPaths.dayEntry(date, entryId), payload);
     return normalizeThinkingDayRecord(response.data);
   },
 
-  async deleteMemoCard(date, memoCardId) {
+  async deleteEntry(date, entryId) {
     assertDateString(date);
-    assertCardId(memoCardId);
-    await apiClient.delete<DeleteThinkingMemoCardResponse>(thinkingReflectionApiPaths.dayMemoCard(date, memoCardId));
+    assertCardId(entryId);
+    await apiClient.delete<DeleteThinkingEntryResponse>(thinkingReflectionApiPaths.dayEntry(date, entryId));
   },
 
   async saveThinkingReflection(date, reflection) {

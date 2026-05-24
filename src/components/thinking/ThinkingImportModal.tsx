@@ -1,19 +1,25 @@
-import { useMemo, useState } from 'react';
-import type { ThinkingMemoCard, ThinkingReflectionResult } from '../../domain/thinkingReflection';
+import { useEffect, useMemo, useState } from 'react';
+import type { ThinkingEntry, ThinkingReflectionResult } from '../../domain/thinkingReflection';
+import { appendImportHistory, getImportHistory, type ImportHistoryRecord } from '../../lib/importHistory';
 import { parseThinkingReflectionImport } from '../../lib/thinkingReflectionImport';
 import ThinkingReflectionPreview from './ThinkingReflectionPreview';
 
 type Props = {
   date: string;
-  memoCards: ThinkingMemoCard[];
+  entries: ThinkingEntry[];
   saving: boolean;
   onClose: () => void;
   onSave: (reflection: ThinkingReflectionResult) => Promise<void>;
 };
 
-export default function ThinkingImportModal({ date, memoCards, saving, onClose, onSave }: Props) {
+export default function ThinkingImportModal({ date, entries, saving, onClose, onSave }: Props) {
   const [rawInput, setRawInput] = useState('');
   const [submitted, setSubmitted] = useState(false);
+  const [history, setHistory] = useState<ImportHistoryRecord[]>([]);
+
+  useEffect(() => {
+    setHistory(getImportHistory('daily', date));
+  }, [date]);
 
   const parsed = useMemo(() => {
     if (!rawInput.trim()) {
@@ -22,7 +28,7 @@ export default function ThinkingImportModal({ date, memoCards, saving, onClose, 
 
     try {
       return {
-        reflection: parseThinkingReflectionImport(rawInput, date, memoCards),
+        reflection: parseThinkingReflectionImport(rawInput, date, entries),
         error: null,
       };
     } catch (error) {
@@ -31,15 +37,29 @@ export default function ThinkingImportModal({ date, memoCards, saving, onClose, 
         error: error instanceof Error ? error.message : 'JSONの解析に失敗しました',
       };
     }
-  }, [date, memoCards, rawInput]);
+  }, [date, entries, rawInput]);
 
   const handleSave = async () => {
     setSubmitted(true);
-    if (!parsed.reflection) {
+    if (!parsed.reflection || parsed.error) {
+      appendImportHistory({
+        scope: 'daily',
+        target: date,
+        success: false,
+        message: parsed.error ?? '不明なエラー',
+      });
+      setHistory(getImportHistory('daily', date));
       return;
     }
 
     await onSave(parsed.reflection);
+    appendImportHistory({
+      scope: 'daily',
+      target: date,
+      success: true,
+      message: 'import成功',
+    });
+    setHistory(getImportHistory('daily', date));
   };
 
   return (
@@ -69,7 +89,10 @@ export default function ThinkingImportModal({ date, memoCards, saving, onClose, 
               placeholder='```json\n{\n  "date": "2026-04-10",\n  ...\n}\n```'
             />
             {submitted && parsed.error ? (
-              <p className="rounded-2xl bg-rose-50 px-4 py-3 text-sm text-rose-700">{parsed.error}</p>
+              <div className="rounded-2xl bg-rose-50 px-4 py-3 text-sm text-rose-700">
+                <p>{parsed.error}</p>
+                <p className="mt-1 text-xs text-rose-600">形式: JSON構文 / schema / 日付やcard_id不一致 を確認してください。</p>
+              </div>
             ) : null}
             <div className="flex justify-end">
               <button
@@ -87,7 +110,7 @@ export default function ThinkingImportModal({ date, memoCards, saving, onClose, 
             <h4 className="text-sm font-semibold text-stone-800">保存前プレビュー</h4>
             <div className="mt-4">
               {parsed.reflection ? (
-                <ThinkingReflectionPreview reflection={parsed.reflection} memoCards={memoCards} />
+                <ThinkingReflectionPreview reflection={parsed.reflection} entries={entries} />
               ) : (
                 <div className="rounded-2xl border border-dashed border-stone-200 px-4 py-12 text-center text-sm text-stone-400">
                   有効なJSONを貼り付けるとプレビューを表示します。
@@ -96,6 +119,18 @@ export default function ThinkingImportModal({ date, memoCards, saving, onClose, 
             </div>
           </section>
         </div>
+
+        <section className="mt-6 rounded-3xl border border-stone-200 bg-white p-4">
+          <h4 className="text-sm font-semibold text-stone-800">import履歴</h4>
+          <div className="mt-3 space-y-2">
+            {history.length === 0 ? <p className="text-sm text-stone-400">履歴はまだありません。</p> : null}
+            {history.map((item) => (
+              <p key={item.id} className={`rounded-xl px-3 py-2 text-xs ${item.success ? 'bg-emerald-50 text-emerald-700' : 'bg-rose-50 text-rose-700'}`}>
+                {item.createdAt} / {item.success ? '成功' : '失敗'} / {item.message}
+              </p>
+            ))}
+          </div>
+        </section>
       </div>
     </div>
   );

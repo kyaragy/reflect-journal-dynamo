@@ -19,6 +19,46 @@ const assertMaxItems = (items: unknown[], max: number, label: string) => {
   }
 };
 
+const ensureObject = (value: unknown, path: string) => {
+  if (!value || typeof value !== 'object') {
+    throw new Error(`schema mismatch: ${path} must be an object`);
+  }
+  return value as Record<string, unknown>;
+};
+
+const ensureArray = (value: unknown, path: string) => {
+  if (!Array.isArray(value)) {
+    throw new Error(`schema mismatch: ${path} must be an array`);
+  }
+  return value;
+};
+
+const ensureString = (value: unknown, path: string) => {
+  if (typeof value !== 'string') {
+    throw new Error(`schema mismatch: ${path} must be a string`);
+  }
+};
+
+const validateMonthlySchema = (value: unknown) => {
+  const root = ensureObject(value, 'root');
+  const reflection = ensureObject(root.reflection, 'reflection');
+  ensureString(reflection.month_start, 'reflection.month_start');
+  ensureString(reflection.month_end, 'reflection.month_end');
+  ensureString(reflection.mode, 'reflection.mode');
+  ensureString(reflection.monthly_summary, 'reflection.monthly_summary');
+  ensureArray(reflection.looping_patterns, 'reflection.looping_patterns');
+  ensureArray(reflection.evolving_insights, 'reflection.evolving_insights');
+  ensureArray(reflection.new_patterns, 'reflection.new_patterns');
+  ensureArray(reflection.resolved_or_reduced_patterns, 'reflection.resolved_or_reduced_patterns');
+  ensureArray(reflection.monthly_focus_points, 'reflection.monthly_focus_points');
+  const sourceWeeks = ensureArray(reflection.source_weeks, 'reflection.source_weeks');
+  sourceWeeks.forEach((item, index) => {
+    const week = ensureObject(item, `reflection.source_weeks[${index}]`);
+    ensureString(week.week_start, `reflection.source_weeks[${index}].week_start`);
+    ensureString(week.week_end, `reflection.source_weeks[${index}].week_end`);
+  });
+};
+
 export const parseMonthlyReflectionImport = (
   input: string,
   monthKey: string,
@@ -28,7 +68,12 @@ export const parseMonthlyReflectionImport = (
   const monthStart = getMonthStart(monthKey);
   const monthEnd = getMonthEnd(monthKey);
   const jsonCandidate = extractJsonCandidate(input);
-  const parsed = JSON.parse(jsonCandidate) as unknown;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(jsonCandidate) as unknown;
+  } catch {
+    throw new Error('JSON syntax error: 有効なJSON形式ではありません');
+  }
   const reflectionCandidate = parsed && typeof parsed === 'object' ? (parsed as { reflection?: unknown }).reflection : undefined;
 
   if (!reflectionCandidate) {
@@ -36,6 +81,7 @@ export const parseMonthlyReflectionImport = (
   }
 
   if (!isMonthlyReflectionResult(reflectionCandidate)) {
+    validateMonthlySchema(parsed);
     throw new Error('Imported JSON does not match the monthly reflection schema');
   }
 

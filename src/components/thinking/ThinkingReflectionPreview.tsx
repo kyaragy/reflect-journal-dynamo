@@ -1,9 +1,9 @@
 import { Brain, Lightbulb, MessageCircleQuestion, Sparkles } from 'lucide-react';
-import type { ThinkingMemoCard, ThinkingReflectionResult } from '../../domain/thinkingReflection';
+import type { ThinkingEntry, ThinkingReflectionResult } from '../../domain/thinkingReflection';
 
 type Props = {
   reflection: ThinkingReflectionResult;
-  memoCards: ThinkingMemoCard[];
+  entries: ThinkingEntry[];
   questionResponses?: Record<string, string>;
   onQuestionSelect?: (question: string) => void;
 };
@@ -94,8 +94,8 @@ function ReflectionList({ title, items, tone }: { title: string; items: string[]
   );
 }
 
-export default function ThinkingReflectionPreview({ reflection, memoCards, questionResponses = {}, onQuestionSelect }: Props) {
-  const memoCardMap = new Map(memoCards.map((card) => [card.id, card]));
+export default function ThinkingReflectionPreview({ reflection, entries, questionResponses = {}, onQuestionSelect }: Props) {
+  const memoCardMap = new Map(entries.map((card) => [card.id, card]));
 
   return (
     <div className="space-y-6">

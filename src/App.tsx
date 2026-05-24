@@ -17,6 +17,9 @@ import V2DayPage from './pages/V2DayPage';
 import V2ThinkingReflectionPage from './pages/V2ThinkingReflectionPage';
 import V2ThinkingWeekPage from './pages/V2ThinkingWeekPage';
 import V2ThinkingMonthPage from './pages/V2ThinkingMonthPage';
+import V2HomePage from './pages/V2HomePage';
+import V2TimelinePage from './pages/V2TimelinePage';
+import V2SearchPage from './pages/V2SearchPage';
 
 function AppShell() {
   const { isAuthenticated, isLoading: authLoading, isAuthEnabled, login } = useAuth();
@@ -76,12 +79,15 @@ function AppShell() {
           <Routes>
             <Route path="/" element={<EntryPage />} />
             <Route path="/todo" element={<TodoPage />} />
+            <Route path="/v2/home" element={<V2HomePage />} />
+            <Route path="/v2/timeline" element={<V2TimelinePage />} />
+            <Route path="/v2/search" element={<V2SearchPage />} />
             <Route path="/v2/calendar" element={<V2CalendarPage />} />
             <Route path="/v2/day/:date" element={<V2DayPage />} />
             <Route path="/v2/day/:date/thinking" element={<V2ThinkingReflectionPage />} />
             <Route path="/v2/week/:weekStart/thinking" element={<V2ThinkingWeekPage />} />
             <Route path="/v2/month/:monthKey/thinking" element={<V2ThinkingMonthPage />} />
-            <Route path="*" element={<Navigate to="/v2/calendar" replace />} />
+            <Route path="*" element={<Navigate to="/v2/home" replace />} />
           </Routes>
         </main>
       </div>

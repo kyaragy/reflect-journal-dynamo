@@ -19,6 +19,44 @@ const assertMaxItems = (items: unknown[], max: number, label: string) => {
   }
 };
 
+const ensureObject = (value: unknown, path: string) => {
+  if (!value || typeof value !== 'object') {
+    throw new Error(`schema mismatch: ${path} must be an object`);
+  }
+  return value as Record<string, unknown>;
+};
+
+const ensureArray = (value: unknown, path: string) => {
+  if (!Array.isArray(value)) {
+    throw new Error(`schema mismatch: ${path} must be an array`);
+  }
+  return value;
+};
+
+const ensureString = (value: unknown, path: string) => {
+  if (typeof value !== 'string') {
+    throw new Error(`schema mismatch: ${path} must be a string`);
+  }
+};
+
+const validateWeeklySchema = (value: unknown) => {
+  const obj = ensureObject(value, 'root');
+  ensureString(obj.week_start, 'week_start');
+  ensureString(obj.week_end, 'week_end');
+  ensureString(obj.mode, 'mode');
+  ensureString(obj.weekly_summary, 'weekly_summary');
+  ensureArray(obj.repeated_patterns, 'repeated_patterns');
+  ensureArray(obj.notable_changes, 'notable_changes');
+  ensureArray(obj.question_answer_patterns, 'question_answer_patterns');
+  ensureArray(obj.unanswered_question_patterns, 'unanswered_question_patterns');
+  ensureArray(obj.growing_insights, 'growing_insights');
+  const sourceDays = ensureArray(obj.source_days, 'source_days');
+  sourceDays.forEach((item, index) => {
+    const day = ensureObject(item, `source_days[${index}]`);
+    ensureString(day.date, `source_days[${index}].date`);
+  });
+};
+
 export const parseWeeklyReflectionImport = (
   input: string,
   weekStart: string,
@@ -27,9 +65,15 @@ export const parseWeeklyReflectionImport = (
   assertDateString(weekStart);
   const weekEnd = getWeekEnd(weekStart);
   const jsonCandidate = extractJsonCandidate(input);
-  const parsed = JSON.parse(jsonCandidate) as unknown;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(jsonCandidate) as unknown;
+  } catch {
+    throw new Error('JSON syntax error: 有効なJSON形式ではありません');
+  }
 
   if (!isWeeklyReflectionResult(parsed)) {
+    validateWeeklySchema(parsed);
     throw new Error('Imported JSON does not match the weekly reflection schema');
   }
 

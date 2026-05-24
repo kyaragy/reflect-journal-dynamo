@@ -3,24 +3,29 @@ import { createEmptyJournalSnapshot } from './journal';
 export const thinkingReflectionMode = 'thinking' as const;
 export type ThinkingReflectionMode = typeof thinkingReflectionMode;
 
-export type ThinkingMemoCard = {
+export type ThinkingEntry = {
   id: string;
-  trigger: string;
+  trigger?: string;
   body: string;
+  tags?: string[];
+  mood?: string;
   createdAt: string;
   updatedAt: string;
 };
 
-export type CreateThinkingMemoCardInput = {
-  trigger: string;
+export type CreateThinkingEntryInput = {
+  trigger?: string;
   body: string;
+  tags?: string[];
+  mood?: string;
 };
 
-export type UpdateThinkingMemoCardInput = CreateThinkingMemoCardInput;
+export type UpdateThinkingEntryInput = CreateThinkingEntryInput;
 
 export type ThinkingReflectionCard = {
   card_id: string;
   trigger: string;
+  tags: string[];
   thoughts: string[];
   emotions: string[];
   body_reactions: string[];
@@ -53,7 +58,7 @@ export type UpsertThinkingQuestionResponseInput = {
 
 export type ThinkingDayRecord = {
   date: string;
-  memoCards: ThinkingMemoCard[];
+  entries: ThinkingEntry[];
   thinkingReflection: ThinkingReflectionResult | null;
   questionResponses: ThinkingQuestionResponse[];
   createdAt: string;
@@ -148,7 +153,7 @@ export type MonthlyUserNote = {
 
 export const createEmptyThinkingDayRecord = (date: string, now = new Date().toISOString()): ThinkingDayRecord => ({
   date,
-  memoCards: [],
+  entries: [],
   thinkingReflection: null,
   questionResponses: [],
   createdAt: now,
@@ -160,10 +165,14 @@ const normalizeString = (value: unknown) => (typeof value === 'string' ? value :
 const normalizeStringArray = (value: unknown) =>
   Array.isArray(value) ? value.filter((item): item is string => typeof item === 'string').map((item) => item.trim()) : [];
 
-export const normalizeThinkingMemoCard = (value: ThinkingMemoCard): ThinkingMemoCard => ({
+export const normalizeThinkingEntry = (value: ThinkingEntry): ThinkingEntry => ({
   id: normalizeString(value.id),
-  trigger: normalizeString(value.trigger).trim(),
+  trigger: normalizeString(value.trigger).trim() || undefined,
   body: normalizeString(value.body).trim(),
+  tags: Array.isArray(value.tags)
+    ? value.tags.filter((item): item is string => typeof item === 'string').map((item) => item.trim()).filter(Boolean)
+    : undefined,
+  mood: normalizeString(value.mood).trim() || undefined,
   createdAt: normalizeString(value.createdAt) || new Date().toISOString(),
   updatedAt: normalizeString(value.updatedAt) || new Date().toISOString(),
 });
@@ -171,6 +180,7 @@ export const normalizeThinkingMemoCard = (value: ThinkingMemoCard): ThinkingMemo
 export const normalizeThinkingReflectionCard = (value: ThinkingReflectionCard): ThinkingReflectionCard => ({
   card_id: normalizeString(value.card_id),
   trigger: normalizeString(value.trigger),
+  tags: normalizeStringArray(value.tags),
   thoughts: normalizeStringArray(value.thoughts),
   emotions: normalizeStringArray(value.emotions),
   body_reactions: normalizeStringArray(value.body_reactions),
@@ -271,7 +281,7 @@ export const normalizeThinkingMonthRecord = (value: ThinkingMonthRecord): Thinki
 
 export const normalizeThinkingDayRecord = (value: ThinkingDayRecord): ThinkingDayRecord => ({
   date: normalizeString(value.date),
-  memoCards: Array.isArray(value.memoCards) ? value.memoCards.map(normalizeThinkingMemoCard) : [],
+  entries: Array.isArray(value.entries) ? value.entries.map(normalizeThinkingEntry) : [],
   thinkingReflection: value.thinkingReflection ? normalizeThinkingReflectionResult(value.thinkingReflection) : null,
   questionResponses: Array.isArray(value.questionResponses) ? value.questionResponses.map(normalizeThinkingQuestionResponse) : [],
   createdAt: normalizeString(value.createdAt) || new Date().toISOString(),
@@ -336,8 +346,8 @@ export const isMonthlyReflectionResult = (value: unknown): value is MonthlyRefle
   );
 };
 
-export const hasMeaningfulThinkingMemoContent = (value: CreateThinkingMemoCardInput | UpdateThinkingMemoCardInput) =>
-  value.trigger.trim().length > 0 && value.body.trim().length > 0;
+export const hasMeaningfulThinkingEntryContent = (value: CreateThinkingEntryInput | UpdateThinkingEntryInput) =>
+  value.body.trim().length > 0;
 
 export const replaceThinkingDay = (days: ThinkingDayRecord[], day: ThinkingDayRecord) =>
   [...days.filter((item) => item.date !== day.date), day].sort((left, right) => left.date.localeCompare(right.date));

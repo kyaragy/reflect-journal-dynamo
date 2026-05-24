@@ -23,21 +23,21 @@ import {
   createEmptyThinkingMonthRecord,
   createEmptyThinkingDayRecord,
   createEmptyThinkingWeekRecord,
-  hasMeaningfulThinkingMemoContent,
+  hasMeaningfulThinkingEntryContent,
   normalizeThinkingDayRecord,
   normalizeThinkingMonthRecord,
   normalizeThinkingReflectionResult,
   normalizeThinkingQuestionResponse,
   normalizeThinkingWeekRecord,
   replaceThinkingDay,
-  type CreateThinkingMemoCardInput,
+  type CreateThinkingEntryInput,
   type MonthlyReflectionResult,
   type MonthlyUserNote,
   type ThinkingDayRecord,
   type ThinkingMonthRecord,
   type ThinkingWeekRecord,
   type ThinkingReflectionResult,
-  type UpdateThinkingMemoCardInput,
+  type UpdateThinkingEntryInput,
   type UpsertThinkingQuestionResponseInput,
   type WeeklyReflectionResult,
   type WeeklyUserNote,
@@ -422,9 +422,9 @@ export class MemoryJournalRepository implements JournalDataRepository {
     return week ? clone(week) : createEmptyThinkingWeekRecord(weekStart, weekEnd);
   }
 
-  async createThinkingMemoCard(userId: string, date: string, input: CreateThinkingMemoCardInput) {
-    if (!hasMeaningfulThinkingMemoContent(input)) {
-      throw validationError('INVALID_REQUEST_BODY', 'Memo card must include both trigger and body');
+  async createThinkingEntry(userId: string, date: string, input: CreateThinkingEntryInput) {
+    if (!hasMeaningfulThinkingEntryContent(input)) {
+      throw validationError('INVALID_REQUEST_BODY', 'Entry body is required');
     }
 
     const now = new Date().toISOString();
@@ -432,12 +432,14 @@ export class MemoryJournalRepository implements JournalDataRepository {
     const current = days.find((item) => item.date === date) ?? createEmptyThinkingDayRecord(date, now);
     const nextDay: ThinkingDayRecord = {
       ...current,
-      memoCards: [
-        ...current.memoCards,
+      entries: [
+        ...current.entries,
         {
           id: randomUUID(),
-          trigger: input.trigger.trim(),
+          trigger: input.trigger?.trim() || undefined,
           body: input.body.trim(),
+          tags: input.tags,
+          mood: input.mood,
           createdAt: now,
           updatedAt: now,
         },
@@ -449,26 +451,28 @@ export class MemoryJournalRepository implements JournalDataRepository {
     return clone(nextDay);
   }
 
-  async updateThinkingMemoCard(userId: string, date: string, memoCardId: string, input: UpdateThinkingMemoCardInput) {
-    if (!hasMeaningfulThinkingMemoContent(input)) {
-      throw validationError('INVALID_REQUEST_BODY', 'Memo card must include both trigger and body');
+  async updateThinkingEntry(userId: string, date: string, entryId: string, input: UpdateThinkingEntryInput) {
+    if (!hasMeaningfulThinkingEntryContent(input)) {
+      throw validationError('INVALID_REQUEST_BODY', 'Entry body is required');
     }
 
     const now = new Date().toISOString();
     const days = this.getThinkingSnapshot(userId);
     const current = days.find((item) => item.date === date);
-    if (!current?.memoCards.some((item) => item.id === memoCardId)) {
-      throw notFoundError('Thinking memo card not found', { date, memoCardId });
+    if (!current?.entries.some((item) => item.id === entryId)) {
+      throw notFoundError('Thinking entry not found', { date, entryId });
     }
 
     const nextDay: ThinkingDayRecord = {
       ...current,
-      memoCards: current.memoCards.map((item) =>
-        item.id === memoCardId
+      entries: current.entries.map((item) =>
+        item.id === entryId
           ? {
               ...item,
-              trigger: input.trigger.trim(),
+              trigger: input.trigger?.trim() || undefined,
               body: input.body.trim(),
+              tags: input.tags,
+              mood: input.mood,
               updatedAt: now,
             }
           : item
@@ -480,16 +484,16 @@ export class MemoryJournalRepository implements JournalDataRepository {
     return clone(nextDay);
   }
 
-  async deleteThinkingMemoCard(userId: string, date: string, memoCardId: string) {
+  async deleteThinkingEntry(userId: string, date: string, entryId: string) {
     const days = this.getThinkingSnapshot(userId);
     const current = days.find((item) => item.date === date);
-    if (!current?.memoCards.some((item) => item.id === memoCardId)) {
-      throw notFoundError('Thinking memo card not found', { date, memoCardId });
+    if (!current?.entries.some((item) => item.id === entryId)) {
+      throw notFoundError('Thinking entry not found', { date, entryId });
     }
 
     const nextDay: ThinkingDayRecord = {
       ...current,
-      memoCards: current.memoCards.filter((item) => item.id !== memoCardId),
+      entries: current.entries.filter((item) => item.id !== entryId),
       updatedAt: new Date().toISOString(),
     };
 

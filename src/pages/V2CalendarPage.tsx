@@ -13,7 +13,7 @@ import {
   subMonths,
 } from 'date-fns';
 import { ja } from 'date-fns/locale';
-import { ChevronLeft, ChevronRight, CalendarRange, Sparkles } from 'lucide-react';
+import { ArrowLeft, ChevronLeft, ChevronRight, CalendarRange, Sparkles } from 'lucide-react';
 import { useThinkingReflectionStore } from '../store/useThinkingReflectionStore';
 
 export default function V2CalendarPage() {
@@ -48,7 +48,7 @@ export default function V2CalendarPage() {
       const currentDay = addDays(day, index);
       const dateKey = format(currentDay, 'yyyy-MM-dd');
       const record = days.find((item) => item.date === dateKey);
-      const memoCount = record?.memoCards.length ?? 0;
+      const memoCount = record?.entries.length ?? 0;
       const hasReflection = Boolean(record?.thinkingReflection);
       if (hasReflection) {
         hasWeekReflection = true;
@@ -104,11 +104,15 @@ export default function V2CalendarPage() {
 
   return (
     <div className="animate-in fade-in duration-500">
+      <button onClick={() => navigate('/v2/home')} className="mb-4 flex items-center text-stone-500 transition-colors hover:text-stone-800">
+        <ArrowLeft className="mr-2 h-4 w-4" />
+        ホームへ戻る
+      </button>
       <section className="mb-6 rounded-3xl border border-sky-200 bg-sky-50/70 p-5 shadow-sm">
-        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-sky-500">Thinking Reflection PoC</p>
-        <h2 className="mt-2 font-serif text-3xl text-slate-900">新版カレンダー</h2>
+        <p className="text-xs font-semibold uppercase tracking-[0.24em] text-sky-500">Browse Logs</p>
+        <h2 className="mt-2 font-serif text-3xl text-slate-900">最近の情報を見る</h2>
         <p className="mt-2 text-sm leading-7 text-slate-700">
-          日中は軽く記録し、夜にChatGPTのJSONを取り込んで思考振り返りを保存します。
+          日付を選んで日次ページへ移動します。日次ページでは左右スワイプでも前日・翌日に移動できます。
         </p>
       </section>
 

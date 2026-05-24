@@ -1,5 +1,6 @@
 import { addDays, format, parseISO } from 'date-fns';
 import type { ThinkingDayRecord } from '../domain/thinkingReflection';
+import { buildReflectionExportMarkdown } from './reflectionExportTemplate';
 
 const WEEKLY_PROMPT_HEADER = `以下は、ある1週間分の日次振り返りデータです。
 あなたの役割は、この記録を「週次振り返り」用に整理し、指定されたJSON形式のみを返すことです。
@@ -105,11 +106,17 @@ ${renderBulletList(day.answer_memos)}`
     )
     .join('\n\n');
 
-  return `${WEEKLY_PROMPT_HEADER}
+  const rawPrompt = `${WEEKLY_PROMPT_HEADER}
 
 【入力データ】
 week_start: ${weekStart}
 week_end: ${weekEnd}
 
 ${renderedDays}`;
+
+  return buildReflectionExportMarkdown({
+    scope: 'weekly',
+    targetLabel: `${weekStart}..${weekEnd}`,
+    body: rawPrompt,
+  });
 };

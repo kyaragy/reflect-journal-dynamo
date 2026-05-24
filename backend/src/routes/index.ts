@@ -15,8 +15,8 @@ import {
   type PutTodoTaskRequest,
 } from '../../../src/contracts/todoApi';
 import type {
-  PostThinkingMemoCardRequest,
-  PutThinkingMemoCardRequest,
+  PostThinkingEntryRequest,
+  PutThinkingEntryRequest,
   PutThinkingReflectionRequest,
   PutThinkingQuestionResponsesRequest,
   PutMonthlyReflectionRequest,
@@ -209,36 +209,36 @@ export const routeRequest = async (
     throw methodNotAllowedError(method, path);
   }
 
-  const thinkingMemoCardMatch = path.match(/^\/v2\/days\/([^/]+)\/memo-cards\/([^/]+)$/);
-  if (thinkingMemoCardMatch) {
-    const [, date, memoCardId] = thinkingMemoCardMatch;
+  const thinkingEntryMatch = path.match(/^\/v2\/days\/([^/]+)\/entries\/([^/]+)$/);
+  if (thinkingEntryMatch) {
+    const [, date, entryId] = thinkingEntryMatch;
     validateDate(date);
-    validateCardId(memoCardId);
+    validateCardId(entryId);
 
     if (method === 'DELETE') {
-      await dependencies.journalService.deleteThinkingMemoCard(userId, date, memoCardId);
+      await dependencies.journalService.deleteThinkingEntry(userId, date, entryId);
       return success({ deleted: true }, requestId);
     }
 
     if (method === 'PUT') {
-      const payload = parseJsonBody<PutThinkingMemoCardRequest>(event);
-      return success(await dependencies.journalService.updateThinkingMemoCard(userId, date, memoCardId, payload), requestId);
+      const payload = parseJsonBody<PutThinkingEntryRequest>(event);
+      return success(await dependencies.journalService.updateThinkingEntry(userId, date, entryId, payload), requestId);
     }
 
     throw methodNotAllowedError(method, path);
   }
 
-  const thinkingMemoCardsMatch = path.match(/^\/v2\/days\/([^/]+)\/memo-cards$/);
-  if (thinkingMemoCardsMatch) {
-    const [, date] = thinkingMemoCardsMatch;
+  const thinkingEntriesMatch = path.match(/^\/v2\/days\/([^/]+)\/entries$/);
+  if (thinkingEntriesMatch) {
+    const [, date] = thinkingEntriesMatch;
     validateDate(date);
 
     if (method !== 'POST') {
       throw methodNotAllowedError(method, path);
     }
 
-    const payload = parseJsonBody<PostThinkingMemoCardRequest>(event);
-    return success(await dependencies.journalService.createThinkingMemoCard(userId, date, payload), requestId);
+    const payload = parseJsonBody<PostThinkingEntryRequest>(event);
+    return success(await dependencies.journalService.createThinkingEntry(userId, date, payload), requestId);
   }
 
   const thinkingReflectionMatch = path.match(/^\/v2\/days\/([^/]+)\/thinking-reflection$/);
