@@ -166,6 +166,11 @@ export default function ThinkingReflectionPreview({ reflection, entries, questio
               <div className="border-b border-stone-100 bg-linear-to-r from-stone-50 via-white to-stone-50 px-5 py-5">
                 <p className="text-xs font-semibold uppercase tracking-[0.2em] text-stone-400">元カード</p>
                 <h4 className="mt-2 text-xl font-medium text-stone-950">{card.trigger}</h4>
+                {card.tags.length > 0 ? <p className="mt-3 text-sm text-stone-600">{card.tags.join(' ')}</p> : null}
+                {card.emotions.length > 0 ? (
+                  <p className="mt-2 text-sm text-rose-700">感情: {card.emotions.join(' / ')}</p>
+                ) : null}
+                {sourceCard?.mood ? <p className="mt-2 text-sm text-stone-500">mood: {sourceCard.mood}</p> : null}
                 {sourceCard ? <p className="mt-3 whitespace-pre-wrap text-sm leading-8 text-stone-600">{sourceCard.body}</p> : null}
               </div>
 

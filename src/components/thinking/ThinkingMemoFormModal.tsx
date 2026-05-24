@@ -118,7 +118,7 @@ export default function ThinkingMemoFormModal({
                     onClick={() => removeTag(tag)}
                     className="inline-flex items-center gap-1 rounded-md bg-stone-200 px-2 py-1 text-sm text-stone-700 hover:brightness-95"
                   >
-                    #{tag}
+                    {tag}
                     <span aria-hidden="true">×</span>
                   </button>
                 ))}

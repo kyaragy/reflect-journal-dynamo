@@ -24,7 +24,7 @@ const PROMPT_HEADER = `以下は、ある1日分の記録カードです。
 - 入力の tags は参考情報として扱ってください（そのまま採用を強制しません）
 - tags の目的は、後で同じタグの記録を横断して振り返ることです
 - 出力の tags は body 内容から抽出してください
-- 既存タグ一覧に該当があれば既存タグを優先してください
+- 既存タグ一覧に該当があれば、必ず既存タグを採用してください
 - 既存タグに当てはまらない場合のみ、新規タグを追加してください
 - tags は「再利用しやすい中粒度カテゴリ」で付与してください（細かすぎる固有名詞や一時的な出来事は避ける）
 - 同義語・表記ゆれは統一してください（例: 仕事/業務 はどちらかに寄せる）
@@ -72,7 +72,7 @@ export const generateThinkingReflectionPrompt = (date: string, cards: ThinkingEn
     .map(
       (card) => `## card_id: ${card.id}
 trigger: ${card.trigger?.trim() || '(none)'}
-tags: ${card.tags?.length ? card.tags.map((tag) => `#${tag}`).join(' ') : '(none)'}
+tags: ${card.tags?.length ? card.tags.join(' ') : '(none)'}
 mood: ${card.mood ?? '(none)'}
 body:
 ${card.body}`
@@ -83,7 +83,7 @@ ${card.body}`
 【入力データ】
 date: ${date}
 existing_tags:
-${existingTags.length ? existingTags.map((tag) => `- #${tag}`).join('\n') : '- (none)'}
+${existingTags.length ? existingTags.map((tag) => `- ${tag}`).join('\n') : '- (none)'}
 
 ${renderedCards}`;
 

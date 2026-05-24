@@ -56,7 +56,7 @@ export default function V2TimelinePage() {
               </button>
             </div>
             <p className="mt-3 whitespace-pre-wrap text-sm leading-7 text-stone-700">{entry.body}</p>
-            {entry.tags?.length ? <p className="mt-3 text-xs text-stone-500">{entry.tags.map((tag) => `#${tag}`).join(' ')}</p> : null}
+            {entry.tags?.length ? <p className="mt-3 text-xs text-stone-500">{entry.tags.join(' ')}</p> : null}
             {entry.mood ? <p className="mt-2 text-xs text-stone-500">mood: {entry.mood}</p> : null}
           </article>
         ))}

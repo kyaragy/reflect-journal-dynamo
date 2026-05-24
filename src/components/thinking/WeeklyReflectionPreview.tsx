@@ -88,7 +88,7 @@ export default function WeeklyReflectionPreview({ reflection, sourceDays }: Prop
                     <div className="rounded-2xl bg-white p-4 md:col-span-2">
                       <p className="text-xs font-semibold uppercase tracking-[0.2em] text-stone-400">record_tags</p>
                       {dayTags.length > 0 ? (
-                        <p className="mt-2 text-base leading-8 text-stone-700">{dayTags.map((tag) => `#${tag}`).join(' ')}</p>
+                        <p className="mt-2 text-base leading-8 text-stone-700">{dayTags.join(' ')}</p>
                       ) : (
                         <p className="mt-2 text-base leading-8 text-stone-400">タグなし</p>
                       )}
