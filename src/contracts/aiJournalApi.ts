@@ -13,6 +13,7 @@ export type PostAiJournalNoteRequest = CreateAiJournalNoteInput;
 export type PostAiJournalNoteResponse = ApiSuccessResponse<AiJournalNote>;
 export type PutAiJournalNoteRequest = UpdateAiJournalNoteInput;
 export type PutAiJournalNoteResponse = ApiSuccessResponse<AiJournalNote | null>;
+export type DeleteAiJournalNoteResponse = ApiSuccessResponse<{ deleted: true }>;
 export type PostAttachRunToNotesRequest = {
   noteIds: string[];
   runId: string;

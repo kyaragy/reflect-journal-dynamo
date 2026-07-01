@@ -21,6 +21,7 @@ type AiJournalState = {
   reload: () => Promise<void>;
   createNote: (type: CreateAiJournalNoteInput['type']) => Promise<AiJournalNote>;
   saveNote: (noteId: string, input: UpdateAiJournalNoteInput) => Promise<AiJournalNote | null>;
+  deleteNotes: (noteIds: string[]) => Promise<void>;
   importBookProperties: (rawJson: string) => Promise<AiJournalNote | null>;
   updateBookProperties: (noteId: string, book: BookProperties) => Promise<AiJournalNote | null>;
   markNotesUsedInRun: (noteIds: string[], runId: string) => void;
@@ -116,6 +117,14 @@ export const useAiJournalStore = create<AiJournalState>()((set, get) => ({
         }));
       }
       return note;
+    });
+  },
+
+  async deleteNotes(noteIds) {
+    return withSaving(set, async () => {
+      const uniqueIds = [...new Set(noteIds)];
+      await Promise.all(uniqueIds.map((noteId) => aiJournalRepository.deleteNote(noteId)));
+      await get().reload();
     });
   },
 

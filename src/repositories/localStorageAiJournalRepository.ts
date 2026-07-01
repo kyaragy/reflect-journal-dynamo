@@ -115,6 +115,21 @@ export const localStorageAiJournalRepository: AiJournalRepository = {
     return updated;
   },
 
+  async deleteNote(noteId) {
+    const snapshot = readSnapshot();
+    const nextNotes = snapshot.notes
+      .filter((note) => note.id !== noteId)
+      .map((note) => ({
+        ...note,
+        relatedSummaryIds: note.relatedSummaryIds.filter((summaryId) => summaryId !== noteId),
+        targetNoteIds: note.targetNoteIds?.filter((targetId) => targetId !== noteId) ?? [],
+        contextSummaryIds: note.contextSummaryIds?.filter((summaryId) => summaryId !== noteId) ?? [],
+      }));
+
+    writeSnapshot({ notes: nextNotes });
+    return { deleted: true as const };
+  },
+
   async attachRunToNotes(noteIds, runId) {
     const snapshot = readSnapshot();
     const nextNotes = snapshot.notes.map((note) =>

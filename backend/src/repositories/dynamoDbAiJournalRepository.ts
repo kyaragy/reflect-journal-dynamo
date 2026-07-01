@@ -110,6 +110,63 @@ export class DynamoDbAiJournalRepository implements AiJournalDataRepository {
     return updated;
   }
 
+  async deleteAiJournalNote(userId: string, noteId: string) {
+    const snapshot = await this.getAiJournalSnapshot(userId);
+    const runSnapshot = await this.getOneOnOneSnapshot(userId);
+
+    await this.client.deleteItem({
+      PK: toUserPk(userId),
+      SK: toNoteSk(noteId),
+    });
+
+    const affectedNotes = snapshot.notes.filter(
+      (note) =>
+        note.id !== noteId &&
+        (note.relatedSummaryIds.includes(noteId) ||
+          (note.targetNoteIds ?? []).includes(noteId) ||
+          (note.contextSummaryIds ?? []).includes(noteId))
+    );
+
+    await Promise.all(
+      affectedNotes.map((note) =>
+        this.client.putItem(
+          toNoteItem(
+            userId,
+            normalizeAiJournalNote({
+              ...note,
+              relatedSummaryIds: note.relatedSummaryIds.filter((summaryId) => summaryId !== noteId),
+              targetNoteIds: note.targetNoteIds?.filter((targetId) => targetId !== noteId) ?? [],
+              contextSummaryIds: note.contextSummaryIds?.filter((summaryId) => summaryId !== noteId) ?? [],
+            })
+          )
+        )
+      )
+    );
+
+    const affectedRuns = runSnapshot.runs.filter(
+      (run) => run.targetNoteIds.includes(noteId) || run.contextSummaryIds.includes(noteId) || run.summaryNoteId === noteId
+    );
+
+    await Promise.all(
+      affectedRuns.map((run) =>
+        this.client.putItem(
+          toRunItem(
+            userId,
+            normalizeOneOnOneRun({
+              ...run,
+              targetNoteIds: run.targetNoteIds.filter((targetId) => targetId !== noteId),
+              contextSummaryIds: run.contextSummaryIds.filter((summaryId) => summaryId !== noteId),
+              summaryNoteId: run.summaryNoteId === noteId ? undefined : run.summaryNoteId,
+              status: run.summaryNoteId === noteId ? 'prompt_created' : run.status,
+            })
+          )
+        )
+      )
+    );
+
+    return { deleted: true as const };
+  }
+
   async attachRunToNotes(userId: string, noteIds: string[], runId: string) {
     if (noteIds.length === 0) {
       return;

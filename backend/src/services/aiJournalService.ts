@@ -22,6 +22,10 @@ export class AiJournalService {
     return this.repository.updateAiJournalNote(userId, noteId, input);
   }
 
+  deleteNote(userId: string, noteId: string) {
+    return this.repository.deleteAiJournalNote(userId, noteId);
+  }
+
   attachRunToNotes(userId: string, noteIds: string[], runId: string) {
     return this.repository.attachRunToNotes(userId, noteIds, runId);
   }

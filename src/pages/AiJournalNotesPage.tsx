@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { format, parseISO } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
-import { Plus, Search } from 'lucide-react';
+import { Plus, Search, Trash2 } from 'lucide-react';
 import { formatAiNoteTypeLabel, resolveJournalMonthLabel, type AiJournalNote, type AiNoteType } from '../domain/aiJournal';
 import { useAiJournalStore } from '../store/useAiJournalStore';
 
@@ -130,6 +130,7 @@ export default function AiJournalNotesPage() {
   const initialLoadStatus = useAiJournalStore((state) => state.initialLoadStatus);
   const initialize = useAiJournalStore((state) => state.initialize);
   const createNote = useAiJournalStore((state) => state.createNote);
+  const deleteNotes = useAiJournalStore((state) => state.deleteNotes);
   const [keyword, setKeyword] = useState('');
   const [activeView, setActiveView] = useState<NotesView>('all');
   const [createType, setCreateType] = useState<'' | Exclude<AiNoteType, 'OneOnOneSummary'>>('');
@@ -224,6 +225,20 @@ export default function AiJournalNotesPage() {
     navigate(`/ai-journal/notes/${note.id}`);
   };
 
+  const handleDeleteSelected = async () => {
+    if (selectedNotes.length === 0) {
+      return;
+    }
+
+    const confirmed = window.confirm(`選択した ${selectedNotes.length} 件のノートを削除します。元に戻せません。`);
+    if (!confirmed) {
+      return;
+    }
+
+    await deleteNotes(selectedNotes.map((note) => note.id));
+    setSelectedIds([]);
+  };
+
   return (
     <div className="space-y-6">
       <section className="px-1 pt-2">
@@ -233,6 +248,15 @@ export default function AiJournalNotesPage() {
             <p className="mt-2 text-sm text-stone-600">ノート数が増えても探しやすいよう、種別ごとのビューで切り替えて確認できます。</p>
           </div>
           <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => void handleDeleteSelected()}
+              disabled={saving || selectedIds.length === 0}
+              className="inline-flex items-center gap-2 rounded-2xl border border-rose-200 bg-rose-50 px-4 py-2.5 text-sm font-medium text-rose-700 transition-colors hover:bg-rose-100 disabled:cursor-not-allowed disabled:opacity-60"
+            >
+              <Trash2 className="h-4 w-4" />
+              選択を削除
+            </button>
             <button
               type="button"
               onClick={() => void handleCreateNote(createType)}
@@ -277,6 +301,11 @@ export default function AiJournalNotesPage() {
                   <span className="text-stone-400">{viewCounts[option.id]}件</span>
                 </button>
               ))}
+            </div>
+
+            <div className="rounded-2xl bg-stone-50 px-3 py-3 text-sm text-stone-600">
+              <p className="font-medium text-stone-800">{selectedIds.length}件を選択中</p>
+              <p className="mt-1 text-xs leading-5 text-stone-500">チェックしたノートを削除できます。</p>
             </div>
           </section>
 

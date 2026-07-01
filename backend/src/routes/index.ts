@@ -214,6 +214,10 @@ export const routeRequest = async (
     const [, noteId] = aiJournalNoteMatch;
     validateAiJournalNoteId(noteId);
 
+    if (method === 'DELETE') {
+      return success(await dependencies.aiJournalService.deleteNote(userId, noteId), requestId);
+    }
+
     if (method !== 'PUT') {
       throw methodNotAllowedError(method, path);
     }

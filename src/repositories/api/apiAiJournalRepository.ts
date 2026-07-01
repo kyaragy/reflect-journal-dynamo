@@ -1,6 +1,7 @@
 import {
   aiJournalApiPaths,
   assertAiJournalNoteId,
+  type DeleteAiJournalNoteResponse,
   type GetAiJournalSnapshotResponse,
   type PostAiJournalNoteResponse,
   type PostAttachRunToNotesRequest,
@@ -37,6 +38,12 @@ export const apiAiJournalRepository: AiJournalRepository = {
     assertAiJournalNoteId(noteId);
     const payload: PutAiJournalNoteRequest = input;
     const response = await apiClient.put<PutAiJournalNoteResponse>(aiJournalApiPaths.note(noteId), payload);
+    return response.data;
+  },
+
+  async deleteNote(noteId) {
+    assertAiJournalNoteId(noteId);
+    const response = await apiClient.delete<DeleteAiJournalNoteResponse>(aiJournalApiPaths.note(noteId));
     return response.data;
   },
 

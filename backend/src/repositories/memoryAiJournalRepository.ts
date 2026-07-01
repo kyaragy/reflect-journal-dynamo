@@ -93,6 +93,34 @@ export class MemoryAiJournalRepository implements AiJournalDataRepository {
     return updated;
   }
 
+  async deleteAiJournalNote(userId: string, noteId: string) {
+    const state = this.getState(userId);
+    state.notes = normalizeAiJournalSnapshot({
+      notes: state.notes.notes
+        .filter((note) => note.id !== noteId)
+        .map((note) =>
+          normalizeAiJournalNote({
+            ...note,
+            relatedSummaryIds: note.relatedSummaryIds.filter((summaryId) => summaryId !== noteId),
+            targetNoteIds: note.targetNoteIds?.filter((targetId) => targetId !== noteId) ?? [],
+            contextSummaryIds: note.contextSummaryIds?.filter((summaryId) => summaryId !== noteId) ?? [],
+          })
+        ),
+    });
+    state.runs = normalizeOneOnOneSnapshot({
+      runs: state.runs.runs.map((run) =>
+        normalizeOneOnOneRun({
+          ...run,
+          targetNoteIds: run.targetNoteIds.filter((targetId) => targetId !== noteId),
+          contextSummaryIds: run.contextSummaryIds.filter((summaryId) => summaryId !== noteId),
+          summaryNoteId: run.summaryNoteId === noteId ? undefined : run.summaryNoteId,
+          status: run.summaryNoteId === noteId ? 'prompt_created' : run.status,
+        })
+      ),
+    });
+    return { deleted: true as const };
+  }
+
   async attachRunToNotes(userId: string, noteIds: string[], runId: string) {
     const state = this.getState(userId);
     const now = new Date().toISOString();
