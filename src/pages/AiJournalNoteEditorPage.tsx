@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { format, parseISO } from 'date-fns';
 import { useNavigate, useParams } from 'react-router-dom';
-import { ArrowLeft, Copy, FileJson, Save, Upload } from 'lucide-react';
+import { ArrowLeft, Copy, FileJson, PencilLine, Save, Upload } from 'lucide-react';
 import { AI_NOTE_TYPE_ORDER, formatAiNoteTypeLabel } from '../domain/aiJournal';
 import { createEmptyBookProperties, type BookProperties } from '../domain/book';
 import { buildBookPropertiesPrompt } from '../domain/book';
@@ -17,6 +17,15 @@ const formatDateTime = (value: string) => {
     return '-';
   }
   return format(date, 'yyyy-MM-dd HH:mm');
+};
+
+const resolveJournalTitleFallback = (createdAt: string) => {
+  const date = parseISO(createdAt);
+  if (!Number.isNaN(date.getTime())) {
+    return format(date, 'yyyy-MM-dd');
+  }
+
+  return '無題のジャーナル';
 };
 
 const renderSummaryList = (items: string[] | undefined, emptyLabel: string) => {
@@ -130,6 +139,11 @@ export default function AiJournalNoteEditorPage() {
       : isBookDirty
         ? '書籍情報に未保存の変更あり'
         : `最終保存: ${formatDateTime(persistedNote?.lastSavedAt ?? '')}`;
+  const journalTitleFallback = useMemo(
+    () => (persistedNote ? resolveJournalTitleFallback(persistedNote.createdAt) : '無題のジャーナル'),
+    [persistedNote]
+  );
+  const journalDisplayTitle = title.trim() || journalTitleFallback;
   const bookHeaderTitle = bookDraft.officialTitle || title || '読書メモ';
 
   useEffect(() => {
@@ -157,9 +171,15 @@ export default function AiJournalNoteEditorPage() {
       return;
     }
 
+    const normalizedTitle = persistedNote.type === 'Journal' ? title.trim() || journalTitleFallback : title;
+
+    if (persistedNote.type === 'Journal' && normalizedTitle !== title) {
+      setTitle(normalizedTitle);
+    }
+
     await saveNote(persistedNote.id, {
       type,
-      title,
+      title: normalizedTitle,
       content,
     });
   };
@@ -243,7 +263,7 @@ export default function AiJournalNoteEditorPage() {
                 {isJournalNote ? 'Today Journal' : isBookNote ? 'Reading Note' : 'Note Editor'}
               </p>
               <h2 className="mt-2 font-serif text-3xl text-stone-900">
-                {isJournalNote ? title || '今日のジャーナル' : isBookNote ? bookHeaderTitle : persistedNote.title || 'ノート編集'}
+                {isJournalNote ? journalDisplayTitle : isBookNote ? bookHeaderTitle : persistedNote.title || 'ノート編集'}
               </h2>
               <p className="mt-2 text-sm text-stone-600">
                 {isJournalNote
@@ -450,12 +470,22 @@ export default function AiJournalNoteEditorPage() {
             <section className="mx-auto w-full max-w-5xl space-y-5">
               <div className="rounded-[1.75rem] border border-stone-200/80 bg-white/90 px-6 py-6">
                 <label className="block">
-                  <span className="text-xs font-semibold uppercase tracking-[0.18em] text-stone-500">タイトル</span>
-                  <input
-                    value={title}
-                    onChange={(event) => setTitle(event.target.value)}
-                    className="mt-2 w-full border-none bg-transparent p-0 text-lg font-medium text-stone-900 outline-none"
-                  />
+                  <span className="text-[11px] font-medium uppercase tracking-[0.16em] text-stone-400">タイトル</span>
+                  <div className="group mt-2 flex items-center gap-3 border-b border-transparent pb-1 transition-colors hover:border-stone-200 focus-within:border-amber-300">
+                    <input
+                      value={title}
+                      onChange={(event) => setTitle(event.target.value)}
+                      onKeyDown={(event) => {
+                        if (event.key === 'Enter') {
+                          event.preventDefault();
+                          event.currentTarget.blur();
+                        }
+                      }}
+                      placeholder="今日のタイトルをつける"
+                      className="min-w-0 flex-1 border-none bg-transparent p-0 text-lg font-medium text-stone-900 outline-none placeholder:text-stone-400"
+                    />
+                    <PencilLine className="h-4 w-4 shrink-0 text-stone-300 opacity-0 transition-opacity group-hover:opacity-100 group-focus-within:opacity-100" />
+                  </div>
                 </label>
 
                 <div className="mt-5 flex flex-wrap gap-2">
