@@ -1,0 +1,86 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+import { DynamoDbAiJournalRepository } from './dynamoDbAiJournalRepository';
+
+const createClientStub = () => {
+  const items = new Map<string, any>();
+  const keyOf = (PK: string, SK: string) => `${PK}|${SK}`;
+
+  return {
+    async getItem<T>(key: Record<string, string>) {
+      return items.get(keyOf(key.PK, key.SK)) as T | undefined;
+    },
+    async putItem(item: any) {
+      items.set(keyOf(item.PK, item.SK), item);
+    },
+    async deleteItem(key: Record<string, string>) {
+      items.delete(keyOf(key.PK, key.SK));
+    },
+    async queryByPartition<T>(pk: string) {
+      return [...items.values()].filter((item) => item.PK === pk) as T[];
+    },
+    async queryByPrefix<T>(pk: string, prefix: string) {
+      return [...items.values()].filter((item) => item.PK === pk && item.SK.startsWith(prefix)) as T[];
+    },
+    async queryBetween<T>() {
+      return [] as T[];
+    },
+    async batchGetItems<T>(keys: Record<string, string>[]) {
+      return keys.map((key) => items.get(keyOf(key.PK, key.SK))).filter(Boolean) as T[];
+    },
+  };
+};
+
+test('creates note and returns ai journal snapshot', async () => {
+  const client = createClientStub();
+  const repository = new DynamoDbAiJournalRepository(client as never);
+
+  const note = await repository.createAiJournalNote('user-1', { type: 'Journal' });
+  const snapshot = await repository.getAiJournalSnapshot('user-1');
+
+  assert.equal(note.type, 'Journal');
+  assert.equal(snapshot.notes.length, 1);
+  assert.equal(snapshot.notes[0]?.id, note.id);
+});
+
+test('creates run, links notes, imports summary, and marks run summarized', async () => {
+  const client = createClientStub();
+  const repository = new DynamoDbAiJournalRepository(client as never);
+
+  const note = await repository.createAiJournalNote('user-1', { type: 'Journal' });
+  const run = await repository.createOneOnOneRun('user-1', {
+    targetNoteIds: [note.id],
+    contextSummaryIds: [],
+    promptText: 'prompt',
+  });
+
+  await repository.attachRunToNotes('user-1', [note.id], run.id);
+  const summaryNote = await repository.importOneOnOneSummary('user-1', {
+    schemaVersion: '1.0',
+    type: '1on1Summary',
+    runId: run.id,
+    targetNoteIds: [note.id],
+    contextSummaryIds: [],
+    summary: {
+      title: '2026-07-01 1on1まとめ',
+      markdown: 'summary body',
+    },
+    changesSincePrevious: ['change'],
+    continuingThemes: ['theme'],
+    newThemes: ['new'],
+    nextQuestions: ['question'],
+  });
+  const updatedRun = await repository.markOneOnOneRunSummarized('user-1', run.id, summaryNote.id);
+  const snapshot = await repository.getAiJournalSnapshot('user-1');
+  const runSnapshot = await repository.getOneOnOneSnapshot('user-1');
+
+  const target = snapshot.notes.find((item) => item.id === note.id);
+  const summary = snapshot.notes.find((item) => item.id === summaryNote.id);
+
+  assert.equal(updatedRun?.summaryNoteId, summaryNote.id);
+  assert.equal(updatedRun?.status, 'summarized');
+  assert.equal(target?.oneOnOneRunIds.includes(run.id), true);
+  assert.equal(target?.relatedSummaryIds.includes(summaryNote.id), true);
+  assert.equal(summary?.type, 'OneOnOneSummary');
+  assert.equal(runSnapshot.runs[0]?.id, run.id);
+});
