@@ -20,6 +20,13 @@ import V2ThinkingMonthPage from './pages/V2ThinkingMonthPage';
 import V2HomePage from './pages/V2HomePage';
 import V2TimelinePage from './pages/V2TimelinePage';
 import V2SearchPage from './pages/V2SearchPage';
+import AiJournalHomePage from './pages/AiJournalHomePage';
+import AiJournalBooksPage from './pages/AiJournalBooksPage';
+import AiJournalNotesPage from './pages/AiJournalNotesPage';
+import AiJournalNoteEditorPage from './pages/AiJournalNoteEditorPage';
+import AiJournalOneOnOnePage from './pages/AiJournalOneOnOnePage';
+import AiJournalOneOnOneSummariesPage from './pages/AiJournalOneOnOneSummariesPage';
+import AiJournalImportPage from './pages/AiJournalImportPage';
 
 function AppShell() {
   const { isAuthenticated, isLoading: authLoading, isAuthEnabled, login } = useAuth();
@@ -65,20 +72,27 @@ function AppShell() {
 
   return (
     <Router>
-      <div className="min-h-screen bg-stone-50 text-stone-900 font-sans">
-        <header className="sticky top-0 z-10 bg-stone-50/80 backdrop-blur-md border-b border-stone-200">
-          <div className="mx-auto flex max-w-5xl flex-wrap items-center justify-between gap-2 px-4 py-2 sm:min-h-14 sm:py-0">
+      <div className="min-h-screen bg-[var(--page-bg)] text-[var(--text-main)] font-sans">
+        <header className="sticky top-0 z-10 border-b border-stone-200 bg-[rgba(251,250,247,0.86)] backdrop-blur-md">
+          <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-2 px-5 py-2 sm:min-h-14 sm:py-0">
             <AppVersionSwitcher />
-            <h1 className="hidden font-serif text-xl font-medium tracking-wide text-stone-700 md:block">Inner Space</h1>
+            <h1 className="hidden font-serif text-[21px] font-medium tracking-[0.02em] text-stone-700 md:block">Inner Space</h1>
             <AuthStatus />
           </div>
         </header>
-        <main className="max-w-5xl mx-auto px-4 py-8">
+        <main className="mx-auto max-w-6xl px-5 py-8">
           {loading && initialLoadStatus !== 'ready' ? <p className="text-sm text-stone-500">Loading...</p> : null}
           {thinkingError ? <p className="mb-4 rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-700">{thinkingError}</p> : null}
           <Routes>
             <Route path="/" element={<EntryPage />} />
             <Route path="/todo" element={<TodoPage />} />
+            <Route path="/ai-journal/home" element={<AiJournalHomePage />} />
+            <Route path="/ai-journal/books" element={<AiJournalBooksPage />} />
+            <Route path="/ai-journal/notes" element={<AiJournalNotesPage />} />
+            <Route path="/ai-journal/notes/:noteId" element={<AiJournalNoteEditorPage />} />
+            <Route path="/ai-journal/1on1" element={<AiJournalOneOnOnePage />} />
+            <Route path="/ai-journal/1on1/summaries" element={<AiJournalOneOnOneSummariesPage />} />
+            <Route path="/ai-journal/import" element={<AiJournalImportPage />} />
             <Route path="/v2/home" element={<V2HomePage />} />
             <Route path="/v2/timeline" element={<V2TimelinePage />} />
             <Route path="/v2/search" element={<V2SearchPage />} />

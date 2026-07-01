@@ -1,4 +1,15 @@
 import {
+  assertAiJournalNoteId,
+  assertOneOnOneRunId,
+  type PostAiJournalNoteRequest,
+  type PostAttachRunToNotesRequest,
+  type PostImportOneOnOneSummaryRequest,
+  type PostOneOnOneRunRequest,
+  type PutAiJournalNoteRequest,
+  type PutBookPropertiesRequest,
+  type PutOneOnOneRunSummaryRequest,
+} from '../../../src/contracts/aiJournalApi';
+import {
   assertCardId,
   assertDateString,
   assertMonthKey,
@@ -27,11 +38,13 @@ import type {
 import { getCurrentUser } from '../auth/getCurrentUser';
 import { methodNotAllowedError, notFoundError, validationError } from '../libs/errors';
 import { noContent, success } from '../libs/response';
+import type { AiJournalService } from '../services/aiJournalService';
 import type { JournalService } from '../services/journalService';
 import type { ApiGatewayHttpEvent, ApiGatewayHttpResponse } from '../functions/api/types';
 
 type RouteDependencies = {
   journalService: JournalService;
+  aiJournalService: AiJournalService;
 };
 
 const parseJsonBody = <T>(event: ApiGatewayHttpEvent): T => {
@@ -105,6 +118,22 @@ const validateTodoLabelId = (value: string) => {
   }
 };
 
+const validateAiJournalNoteId = (value: string) => {
+  try {
+    assertAiJournalNoteId(value);
+  } catch {
+    throw validationError('INVALID_REQUEST_BODY', 'Invalid noteId: expected non-empty string', { noteId: value });
+  }
+};
+
+const validateOneOnOneRunId = (value: string) => {
+  try {
+    assertOneOnOneRunId(value);
+  } catch {
+    throw validationError('INVALID_REQUEST_BODY', 'Invalid runId: expected non-empty string', { runId: value });
+  }
+};
+
 const parseQuery = (event: ApiGatewayHttpEvent) => new URLSearchParams(event.rawQueryString ?? '');
 
 export const routeRequest = async (
@@ -134,6 +163,90 @@ export const routeRequest = async (
   }
 
   const { userId } = getCurrentUser(event);
+
+  if (path === '/ai-journal/notes') {
+    if (method === 'GET') {
+      return success(await dependencies.aiJournalService.getSnapshot(userId), requestId);
+    }
+
+    if (method === 'POST') {
+      const payload = parseJsonBody<PostAiJournalNoteRequest>(event);
+      return success(await dependencies.aiJournalService.createNote(userId, payload), requestId);
+    }
+
+    throw methodNotAllowedError(method, path);
+  }
+
+  if (path === '/ai-journal/notes/attach-run') {
+    if (method !== 'POST') {
+      throw methodNotAllowedError(method, path);
+    }
+
+    const payload = parseJsonBody<PostAttachRunToNotesRequest>(event);
+    await dependencies.aiJournalService.attachRunToNotes(userId, payload.noteIds ?? [], payload.runId ?? '');
+    return success({ attached: true }, requestId);
+  }
+
+  if (path === '/ai-journal/notes/import-one-on-one-summary') {
+    if (method !== 'POST') {
+      throw methodNotAllowedError(method, path);
+    }
+
+    const payload = parseJsonBody<PostImportOneOnOneSummaryRequest>(event);
+    return success(await dependencies.aiJournalService.importOneOnOneSummary(userId, payload), requestId);
+  }
+
+  const aiJournalNoteBookPropertiesMatch = path.match(/^\/ai-journal\/notes\/([^/]+)\/book-properties$/);
+  if (aiJournalNoteBookPropertiesMatch) {
+    const [, noteId] = aiJournalNoteBookPropertiesMatch;
+    validateAiJournalNoteId(noteId);
+
+    if (method !== 'PUT') {
+      throw methodNotAllowedError(method, path);
+    }
+
+    const payload = parseJsonBody<PutBookPropertiesRequest>(event);
+    return success(await dependencies.aiJournalService.importBookProperties(userId, noteId, payload.book), requestId);
+  }
+
+  const aiJournalNoteMatch = path.match(/^\/ai-journal\/notes\/([^/]+)$/);
+  if (aiJournalNoteMatch) {
+    const [, noteId] = aiJournalNoteMatch;
+    validateAiJournalNoteId(noteId);
+
+    if (method !== 'PUT') {
+      throw methodNotAllowedError(method, path);
+    }
+
+    const payload = parseJsonBody<PutAiJournalNoteRequest>(event);
+    return success(await dependencies.aiJournalService.updateNote(userId, noteId, payload), requestId);
+  }
+
+  if (path === '/ai-journal/one-on-one-runs') {
+    if (method === 'GET') {
+      return success(await dependencies.aiJournalService.getOneOnOneSnapshot(userId), requestId);
+    }
+
+    if (method === 'POST') {
+      const payload = parseJsonBody<PostOneOnOneRunRequest>(event);
+      return success(await dependencies.aiJournalService.createOneOnOneRun(userId, payload), requestId);
+    }
+
+    throw methodNotAllowedError(method, path);
+  }
+
+  const oneOnOneRunSummaryMatch = path.match(/^\/ai-journal\/one-on-one-runs\/([^/]+)\/summary$/);
+  if (oneOnOneRunSummaryMatch) {
+    const [, runId] = oneOnOneRunSummaryMatch;
+    validateOneOnOneRunId(runId);
+
+    if (method !== 'PUT') {
+      throw methodNotAllowedError(method, path);
+    }
+
+    const payload = parseJsonBody<PutOneOnOneRunSummaryRequest>(event);
+    return success(await dependencies.aiJournalService.markOneOnOneRunSummarized(userId, runId, payload.summaryNoteId), requestId);
+  }
 
   if (path === '/todos') {
     if (method === 'GET') {

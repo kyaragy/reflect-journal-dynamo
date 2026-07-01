@@ -1,11 +1,12 @@
 import { createServer, type IncomingMessage } from 'node:http';
 import { createHandler } from './functions/api/handler';
 import type { ApiGatewayHttpEvent } from './functions/api/types';
-import { createJournalServiceFromEnv } from './repositories/factory';
+import { createAiJournalServiceFromEnv, createJournalServiceFromEnv } from './repositories/factory';
 
 const PORT = Number(process.env.PORT ?? 4000);
 const { driver, journalService } = createJournalServiceFromEnv('memory');
-const handler = createHandler(journalService);
+const { aiJournalService } = createAiJournalServiceFromEnv(driver);
+const handler = createHandler(journalService, aiJournalService);
 
 const readBody = async (req: IncomingMessage) => {
   const chunks: Buffer[] = [];

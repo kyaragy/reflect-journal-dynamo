@@ -1,6 +1,9 @@
 import { createDynamoDbClientFromEnv } from '../db/dynamoDbClient';
+import { AiJournalService } from '../services/aiJournalService';
 import { JournalService } from '../services/journalService';
+import { DynamoDbAiJournalRepository } from './dynamoDbAiJournalRepository';
 import { DynamoDbJournalRepository } from './dynamoDbJournalRepository';
+import { MemoryAiJournalRepository } from './memoryAiJournalRepository';
 import { MemoryJournalRepository } from './memoryJournalRepository';
 
 export type BackendRepositoryDriver = 'dynamodb' | 'memory';
@@ -24,5 +27,18 @@ export const createJournalServiceFromEnv = (fallback: BackendRepositoryDriver = 
   return {
     driver,
     journalService: new JournalService(repository),
+  };
+};
+
+export const createAiJournalServiceFromEnv = (fallback: BackendRepositoryDriver = 'dynamodb') => {
+  const driver = resolveDriver(fallback);
+  const repository =
+    driver === 'memory'
+      ? new MemoryAiJournalRepository()
+      : new DynamoDbAiJournalRepository(createDynamoDbClientFromEnv());
+
+  return {
+    driver,
+    aiJournalService: new AiJournalService(repository),
   };
 };

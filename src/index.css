@@ -1,1 +1,79 @@
 @import "tailwindcss";
+
+@theme {
+  --font-sans: "Noto Sans JP", "BIZ UDPGothic", "Yu Gothic", "Hiragino Kaku Gothic ProN", "Meiryo", sans-serif;
+  --font-serif: "Noto Serif JP", "Yu Mincho", "Hiragino Mincho ProN", serif;
+}
+
+:root {
+  color-scheme: light;
+  --page-bg: #fbfaf7;
+  --surface: #fffdfa;
+  --text-main: #211f1c;
+  --text-sub: #6e6962;
+  --text-muted: #9a948c;
+  --border-soft: #e8e2da;
+  --shadow-soft: 0 8px 24px rgba(33, 31, 28, 0.06);
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+}
+
+body {
+  background: var(--page-bg);
+  color: var(--text-main);
+  font-family: var(--font-sans);
+  letter-spacing: 0.01em;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+
+::selection {
+  background: rgba(191, 219, 254, 0.45);
+}
+
+.bg-white {
+  background-color: var(--surface);
+}
+
+.bg-stone-50 {
+  background-color: #f7f4ef;
+}
+
+.text-stone-900 {
+  color: var(--text-main);
+}
+
+.text-stone-700,
+.text-stone-800 {
+  color: #4c4740;
+}
+
+.text-stone-600 {
+  color: var(--text-sub);
+}
+
+.text-stone-500,
+.text-stone-400 {
+  color: var(--text-muted);
+}
+
+.border-stone-200,
+.border-stone-300,
+.border-stone-100 {
+  border-color: var(--border-soft);
+}
+
+.shadow-sm {
+  box-shadow: var(--shadow-soft);
+}
