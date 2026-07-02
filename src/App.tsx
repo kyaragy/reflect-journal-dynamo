@@ -73,14 +73,14 @@ function AppShell() {
   return (
     <Router>
       <div className="min-h-screen bg-[var(--page-bg)] text-[var(--text-main)] font-sans">
-        <header className="sticky top-0 z-10 border-b border-stone-200 bg-[rgba(251,250,247,0.86)] backdrop-blur-md">
+        <header className="sticky top-0 z-20 border-b border-stone-200 bg-[rgba(251,250,247,0.9)] backdrop-blur-md">
           <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-2 px-5 py-2 sm:min-h-14 sm:py-0">
             <AppVersionSwitcher />
             <h1 className="hidden font-serif text-[21px] font-medium tracking-[0.02em] text-stone-700 md:block">Inner Space</h1>
             <AuthStatus />
           </div>
         </header>
-        <main className="mx-auto max-w-6xl px-5 py-8">
+        <main className="mx-auto max-w-6xl px-5 pb-8 pt-10">
           {loading && initialLoadStatus !== 'ready' ? <p className="text-sm text-stone-500">Loading...</p> : null}
           {thinkingError ? <p className="mb-4 rounded-xl bg-rose-50 px-4 py-3 text-sm text-rose-700">{thinkingError}</p> : null}
           <Routes>

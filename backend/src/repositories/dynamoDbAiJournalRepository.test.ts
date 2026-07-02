@@ -56,7 +56,7 @@ test('creates run, links notes, imports summary, and marks run summarized', asyn
 
   await repository.attachRunToNotes('user-1', [note.id], run.id);
   const summaryNote = await repository.importOneOnOneSummary('user-1', {
-    schemaVersion: '1.0',
+    schemaVersion: '1.1',
     type: '1on1Summary',
     runId: run.id,
     targetNoteIds: [note.id],
@@ -65,6 +65,10 @@ test('creates run, links notes, imports summary, and marks run summarized', asyn
       title: '2026-07-01 1on1まとめ',
       markdown: 'summary body',
     },
+    discussedThemes: ['テーマA'],
+    notableQuotes: ['まず導線を整えたい'],
+    insights: ['入口の分かりやすさが重要'],
+    nextActions: ['トップ導線を見直す'],
     changesSincePrevious: ['change'],
     continuingThemes: ['theme'],
     newThemes: ['new'],
@@ -82,5 +86,9 @@ test('creates run, links notes, imports summary, and marks run summarized', asyn
   assert.equal(target?.oneOnOneRunIds.includes(run.id), true);
   assert.equal(target?.relatedSummaryIds.includes(summaryNote.id), true);
   assert.equal(summary?.type, 'OneOnOneSummary');
+  assert.deepEqual(summary?.discussedThemes, ['テーマA']);
+  assert.deepEqual(summary?.notableQuotes, ['まず導線を整えたい']);
+  assert.deepEqual(summary?.insights, ['入口の分かりやすさが重要']);
+  assert.deepEqual(summary?.nextActions, ['トップ導線を見直す']);
   assert.equal(runSnapshot.runs[0]?.id, run.id);
 });

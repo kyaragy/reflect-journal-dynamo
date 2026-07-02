@@ -108,6 +108,8 @@ export default function AiJournalOneOnOneSummariesPage() {
                       <p className="mt-2 line-clamp-2 text-sm leading-[1.7] text-stone-600">{resolveSummaryPreview(summary.content)}</p>
                       <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-stone-500">
                         <span className="rounded-full bg-stone-100 px-2.5 py-1">対象ノート {summary.targetNoteIds?.length ?? 0}件</span>
+                        <span className="rounded-full bg-stone-100 px-2.5 py-1">テーマ {summary.discussedThemes?.length ?? 0}件</span>
+                        <span className="rounded-full bg-stone-100 px-2.5 py-1">気づき {summary.insights?.length ?? 0}件</span>
                         <span className="rounded-full bg-stone-100 px-2.5 py-1">次回への問い {summary.nextQuestions?.length ?? 0}件</span>
                         <span className="rounded-full bg-stone-100 px-2.5 py-1">最終更新 {formatDateTime(summary.updatedAt)}</span>
                       </div>

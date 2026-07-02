@@ -18,7 +18,7 @@ export type OneOnOneSnapshot = {
 };
 
 export type ImportedOneOnOneSummary = {
-  schemaVersion: '1.0';
+  schemaVersion: '1.0' | '1.1';
   type: '1on1Summary';
   runId: string;
   targetNoteIds: string[];
@@ -27,6 +27,10 @@ export type ImportedOneOnOneSummary = {
     title: string;
     markdown: string;
   };
+  discussedThemes?: string[];
+  notableQuotes?: string[];
+  insights?: string[];
+  nextActions?: string[];
   changesSincePrevious: string[];
   continuingThemes: string[];
   newThemes: string[];
@@ -101,19 +105,38 @@ export const buildOneOnOnePrompt = (runId: string, targetNotes: AiJournalNote[],
       : null;
 
   return [
+    '# 役割',
+    '- あなたはコーチや評価者ではなく、信頼できる1on1相手として対話してください。',
+    '- 役割は、ユーザーの思考・感情・論点を整理するための壁打ち相手になることです。',
+    '- 無理に結論を出したり、成長ストーリーを作ったりしないでください。',
+    '',
     '# 1on1の進め方',
     '- 基本的に質問は1つずつ行ってください。',
     '- レポート形式で大量出力せず、対話を優先してください。',
     '- ユーザーの話したいテーマを優先してください。',
     '- 複数メモにまたがる共通テーマ、継続テーマ、変化を考慮してください。',
+    '- 複数の論点があっても、一度に扱うのは1つのテーマに絞ってください。',
+    '- 気になった点を1つ選び、事実・感情・引っかかり・本当はどうしたいか、の順で自然に深掘りしてください。',
+    '- 短く整理し直すのは構いませんが、分析レポートのようにはしないでください。',
+    '- 過去の1on1サマリにある継続テーマや要点は、以前どのような話をしていたかを把握する目的で使ってください。',
+    '- 過去の継続テーマは、今回の対話でも継続していそうだと分かったときに気づきとして扱う程度に留め、無理にその方向へ誘導しないでください。',
     '- Bookノートが対象に含まれる場合は、読書の進捗、印象に残った学び、仕事や日常への接続を会話の中で確認してください。',
     '- ユーザーが終了を宣言するまで対話を継続してください。',
     '',
     '# 1on1終了時の出力要件',
     '- 最後にJSONのみを出力してください。',
-    '- schemaVersion は "1.0" を使ってください。',
+    '- schemaVersion は "1.1" を使ってください。',
     '- type は "1on1Summary" を使ってください。',
     '- runId は以下の値をそのまま使用してください。',
+    '- discussedThemes には、今回の1on1で実際に扱ったテーマを入れてください。',
+    '- notableQuotes には、本人の発言のうち印象に残った言葉を、可能な限り本人の表現に沿って入れてください。',
+    '- insights には、今回の対話の中で見えた気づきを入れてください。',
+    '- nextActions には、次に試したいこと・考えたいこと・確認したい行動候補を入れてください。',
+    '- continuingThemes には、今回の1on1でも引き続き現れていたテーマだけを入れてください。',
+    '- 直接同じ言葉で出ていなくても、過去テーマと関連性が高い場合は continuingThemes に含めて構いません。',
+    '- 反対に、今回の対話で継続が確認できない過去テーマを惰性で引き継がないでください。',
+    '- summary.markdown には、今回話したテーマ・印象に残った発言・気づき・次回確認したいことが分かるようにまとめてください。',
+    '- AIの分析レポートではなく、1on1の対話記録として自然な文体でまとめてください。',
     '',
     '# メタ情報',
     `- runId: ${runId}`,
@@ -133,7 +156,7 @@ export const buildOneOnOnePrompt = (runId: string, targetNotes: AiJournalNote[],
     '```json',
     JSON.stringify(
       {
-        schemaVersion: '1.0',
+        schemaVersion: '1.1',
         type: '1on1Summary',
         runId,
         targetNoteIds: [],
@@ -142,6 +165,10 @@ export const buildOneOnOnePrompt = (runId: string, targetNotes: AiJournalNote[],
           title: '',
           markdown: '',
         },
+        discussedThemes: [],
+        notableQuotes: [],
+        insights: [],
+        nextActions: [],
         changesSincePrevious: [],
         continuingThemes: [],
         newThemes: [],
@@ -170,8 +197,8 @@ export const parseImportedOneOnOneSummary = (value: string): ImportedOneOnOneSum
   }
 
   const candidate = parsed as Record<string, unknown>;
-  if (candidate.schemaVersion !== '1.0') {
-    throw new Error('schemaVersion は "1.0" である必要があります。');
+  if (candidate.schemaVersion !== '1.0' && candidate.schemaVersion !== '1.1') {
+    throw new Error('schemaVersion は "1.0" または "1.1" である必要があります。');
   }
 
   if (candidate.type !== '1on1Summary' && candidate.type !== 'oneOnOneSummary') {
@@ -199,13 +226,17 @@ export const parseImportedOneOnOneSummary = (value: string): ImportedOneOnOneSum
     throw new Error('summary.title と summary.markdown は文字列である必要があります。');
   }
 
+  const discussedThemes = isStringArray(candidate.discussedThemes) ? candidate.discussedThemes : [];
+  const notableQuotes = isStringArray(candidate.notableQuotes) ? candidate.notableQuotes : [];
+  const insights = isStringArray(candidate.insights) ? candidate.insights : [];
+  const nextActions = isStringArray(candidate.nextActions) ? candidate.nextActions : [];
   const changesSincePrevious = isStringArray(candidate.changesSincePrevious) ? candidate.changesSincePrevious : [];
   const continuingThemes = isStringArray(candidate.continuingThemes) ? candidate.continuingThemes : [];
   const newThemes = isStringArray(candidate.newThemes) ? candidate.newThemes : [];
   const nextQuestions = isStringArray(candidate.nextQuestions) ? candidate.nextQuestions : [];
 
   return {
-    schemaVersion: '1.0',
+    schemaVersion: candidate.schemaVersion,
     type: '1on1Summary',
     runId: candidate.runId,
     targetNoteIds: candidate.targetNoteIds,
@@ -214,6 +245,10 @@ export const parseImportedOneOnOneSummary = (value: string): ImportedOneOnOneSum
       title: summary.title,
       markdown: summary.markdown,
     },
+    discussedThemes,
+    notableQuotes,
+    insights,
+    nextActions,
     changesSincePrevious,
     continuingThemes,
     newThemes,

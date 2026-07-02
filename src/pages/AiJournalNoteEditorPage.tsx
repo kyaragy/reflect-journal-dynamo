@@ -44,6 +44,29 @@ const renderSummaryList = (items: string[] | undefined, emptyLabel: string) => {
   );
 };
 
+const hasItems = (items: string[] | undefined) => Boolean(items && items.length > 0);
+
+const renderSummaryBullets = (items: string[] | undefined, emptyLabel: string, tone: 'default' | 'highlight' = 'default') => {
+  if (!items || items.length === 0) {
+    return <p className="text-sm text-stone-500">{emptyLabel}</p>;
+  }
+
+  return (
+    <ul className="space-y-2.5">
+      {items.map((item, index) => (
+        <li
+          key={`${item}-${index}`}
+          className={`rounded-2xl px-3.5 py-3 text-sm leading-7 ${
+            tone === 'highlight' ? 'bg-white/80 text-stone-800 ring-1 ring-sky-100' : 'bg-stone-50 text-stone-700'
+          }`}
+        >
+          {item}
+        </li>
+      ))}
+    </ul>
+  );
+};
+
 const renderSummaryBody = (content: string) => {
   if (!content.trim()) {
     return <p className="text-sm text-stone-500">本文がありません。</p>;
@@ -54,6 +77,31 @@ const renderSummaryBody = (content: string) => {
 
     if (!trimmedLine) {
       return <div key={`summary-space-${index}`} className="h-3" />;
+    }
+
+    if (trimmedLine.startsWith('## ')) {
+      return (
+        <h4 key={`summary-heading-${index}`} className="pt-2 text-sm font-semibold tracking-[0.01em] text-stone-900">
+          {trimmedLine.replace(/^##\s+/, '')}
+        </h4>
+      );
+    }
+
+    if (trimmedLine.startsWith('# ')) {
+      return (
+        <h4 key={`summary-heading-${index}`} className="pt-2 text-base font-semibold tracking-[0.01em] text-stone-900">
+          {trimmedLine.replace(/^#\s+/, '')}
+        </h4>
+      );
+    }
+
+    if (trimmedLine.startsWith('- ')) {
+      return (
+        <p key={`summary-bullet-${index}`} className="pl-4 text-[15px] leading-[1.85] text-stone-800">
+          <span className="ml-[-0.9rem] inline-block w-4 text-stone-400">•</span>
+          {trimmedLine.replace(/^- /, '')}
+        </p>
+      );
     }
 
     return (
@@ -222,14 +270,14 @@ export default function AiJournalNoteEditorPage() {
   const handleInsertJournalPrompt = (promptLabel: string) => {
     setContent((current) => {
       const prefix = current.trim().length === 0 ? '' : '\n\n';
-      return `${current}${prefix}## ${promptLabel}\n`;
+      return `${current}${prefix}${promptLabel}\n`;
     });
   };
 
   const handleInsertBookPrompt = (promptLabel: string) => {
     setContent((current) => {
       const prefix = current.trim().length === 0 ? '' : '\n\n';
-      return `${current}${prefix}## ${promptLabel}\n`;
+      return `${current}${prefix}${promptLabel}\n`;
     });
   };
 
@@ -307,9 +355,16 @@ export default function AiJournalNoteEditorPage() {
                 <h3 className="mt-2 text-[2rem] font-semibold tracking-[-0.02em] text-stone-900">
                   {persistedNote.title || '1on1まとめ'}
                 </h3>
-                <p className="mt-2 text-sm text-stone-600">
-                  1on1サマリ · 作成日 {formatDateTime(persistedNote.createdAt)} · 対象ノート {relatedTargetNotes.length}件
-                </p>
+                <div className="mt-3 flex flex-wrap gap-2 text-[11px] text-stone-600">
+                  <span className="rounded-full bg-white/80 px-2.5 py-1">作成日 {formatDateTime(persistedNote.createdAt)}</span>
+                  <span className="rounded-full bg-white/80 px-2.5 py-1">対象ノート {relatedTargetNotes.length}件</span>
+                  {relatedContextNotes.length > 0 ? (
+                    <span className="rounded-full bg-white/80 px-2.5 py-1">過去まとめ {relatedContextNotes.length}件</span>
+                  ) : null}
+                  {hasItems(persistedNote.nextQuestions) ? (
+                    <span className="rounded-full bg-white/80 px-2.5 py-1">次回確認 {persistedNote.nextQuestions?.length ?? 0}件</span>
+                  ) : null}
+                </div>
               </div>
               <div className="flex gap-2">
                 <button
@@ -333,132 +388,143 @@ export default function AiJournalNoteEditorPage() {
             </div>
           </section>
 
-          <section className="grid items-start gap-6 xl:grid-cols-[minmax(0,1.15fr)_320px]">
-            <section className="rounded-3xl border border-stone-200 bg-white p-6 shadow-sm">
-              <h3 className="text-xl font-semibold text-stone-900">1on1で見えたこと</h3>
-              <div className="mt-5 space-y-3">{renderSummaryBody(persistedNote.content)}</div>
+          <section className="grid items-start gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(280px,0.8fr)]">
+            <section className="rounded-3xl border border-sky-100 bg-sky-50/35 p-6 shadow-sm">
+              <h3 className="text-xl font-semibold text-stone-900">今回の要点</h3>
+
+              {hasItems(persistedNote.discussedThemes) ? (
+                <div className="mt-5">
+                  <p className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-sky-700">今回話したテーマ</p>
+                  {renderSummaryBullets(persistedNote.discussedThemes, '今回話したテーマはありません。', 'highlight')}
+                </div>
+              ) : null}
+
+              <div className="mt-5">
+                <p className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-sky-700">1on1で見えたこと</p>
+                <div className="space-y-3 rounded-3xl bg-white/88 px-4 py-4 ring-1 ring-sky-100/80">{renderSummaryBody(persistedNote.content)}</div>
+              </div>
+
+              {hasItems(persistedNote.notableQuotes) ? (
+                <div className="mt-5">
+                  <p className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-sky-700">印象に残った発言</p>
+                  {renderSummaryBullets(persistedNote.notableQuotes, '印象に残った発言はありません。', 'highlight')}
+                </div>
+              ) : null}
             </section>
 
-            <aside className="space-y-4">
-              <section className="rounded-3xl border border-stone-200 bg-white p-5 shadow-sm">
-                <h4 className="text-sm font-semibold uppercase tracking-[0.18em] text-stone-500">今回の要点</h4>
-                <div className="mt-4 space-y-3 text-sm text-stone-600">
-                  <div className="rounded-2xl bg-stone-50 px-4 py-3">
-                    <p className="text-xs text-stone-500">対象ノート</p>
-                    <p className="mt-1 font-medium text-stone-900">{relatedTargetNotes.length}件</p>
+            <aside>
+              <section className="rounded-3xl border border-emerald-200 bg-emerald-50/60 p-6 shadow-sm">
+                <h3 className="text-xl font-semibold text-stone-900">次の行動</h3>
+
+                {hasItems(persistedNote.nextActions) ? (
+                  <div className="mt-5">
+                    <p className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">次に試したいこと</p>
+                    {renderSummaryBullets(persistedNote.nextActions, '次に試したいことはありません。')}
                   </div>
-                  <div className="rounded-2xl bg-stone-50 px-4 py-3">
-                    <p className="text-xs text-stone-500">参照した過去まとめ</p>
-                    <p className="mt-1 font-medium text-stone-900">{relatedContextNotes.length}件</p>
+                ) : null}
+
+                {hasItems(persistedNote.nextQuestions) ? (
+                  <div className="mt-5">
+                    <p className="mb-2 text-xs font-semibold uppercase tracking-[0.16em] text-emerald-700">次回確認したいこと</p>
+                    {renderSummaryBullets(persistedNote.nextQuestions, '次回確認したいことはありません。')}
                   </div>
-                  <div className="rounded-2xl bg-stone-50 px-4 py-3">
-                    <p className="text-xs text-stone-500">次回への問い</p>
-                    <p className="mt-1 font-medium text-stone-900">{persistedNote.nextQuestions?.length ?? 0}件</p>
-                  </div>
-                </div>
+                ) : null}
               </section>
+            </aside>
+          </section>
+
+          {hasItems(persistedNote.changesSincePrevious) || hasItems(persistedNote.insights) ? (
+            <section className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,0.9fr)]">
+              {hasItems(persistedNote.changesSincePrevious) ? (
+                <section className="space-y-4 rounded-3xl border border-stone-200 bg-white p-5 shadow-sm">
+                  <h3 className="text-lg font-semibold text-stone-900">前回からの変化</h3>
+                  {renderSummaryBullets(persistedNote.changesSincePrevious, '前回からの変化はありません。')}
+                </section>
+              ) : null}
+
+              {hasItems(persistedNote.insights) ? (
+                <section className="space-y-4 rounded-3xl border border-stone-200 bg-stone-50/70 p-5 shadow-sm">
+                  <h3 className="text-lg font-semibold text-stone-900">気づき</h3>
+                  {renderSummaryBullets(persistedNote.insights, '気づきはありません。')}
+                </section>
+              ) : null}
+            </section>
+          ) : null}
+
+          {hasItems(persistedNote.continuingThemes) || hasItems(persistedNote.newThemes) ? (
+            <section className="grid gap-6 lg:grid-cols-2">
+              {hasItems(persistedNote.continuingThemes) ? (
+                <section className="space-y-4 rounded-3xl border border-stone-200 bg-white p-5 shadow-sm">
+                  <h3 className="text-lg font-semibold text-stone-900">継続テーマ</h3>
+                  {renderSummaryBullets(persistedNote.continuingThemes, '継続テーマはありません。')}
+                </section>
+              ) : null}
+
+              {hasItems(persistedNote.newThemes) ? (
+                <section className="space-y-4 rounded-3xl border border-stone-200 bg-white p-5 shadow-sm">
+                  <h3 className="text-lg font-semibold text-stone-900">新規テーマ</h3>
+                  {renderSummaryBullets(persistedNote.newThemes, '新規テーマはありません。')}
+                </section>
+              ) : null}
+            </section>
+          ) : null}
+
+          {(relatedTargetNotes.length > 0 || relatedContextNotes.length > 0) ? (
+            <section className="space-y-5 rounded-3xl border border-stone-200 bg-white p-6 shadow-sm">
+              <div>
+                <h3 className="text-lg font-semibold text-stone-900">関連情報</h3>
+                <p className="mt-1 text-sm text-stone-500">必要になったら、今回使った対象メモや参照した過去まとめへ戻れます。</p>
+              </div>
 
               {relatedTargetNotes.length > 0 ? (
-                <section className="rounded-3xl border border-stone-200 bg-white p-5 shadow-sm">
-                  <h4 className="text-sm font-semibold uppercase tracking-[0.18em] text-stone-500">関連ノート</h4>
-                  <div className="mt-4 space-y-2">
-                    {relatedTargetNotes.slice(0, 3).map((targetNote) => (
+                <div className="space-y-3">
+                  <h4 className="text-sm font-semibold uppercase tracking-[0.16em] text-stone-500">対象メモ</h4>
+                  <div className="space-y-3">
+                    {relatedTargetNotes.map((targetNote) => (
                       <button
                         key={targetNote.id}
                         type="button"
                         onClick={() => navigate(`/ai-journal/notes/${targetNote.id}`)}
-                        className="block w-full rounded-2xl bg-stone-50 px-4 py-3 text-left transition-colors hover:bg-stone-100"
+                        className="flex w-full items-start justify-between rounded-2xl border border-stone-200 px-4 py-4 text-left transition-colors hover:bg-stone-50"
                       >
-                        <div className="flex flex-wrap items-center gap-2">
-                          <span className="rounded-full bg-white px-2 py-1 text-[11px] text-stone-600">{formatAiNoteTypeLabel(targetNote.type)}</span>
-                          <p className="text-sm font-medium text-stone-900">{targetNote.title || '(無題)'}</p>
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="rounded-full bg-stone-100 px-2 py-1 text-[11px] text-stone-600">{formatAiNoteTypeLabel(targetNote.type)}</span>
+                            <p className="font-medium text-stone-900">{targetNote.title || '(無題)'}</p>
+                          </div>
+                          <p className="mt-2 line-clamp-2 text-sm leading-6 text-stone-500">{resolveLinkedNotePreview(targetNote)}</p>
                         </div>
-                        <p className="mt-1 line-clamp-1 text-sm text-stone-500">{resolveLinkedNotePreview(targetNote)}</p>
+                        <p className="ml-4 shrink-0 text-xs text-stone-400">{formatDateTime(targetNote.updatedAt)}</p>
                       </button>
                     ))}
                   </div>
-                </section>
+                </div>
               ) : null}
-            </aside>
-          </section>
 
-          {persistedNote.changesSincePrevious && persistedNote.changesSincePrevious.length > 0 ? (
-            <section className="space-y-4 rounded-3xl border border-stone-200 bg-white p-6 shadow-sm">
-              <h3 className="text-lg font-semibold text-stone-900">前回からの変化</h3>
-              {renderSummaryList(persistedNote.changesSincePrevious, '前回からの変化はありません。')}
-            </section>
-          ) : null}
-
-          <section className="grid gap-6 lg:grid-cols-3">
-            {persistedNote.continuingThemes && persistedNote.continuingThemes.length > 0 ? (
-              <section className="space-y-4 rounded-3xl border border-stone-200 bg-white p-6 shadow-sm">
-                <h3 className="text-lg font-semibold text-stone-900">継続テーマ</h3>
-                {renderSummaryList(persistedNote.continuingThemes, '継続テーマはありません。')}
-              </section>
-            ) : null}
-
-            {persistedNote.newThemes && persistedNote.newThemes.length > 0 ? (
-              <section className="space-y-4 rounded-3xl border border-stone-200 bg-white p-6 shadow-sm">
-                <h3 className="text-lg font-semibold text-stone-900">新規テーマ</h3>
-                {renderSummaryList(persistedNote.newThemes, '新規テーマはありません。')}
-              </section>
-            ) : null}
-
-            {persistedNote.nextQuestions && persistedNote.nextQuestions.length > 0 ? (
-              <section className="space-y-4 rounded-3xl border border-stone-200 bg-white p-6 shadow-sm">
-                <h3 className="text-lg font-semibold text-stone-900">次回以降の問い</h3>
-                {renderSummaryList(persistedNote.nextQuestions, '次回以降の問いはありません。')}
-              </section>
-            ) : null}
-          </section>
-
-          {relatedTargetNotes.length > 0 ? (
-            <section className="space-y-4 rounded-3xl border border-stone-200 bg-white p-6 shadow-sm">
-              <h3 className="text-lg font-semibold text-stone-900">対象メモ</h3>
-              <div className="space-y-3">
-                {relatedTargetNotes.map((targetNote) => (
-                  <button
-                    key={targetNote.id}
-                    type="button"
-                    onClick={() => navigate(`/ai-journal/notes/${targetNote.id}`)}
-                    className="flex w-full items-start justify-between rounded-2xl border border-stone-200 px-4 py-4 text-left transition-colors hover:bg-stone-50"
-                  >
-                    <div className="min-w-0">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="rounded-full bg-stone-100 px-2 py-1 text-[11px] text-stone-600">{formatAiNoteTypeLabel(targetNote.type)}</span>
-                        <p className="font-medium text-stone-900">{targetNote.title || '(無題)'}</p>
-                      </div>
-                      <p className="mt-2 line-clamp-2 text-sm leading-6 text-stone-500">{resolveLinkedNotePreview(targetNote)}</p>
-                    </div>
-                    <p className="ml-4 shrink-0 text-xs text-stone-400">{formatDateTime(targetNote.updatedAt)}</p>
-                  </button>
-                ))}
-              </div>
-            </section>
-          ) : null}
-
-          {relatedContextNotes.length > 0 ? (
-            <section className="space-y-4 rounded-3xl border border-stone-200 bg-white p-6 shadow-sm">
-              <h3 className="text-lg font-semibold text-stone-900">参照した過去まとめ</h3>
-              <div className="space-y-3">
-                {relatedContextNotes.map((contextNote) => (
-                  <button
-                    key={contextNote.id}
-                    type="button"
-                    onClick={() => navigate(`/ai-journal/notes/${contextNote.id}`)}
-                    className="flex w-full items-start justify-between rounded-2xl border border-stone-200 px-4 py-4 text-left transition-colors hover:bg-stone-50"
-                  >
-                    <div className="min-w-0">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <span className="rounded-full bg-sky-50 px-2 py-1 text-[11px] text-sky-700">1on1サマリ</span>
-                        <p className="font-medium text-stone-900">{contextNote.title || '(無題)'}</p>
-                      </div>
-                      <p className="mt-2 line-clamp-2 text-sm leading-6 text-stone-500">{resolveLinkedNotePreview(contextNote)}</p>
-                    </div>
-                    <p className="ml-4 shrink-0 text-xs text-stone-400">{formatDateTime(contextNote.updatedAt)}</p>
-                  </button>
-                ))}
-              </div>
+              {relatedContextNotes.length > 0 ? (
+                <div className="space-y-3">
+                  <h4 className="text-sm font-semibold uppercase tracking-[0.16em] text-stone-500">参照した過去まとめ</h4>
+                  <div className="space-y-3">
+                    {relatedContextNotes.map((contextNote) => (
+                      <button
+                        key={contextNote.id}
+                        type="button"
+                        onClick={() => navigate(`/ai-journal/notes/${contextNote.id}`)}
+                        className="flex w-full items-start justify-between rounded-2xl border border-stone-200 px-4 py-4 text-left transition-colors hover:bg-stone-50"
+                      >
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <span className="rounded-full bg-sky-50 px-2 py-1 text-[11px] text-sky-700">1on1サマリ</span>
+                            <p className="font-medium text-stone-900">{contextNote.title || '(無題)'}</p>
+                          </div>
+                          <p className="mt-2 line-clamp-2 text-sm leading-6 text-stone-500">{resolveLinkedNotePreview(contextNote)}</p>
+                        </div>
+                        <p className="ml-4 shrink-0 text-xs text-stone-400">{formatDateTime(contextNote.updatedAt)}</p>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              ) : null}
             </section>
           ) : null}
         </section>
@@ -718,7 +784,7 @@ export default function AiJournalNoteEditorPage() {
               </div>
 
               <label className="space-y-2">
-                <span className="text-sm font-medium text-stone-700">Markdown本文</span>
+                <span className="text-sm font-medium text-stone-700">本文</span>
                 <textarea
                   value={content}
                   onChange={(event) => setContent(event.target.value)}

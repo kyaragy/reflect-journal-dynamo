@@ -27,6 +27,10 @@ export type AiJournalNote = {
   sourceRunId?: string;
   targetNoteIds?: string[];
   contextSummaryIds?: string[];
+  discussedThemes?: string[];
+  notableQuotes?: string[];
+  insights?: string[];
+  nextActions?: string[];
   changesSincePrevious?: string[];
   continuingThemes?: string[];
   newThemes?: string[];
@@ -108,6 +112,10 @@ export const normalizeAiJournalNote = (note: AiJournalNote): AiJournalNote => ({
   relatedSummaryIds: Array.isArray(note.relatedSummaryIds) ? note.relatedSummaryIds : [],
   targetNoteIds: Array.isArray(note.targetNoteIds) ? note.targetNoteIds : [],
   contextSummaryIds: Array.isArray(note.contextSummaryIds) ? note.contextSummaryIds : [],
+  discussedThemes: Array.isArray(note.discussedThemes) ? note.discussedThemes : [],
+  notableQuotes: Array.isArray(note.notableQuotes) ? note.notableQuotes : [],
+  insights: Array.isArray(note.insights) ? note.insights : [],
+  nextActions: Array.isArray(note.nextActions) ? note.nextActions : [],
   changesSincePrevious: Array.isArray(note.changesSincePrevious) ? note.changesSincePrevious : [],
   continuingThemes: Array.isArray(note.continuingThemes) ? note.continuingThemes : [],
   newThemes: Array.isArray(note.newThemes) ? note.newThemes : [],
