@@ -33,17 +33,9 @@ await aiJournalService.updateNote(userId, workNote.id, {
   ].join('\n\n'),
 });
 
-const previousRun = await aiJournalService.createOneOnOneRun(userId, {
-  targetNoteIds: [journalNote.id],
-  contextSummaryIds: [],
-  promptText: 'sample previous 1on1 prompt',
-});
-await aiJournalService.attachRunToNotes(userId, [journalNote.id], previousRun.id);
-
 const previousSummary = await aiJournalService.importOneOnOneSummary(userId, {
   schemaVersion: '1.1',
   type: '1on1Summary',
-  runId: previousRun.id,
   targetNoteIds: [journalNote.id],
   contextSummaryIds: [],
   summary: {
@@ -65,19 +57,10 @@ const previousSummary = await aiJournalService.importOneOnOneSummary(userId, {
   newThemes: ['1on1準備画面の役割整理'],
   nextQuestions: ['1on1準備画面では何を最優先で見せるか'],
 });
-await aiJournalService.markOneOnOneRunSummarized(userId, previousRun.id, previousSummary.id);
 
-const currentRun = await aiJournalService.createOneOnOneRun(userId, {
-  targetNoteIds: [journalNote.id, workNote.id],
-  contextSummaryIds: [previousSummary.id],
-  promptText: 'sample current 1on1 prompt',
-});
-await aiJournalService.attachRunToNotes(userId, [journalNote.id, workNote.id], currentRun.id);
-
-const currentSummary = await aiJournalService.importOneOnOneSummary(userId, {
+await aiJournalService.importOneOnOneSummary(userId, {
   schemaVersion: '1.1',
   type: '1on1Summary',
-  runId: currentRun.id,
   targetNoteIds: [journalNote.id, workNote.id],
   contextSummaryIds: [previousSummary.id],
   summary: {
@@ -119,6 +102,5 @@ const currentSummary = await aiJournalService.importOneOnOneSummary(userId, {
     '読み返し価値を高めるために何を必須表示にするか',
   ],
 });
-await aiJournalService.markOneOnOneRunSummarized(userId, currentRun.id, currentSummary.id);
 
 console.log(`Seeded sample 1on1 summary v1.1 for ${userId} (${driver})`);

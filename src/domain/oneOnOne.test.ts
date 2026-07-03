@@ -7,7 +7,6 @@ test('parseImportedOneOnOneSummary accepts schemaVersion 1.1 optional fields', (
     JSON.stringify({
       schemaVersion: '1.1',
       type: '1on1Summary',
-      runId: 'oneonone-20260702-001',
       targetNoteIds: ['note-1'],
       contextSummaryIds: ['summary-1'],
       summary: {

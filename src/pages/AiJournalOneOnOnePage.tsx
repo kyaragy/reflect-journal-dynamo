@@ -2,7 +2,6 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowRight, CheckCircle2, Copy, FileJson, MessagesSquare, Search, Upload, X } from 'lucide-react';
 import { AI_NOTE_TYPE_ORDER, formatAiNoteTypeLabel, type AiJournalNote, type AiNoteType } from '../domain/aiJournal';
-import { formatOneOnOneRunDateTime } from '../domain/oneOnOne';
 import { useAiJournalStore } from '../store/useAiJournalStore';
 import { useOneOnOneStore } from '../store/useOneOnOneStore';
 
@@ -248,7 +247,7 @@ function NotePickerModal({ title, description, notes, selectedIds, filterTypes, 
         </div>
         <div className="shrink-0 text-right text-[11px] text-stone-400">
           <p>{formatDateTime(note.updatedAt)}</p>
-          <p className="mt-1">{formatOneOnOneUsageLabel(note.oneOnOneRunIds.length)}</p>
+          <p className="mt-1">{formatOneOnOneUsageLabel(note.relatedSummaryIds.length)}</p>
         </div>
       </button>
     );
@@ -449,11 +448,9 @@ export default function AiJournalOneOnOnePage() {
   const navigate = useNavigate();
   const notes = useAiJournalStore((state) => state.notes);
   const initializeNotes = useAiJournalStore((state) => state.initialize);
-  const initializeRuns = useOneOnOneStore((state) => state.initialize);
+  const initializeOneOnOne = useOneOnOneStore((state) => state.initialize);
   const createPromptRun = useOneOnOneStore((state) => state.createPromptRun);
   const importSummaryJson = useOneOnOneStore((state) => state.importSummaryJson);
-  const runs = useOneOnOneStore((state) => state.runs);
-  const latestRunId = useOneOnOneStore((state) => state.latestRunId);
   const latestPromptText = useOneOnOneStore((state) => state.latestPromptText);
   const latestSummaryNoteId = useOneOnOneStore((state) => state.latestSummaryNoteId);
   const saving = useOneOnOneStore((state) => state.saving);
@@ -469,8 +466,8 @@ export default function AiJournalOneOnOnePage() {
 
   useEffect(() => {
     void initializeNotes();
-    void initializeRuns();
-  }, [initializeNotes, initializeRuns]);
+    void initializeOneOnOne();
+  }, [initializeNotes, initializeOneOnOne]);
 
   const targetCandidates = useMemo(() => notes.filter((note) => note.type !== 'OneOnOneSummary'), [notes]);
   const summaryNotes = useMemo(() => notes.filter((note) => note.type === 'OneOnOneSummary'), [notes]);
@@ -486,8 +483,6 @@ export default function AiJournalOneOnOnePage() {
     }
   }, [selectedContextIds.length, summaryNotes]);
 
-  const latestRun = runs.find((run) => run.id === latestRunId) ?? runs[0] ?? null;
-  const pendingRuns = useMemo(() => runs.filter((run) => run.status === 'prompt_created'), [runs]);
   const latestSummaryNote = useMemo(
     () => summaryNotes.slice().sort((left, right) => right.createdAt.localeCompare(left.createdAt))[0] ?? null,
     [summaryNotes]
@@ -502,10 +497,9 @@ export default function AiJournalOneOnOnePage() {
   };
 
   const handleGeneratePrompt = async () => {
-    const run = await createPromptRun(selectedTargetIds, selectedContextIds);
+    await createPromptRun(selectedTargetIds, selectedContextIds);
     navigate('/ai-journal/1on1');
     setCopyStatus('idle');
-    return run;
   };
 
   const handleCopy = async () => {
@@ -523,7 +517,7 @@ export default function AiJournalOneOnOnePage() {
 
     try {
       const result = await importSummaryJson(rawJson);
-      setValidationMessage(`1on1サマリノートを作成しました。runId: ${result.run.id}`);
+      setValidationMessage('1on1サマリノートを作成しました。');
       setImportedSummaryId(result.summaryNoteId);
     } catch (importError) {
       setValidationMessage(importError instanceof Error ? importError.message : '取込に失敗しました。');
@@ -675,15 +669,13 @@ export default function AiJournalOneOnOnePage() {
             </div>
             {selectedTargetIds.length === 0 ? <p className="text-xs text-rose-600">少なくとも1件の対象ノートを選択してください。</p> : null}
 
-            <div className="rounded-2xl bg-white p-4">
-              <div className="flex items-center justify-between gap-3">
-                <div>
-                  <p className="text-sm font-medium text-stone-900">生成結果</p>
-                  <p className="text-sm text-stone-500">
-                    {latestRun ? `${latestRun.id} / ${formatOneOnOneRunDateTime(latestRun.createdAt)}` : 'まだ生成していません。'}
-                  </p>
+              <div className="rounded-2xl bg-white p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <p className="text-sm font-medium text-stone-900">生成結果</p>
+                    <p className="text-sm text-stone-500">{latestPromptText ? '選択中ノートをもとに生成したプロンプトです。' : 'まだ生成していません。'}</p>
+                  </div>
                 </div>
-              </div>
 
               {latestPromptText ? (
                 <textarea
@@ -710,9 +702,6 @@ export default function AiJournalOneOnOnePage() {
                 <p className="text-sm text-stone-500">
                   ChatGPTの出力JSONを貼り付けると、1on1サマリノートを作成し、対象ノートと参照した過去まとめにリンクします。
                 </p>
-              </div>
-              <div className="text-sm text-stone-500">
-                {pendingRuns.length === 0 ? '未取込の1on1 run はありません。' : `取込待ちRun ${pendingRuns.length}件`}
               </div>
             </div>
 

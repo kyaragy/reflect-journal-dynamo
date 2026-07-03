@@ -1,25 +1,28 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { CheckCircle2, FileJson, Upload } from 'lucide-react';
+import { useAiJournalStore } from '../store/useAiJournalStore';
 import { useOneOnOneStore } from '../store/useOneOnOneStore';
 
 export default function AiJournalImportPage() {
   const navigate = useNavigate();
   const initialize = useOneOnOneStore((state) => state.initialize);
   const importSummaryJson = useOneOnOneStore((state) => state.importSummaryJson);
-  const runs = useOneOnOneStore((state) => state.runs);
   const saving = useOneOnOneStore((state) => state.saving);
   const error = useOneOnOneStore((state) => state.error);
   const latestSummaryNoteId = useOneOnOneStore((state) => state.latestSummaryNoteId);
+  const notes = useAiJournalStore((state) => state.notes);
+  const initializeNotes = useAiJournalStore((state) => state.initialize);
   const [rawJson, setRawJson] = useState('');
   const [validationMessage, setValidationMessage] = useState<string | null>(null);
   const [importedSummaryId, setImportedSummaryId] = useState<string | null>(null);
 
   useEffect(() => {
     void initialize();
-  }, [initialize]);
+    void initializeNotes();
+  }, [initialize, initializeNotes]);
 
-  const pendingRuns = useMemo(() => runs.filter((run) => run.status === 'prompt_created'), [runs]);
+  const summaryNotes = useMemo(() => notes.filter((note) => note.type === 'OneOnOneSummary'), [notes]);
 
   const handleImport = async () => {
     setValidationMessage(null);
@@ -27,7 +30,7 @@ export default function AiJournalImportPage() {
 
     try {
       const result = await importSummaryJson(rawJson);
-      setValidationMessage(`取込に成功しました。runId: ${result.run.id}`);
+      setValidationMessage('取込に成功しました。');
       setImportedSummaryId(result.summaryNoteId);
     } catch (importError) {
       setValidationMessage(importError instanceof Error ? importError.message : '取込に失敗しました。');
@@ -94,16 +97,16 @@ export default function AiJournalImportPage() {
 
         <aside className="space-y-4">
           <section className="rounded-3xl border border-stone-200 bg-white p-5 shadow-sm">
-            <h3 className="text-lg font-semibold text-stone-900">取込待ちRun</h3>
+            <h3 className="text-lg font-semibold text-stone-900">既存の1on1サマリ</h3>
             <div className="mt-4 space-y-3">
-              {pendingRuns.length === 0 ? (
-                <p className="text-sm text-stone-500">未取込の1on1 run はありません。</p>
+              {summaryNotes.length === 0 ? (
+                <p className="text-sm text-stone-500">まだ1on1サマリはありません。</p>
               ) : (
-                pendingRuns.map((run) => (
-                  <div key={run.id} className="rounded-2xl border border-stone-100 px-4 py-3">
-                    <p className="font-medium text-stone-900">{run.id}</p>
+                summaryNotes.slice(0, 5).map((note) => (
+                  <div key={note.id} className="rounded-2xl border border-stone-100 px-4 py-3">
+                    <p className="font-medium text-stone-900">{note.title || '1on1まとめ'}</p>
                     <p className="mt-1 text-sm text-stone-500">
-                      対象 {run.targetNoteIds.length}件 / 文脈 {run.contextSummaryIds.length}件
+                      対象 {note.targetNoteIds?.length ?? 0}件 / 参照 {note.contextSummaryIds?.length ?? 0}件
                     </p>
                   </div>
                 ))
@@ -114,10 +117,9 @@ export default function AiJournalImportPage() {
           <section className="rounded-3xl border border-stone-200 bg-white p-5 shadow-sm">
             <h3 className="text-lg font-semibold text-stone-900">バリデーション対象</h3>
             <ul className="mt-4 space-y-2 text-sm text-stone-600">
-              <li>`schemaVersion` が `1.0`</li>
+              <li>`schemaVersion` が `1.0` または `1.1`</li>
               <li>`type` が `1on1Summary`</li>
-              <li>`runId` が既存の1on1 runと一致</li>
-              <li>`targetNoteIds` / `contextSummaryIds` がrun内容と一致</li>
+              <li>`targetNoteIds` / `contextSummaryIds` が既存ノートIDと一致</li>
               <li>Summary本文と配列項目が存在</li>
             </ul>
           </section>

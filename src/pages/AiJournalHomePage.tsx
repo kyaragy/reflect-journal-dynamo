@@ -4,7 +4,6 @@ import { useNavigate } from 'react-router-dom';
 import { differenceInCalendarDays, format, parseISO } from 'date-fns';
 import { formatAiNoteTypeLabel, type AiJournalNote } from '../domain/aiJournal';
 import { useAiJournalStore } from '../store/useAiJournalStore';
-import { useOneOnOneStore } from '../store/useOneOnOneStore';
 
 const resolveNoteHeadline = (note: AiJournalNote) => {
   if (note.title.trim()) {
@@ -61,13 +60,10 @@ export default function AiJournalHomePage() {
   const initialize = useAiJournalStore((state) => state.initialize);
   const createNote = useAiJournalStore((state) => state.createNote);
   const saving = useAiJournalStore((state) => state.saving);
-  const runs = useOneOnOneStore((state) => state.runs);
-  const initializeRuns = useOneOnOneStore((state) => state.initialize);
 
   useEffect(() => {
     void initialize();
-    void initializeRuns();
-  }, [initialize, initializeRuns]);
+  }, [initialize]);
 
   const recentNotes = [...notes]
     .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt))
@@ -84,14 +80,11 @@ export default function AiJournalHomePage() {
     .sort((left, right) => right.updatedAt.localeCompare(left.updatedAt))
     .slice(0, 2);
 
-  const lastOneOnOneRun = [...runs]
-    .filter((run) => run.status === 'summarized')
-    .sort((left, right) => right.createdAt.localeCompare(left.createdAt))[0];
   const latestSummaryNote = [...notes]
     .filter((note) => note.type === 'OneOnOneSummary')
     .sort((left, right) => right.createdAt.localeCompare(left.createdAt))[0];
 
-  const lastOneOnOneDate = lastOneOnOneRun ? parseISO(lastOneOnOneRun.createdAt) : null;
+  const lastOneOnOneDate = latestSummaryNote ? parseISO(latestSummaryNote.createdAt) : null;
   const daysSinceLastOneOnOne =
     lastOneOnOneDate && !Number.isNaN(lastOneOnOneDate.getTime())
       ? differenceInCalendarDays(new Date(), lastOneOnOneDate)
@@ -331,7 +324,7 @@ export default function AiJournalHomePage() {
                   </div>
                   <div className="ml-4 shrink-0 text-right">
                     <p className="text-xs text-stone-400">{format(parseISO(note.updatedAt), 'MM-dd HH:mm')}</p>
-                    <p className="mt-2 text-xs text-stone-400">1on1 {note.oneOnOneRunIds.length}回</p>
+                    <p className="mt-2 text-xs text-stone-400">1on1 {note.relatedSummaryIds.length}回</p>
                   </div>
                 </button>
               ))

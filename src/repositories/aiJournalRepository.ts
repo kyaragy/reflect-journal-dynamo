@@ -13,7 +13,6 @@ export type AiJournalRepository = {
   createNote: (input: CreateAiJournalNoteInput) => Promise<AiJournalNote>;
   updateNote: (noteId: string, input: UpdateAiJournalNoteInput) => Promise<AiJournalNote | null>;
   deleteNote: (noteId: string) => Promise<{ deleted: true }>;
-  attachRunToNotes: (noteIds: string[], runId: string) => Promise<void>;
   importOneOnOneSummary: (input: ImportOneOnOneSummaryInput) => Promise<AiJournalNote>;
   importBookProperties: (noteId: string, book: BookProperties) => Promise<AiJournalNote | null>;
 };

@@ -179,7 +179,7 @@ export default function AiJournalNoteEditorPage() {
     persistedNote?.type === 'Book' &&
       JSON.stringify(persistedNote.book ?? createEmptyBookProperties()) !== JSON.stringify(bookDraft)
   );
-  const hasRelatedMeta = Boolean(persistedNote && (persistedNote.oneOnOneRunIds.length > 0 || persistedNote.relatedSummaryIds.length > 0));
+  const hasRelatedMeta = Boolean(persistedNote && persistedNote.relatedSummaryIds.length > 0);
   const saveStatusLabel = saving
     ? '保存中'
     : isDirty
@@ -581,8 +581,8 @@ export default function AiJournalNoteEditorPage() {
                 <details className="rounded-2xl border border-stone-200 bg-white px-5 py-4">
                   <summary className="cursor-pointer list-none text-sm font-medium text-stone-900">補助情報</summary>
                   <div className="mt-4 space-y-4 text-sm text-stone-600">
-                    {persistedNote.oneOnOneRunIds.length > 0 ? (
-                      <p>1on1利用履歴: {persistedNote.oneOnOneRunIds.length}件</p>
+                    {persistedNote.relatedSummaryIds.length > 0 ? (
+                      <p>1on1利用履歴: {persistedNote.relatedSummaryIds.length}件</p>
                     ) : null}
                     {persistedNote.relatedSummaryIds.length > 0 ? (
                       <p>関連まとめ: {persistedNote.relatedSummaryIds.length}件</p>
@@ -750,7 +750,7 @@ export default function AiJournalNoteEditorPage() {
                 <details className="rounded-2xl border border-stone-200 bg-white px-5 py-4">
                   <summary className="cursor-pointer list-none text-sm font-medium text-stone-900">補助情報</summary>
                   <div className="mt-4 space-y-4 text-sm text-stone-600">
-                    {persistedNote.oneOnOneRunIds.length > 0 ? <p>1on1利用履歴: {persistedNote.oneOnOneRunIds.length}件</p> : null}
+                    {persistedNote.relatedSummaryIds.length > 0 ? <p>1on1利用履歴: {persistedNote.relatedSummaryIds.length}件</p> : null}
                     {persistedNote.relatedSummaryIds.length > 0 ? <p>関連まとめ: {persistedNote.relatedSummaryIds.length}件</p> : null}
                   </div>
                 </details>
@@ -798,7 +798,7 @@ export default function AiJournalNoteEditorPage() {
             <details className="rounded-2xl border border-stone-200 bg-white px-5 py-4 shadow-sm">
               <summary className="cursor-pointer list-none text-sm font-medium text-stone-900">補助情報</summary>
               <div className="mt-4 space-y-3 text-sm text-stone-600">
-                {persistedNote.oneOnOneRunIds.length > 0 ? <p>1on1利用履歴: {persistedNote.oneOnOneRunIds.length}件</p> : null}
+                {persistedNote.relatedSummaryIds.length > 0 ? <p>1on1利用履歴: {persistedNote.relatedSummaryIds.length}件</p> : null}
                 {persistedNote.relatedSummaryIds.length > 0 ? <p>関連まとめ: {persistedNote.relatedSummaryIds.length}件</p> : null}
               </div>
             </details>

@@ -130,23 +130,6 @@ export const localStorageAiJournalRepository: AiJournalRepository = {
     return { deleted: true as const };
   },
 
-  async attachRunToNotes(noteIds, runId) {
-    const snapshot = readSnapshot();
-    const nextNotes = snapshot.notes.map((note) =>
-      noteIds.includes(note.id) && !note.oneOnOneRunIds.includes(runId)
-        ? {
-            ...note,
-            oneOnOneRunIds: [runId, ...note.oneOnOneRunIds],
-            updatedAt: new Date().toISOString(),
-          }
-        : note
-    );
-
-    writeSnapshot({
-      notes: nextNotes,
-    });
-  },
-
   async importOneOnOneSummary(input) {
     const snapshot = readSnapshot();
     const now = new Date().toISOString();
@@ -158,9 +141,8 @@ export const localStorageAiJournalRepository: AiJournalRepository = {
       createdAt: now,
       updatedAt: now,
       lastSavedAt: now,
-      oneOnOneRunIds: [input.runId],
+      oneOnOneRunIds: [],
       relatedSummaryIds: [],
-      sourceRunId: input.runId,
       targetNoteIds: input.targetNoteIds,
       contextSummaryIds: input.contextSummaryIds,
       discussedThemes: input.discussedThemes,

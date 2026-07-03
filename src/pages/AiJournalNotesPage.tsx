@@ -116,7 +116,7 @@ const renderNoteRow = ({
     </div>
     <div className="shrink-0 text-right text-[12px] leading-[1.45] text-stone-400">
       <p>更新 {formatDateTime(note.updatedAt)}</p>
-      <p className="mt-1">1on1 {note.oneOnOneRunIds.length}回</p>
+      <p className="mt-1">1on1 {note.relatedSummaryIds.length}回</p>
     </div>
   </button>
 );

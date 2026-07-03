@@ -1,26 +1,9 @@
-import { format, parseISO } from 'date-fns';
+import { parseISO } from 'date-fns';
 import { resolveJournalMonthLabel, type AiJournalNote } from './aiJournal';
-
-export type OneOnOneRunStatus = 'prompt_created' | 'summarized';
-
-export type OneOnOneRun = {
-  id: string;
-  createdAt: string;
-  targetNoteIds: string[];
-  contextSummaryIds: string[];
-  promptText: string;
-  summaryNoteId?: string;
-  status: OneOnOneRunStatus;
-};
-
-export type OneOnOneSnapshot = {
-  runs: OneOnOneRun[];
-};
 
 export type ImportedOneOnOneSummary = {
   schemaVersion: '1.0' | '1.1';
   type: '1on1Summary';
-  runId: string;
   targetNoteIds: string[];
   contextSummaryIds: string[];
   summary: {
@@ -38,25 +21,6 @@ export type ImportedOneOnOneSummary = {
 };
 
 export type ImportOneOnOneSummaryInput = ImportedOneOnOneSummary;
-
-export const createEmptyOneOnOneSnapshot = (): OneOnOneSnapshot => ({
-  runs: [],
-});
-
-export const sortOneOnOneRuns = (runs: OneOnOneRun[]) =>
-  [...runs].sort((left, right) => right.createdAt.localeCompare(left.createdAt));
-
-export const normalizeOneOnOneRun = (run: OneOnOneRun): OneOnOneRun => ({
-  ...run,
-  targetNoteIds: Array.isArray(run.targetNoteIds) ? run.targetNoteIds : [],
-  contextSummaryIds: Array.isArray(run.contextSummaryIds) ? run.contextSummaryIds : [],
-  promptText: run.promptText ?? '',
-  status: run.status === 'summarized' ? 'summarized' : 'prompt_created',
-});
-
-export const normalizeOneOnOneSnapshot = (snapshot: OneOnOneSnapshot): OneOnOneSnapshot => ({
-  runs: Array.isArray(snapshot.runs) ? sortOneOnOneRuns(snapshot.runs.map(normalizeOneOnOneRun)) : [],
-});
 
 const formatNoteBlock = (note: AiJournalNote) => {
   if (note.type === 'Book') {
@@ -93,7 +57,7 @@ const formatSummaryBlock = (note: AiJournalNote) => {
   ].join('\n');
 };
 
-export const buildOneOnOnePrompt = (runId: string, targetNotes: AiJournalNote[], contextNotes: AiJournalNote[]) => {
+export const buildOneOnOnePrompt = (targetNotes: AiJournalNote[], contextNotes: AiJournalNote[]) => {
   const targetNoteIds = targetNotes.map((note) => note.id);
   const contextSummaryIds = contextNotes.map((note) => note.id);
   const latestSummaryMonth =
@@ -136,7 +100,6 @@ export const buildOneOnOnePrompt = (runId: string, targetNotes: AiJournalNote[],
     '- 最後にJSONのみを出力してください。',
     '- schemaVersion は "1.1" を使ってください。',
     '- type は "1on1Summary" を使ってください。',
-    '- runId は以下の値をそのまま使用してください。',
     '- discussedThemes には、今回の1on1で実際に扱ったテーマを入れてください。',
     '- notableQuotes には、本人の発言のうち印象に残った言葉を、可能な限り本人の表現に沿って入れてください。',
     '- insights には、今回の対話の中で見えた気づきを入れてください。',
@@ -148,7 +111,6 @@ export const buildOneOnOnePrompt = (runId: string, targetNotes: AiJournalNote[],
     '- AIの分析レポートではなく、1on1の対話記録として自然な文体でまとめてください。',
     '',
     '# メタ情報',
-    `- runId: ${runId}`,
     `- targetNoteIds: ${JSON.stringify(targetNoteIds)}`,
     `- contextSummaryIds: ${JSON.stringify(contextSummaryIds)}`,
     latestSummaryMonth ? `- latestContextMonth: ${latestSummaryMonth}` : '- latestContextMonth: none',
@@ -167,7 +129,6 @@ export const buildOneOnOnePrompt = (runId: string, targetNotes: AiJournalNote[],
       {
         schemaVersion: '1.1',
         type: '1on1Summary',
-        runId,
         targetNoteIds: [],
         contextSummaryIds: [],
         summary: {
@@ -214,10 +175,6 @@ export const parseImportedOneOnOneSummary = (value: string): ImportedOneOnOneSum
     throw new Error('type は "1on1Summary" である必要があります。');
   }
 
-  if (typeof candidate.runId !== 'string' || candidate.runId.length === 0) {
-    throw new Error('runId が不正です。');
-  }
-
   if (!isStringArray(candidate.targetNoteIds)) {
     throw new Error('targetNoteIds は文字列配列である必要があります。');
   }
@@ -247,7 +204,6 @@ export const parseImportedOneOnOneSummary = (value: string): ImportedOneOnOneSum
   return {
     schemaVersion: candidate.schemaVersion,
     type: '1on1Summary',
-    runId: candidate.runId,
     targetNoteIds: candidate.targetNoteIds,
     contextSummaryIds: candidate.contextSummaryIds,
     summary: {
@@ -263,15 +219,4 @@ export const parseImportedOneOnOneSummary = (value: string): ImportedOneOnOneSum
     newThemes,
     nextQuestions,
   };
-};
-
-export const createOneOnOneRunId = (date = new Date(), sequence = 1) =>
-  `oneonone-${format(date, 'yyyyMMdd')}-${String(sequence).padStart(3, '0')}`;
-
-export const formatOneOnOneRunDateTime = (value: string) => {
-  const date = parseISO(value);
-  if (Number.isNaN(date.getTime())) {
-    return '-';
-  }
-  return format(date, 'yyyy-MM-dd HH:mm');
 };

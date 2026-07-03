@@ -1,6 +1,5 @@
 import {
   createDefaultTitleForAiNoteType,
-  createEmptyAiJournalSnapshot,
   normalizeAiJournalNote,
   normalizeAiJournalSnapshot,
   type AiJournalNote,
@@ -8,15 +7,7 @@ import {
   type UpdateAiJournalNoteInput,
 } from '../../../src/domain/aiJournal';
 import type { BookProperties } from '../../../src/domain/book';
-import {
-  createEmptyOneOnOneSnapshot,
-  createOneOnOneRunId,
-  normalizeOneOnOneRun,
-  normalizeOneOnOneSnapshot,
-  type ImportOneOnOneSummaryInput,
-  type OneOnOneRun,
-} from '../../../src/domain/oneOnOne';
-import type { CreateOneOnOneRunInput } from '../../../src/repositories/oneOnOneRepository';
+import { type ImportOneOnOneSummaryInput } from '../../../src/domain/oneOnOne';
 import { DynamoDbClient } from '../db/dynamoDbClient';
 import type { AiJournalDataRepository } from './aiJournalDataRepository';
 
@@ -28,17 +19,8 @@ type AiJournalNoteItem = {
   updatedAt: string;
 };
 
-type OneOnOneRunItem = {
-  PK: string;
-  SK: string;
-  entityType: 'AI_ONE_ON_ONE_RUN';
-  run: OneOnOneRun;
-  updatedAt: string;
-};
-
 const toUserPk = (userId: string) => `USER#${userId}`;
 const toNoteSk = (noteId: string) => `AI_NOTE#${noteId}`;
-const toRunSk = (runId: string) => `AI_ONE_ON_ONE_RUN#${runId}`;
 
 const toNoteItem = (userId: string, note: AiJournalNote): AiJournalNoteItem => ({
   PK: toUserPk(userId),
@@ -46,14 +28,6 @@ const toNoteItem = (userId: string, note: AiJournalNote): AiJournalNoteItem => (
   entityType: 'AI_NOTE',
   note,
   updatedAt: note.updatedAt,
-});
-
-const toRunItem = (userId: string, run: OneOnOneRun): OneOnOneRunItem => ({
-  PK: toUserPk(userId),
-  SK: toRunSk(run.id),
-  entityType: 'AI_ONE_ON_ONE_RUN',
-  run,
-  updatedAt: run.createdAt,
 });
 
 export class DynamoDbAiJournalRepository implements AiJournalDataRepository {
@@ -112,7 +86,6 @@ export class DynamoDbAiJournalRepository implements AiJournalDataRepository {
 
   async deleteAiJournalNote(userId: string, noteId: string) {
     const snapshot = await this.getAiJournalSnapshot(userId);
-    const runSnapshot = await this.getOneOnOneSnapshot(userId);
 
     await this.client.deleteItem({
       PK: toUserPk(userId),
@@ -143,57 +116,7 @@ export class DynamoDbAiJournalRepository implements AiJournalDataRepository {
       )
     );
 
-    const affectedRuns = runSnapshot.runs.filter(
-      (run) => run.targetNoteIds.includes(noteId) || run.contextSummaryIds.includes(noteId) || run.summaryNoteId === noteId
-    );
-
-    await Promise.all(
-      affectedRuns.map((run) =>
-        this.client.putItem(
-          toRunItem(
-            userId,
-            normalizeOneOnOneRun({
-              ...run,
-              targetNoteIds: run.targetNoteIds.filter((targetId) => targetId !== noteId),
-              contextSummaryIds: run.contextSummaryIds.filter((summaryId) => summaryId !== noteId),
-              summaryNoteId: run.summaryNoteId === noteId ? undefined : run.summaryNoteId,
-              status: run.summaryNoteId === noteId ? 'prompt_created' : run.status,
-            })
-          )
-        )
-      )
-    );
-
     return { deleted: true as const };
-  }
-
-  async attachRunToNotes(userId: string, noteIds: string[], runId: string) {
-    if (noteIds.length === 0) {
-      return;
-    }
-
-    const items = await this.client.batchGetItems<AiJournalNoteItem>(
-      noteIds.map((noteId) => ({
-        PK: toUserPk(userId),
-        SK: toNoteSk(noteId),
-      }))
-    );
-
-    const now = new Date().toISOString();
-    await Promise.all(
-      items
-        .filter((item) => item.entityType === 'AI_NOTE')
-        .map((item) => {
-          const next = normalizeAiJournalNote({
-            ...item.note,
-            oneOnOneRunIds: item.note.oneOnOneRunIds.includes(runId)
-              ? item.note.oneOnOneRunIds
-              : [runId, ...item.note.oneOnOneRunIds],
-            updatedAt: now,
-          });
-          return this.client.putItem(toNoteItem(userId, next));
-        })
-    );
   }
 
   async importOneOnOneSummary(userId: string, input: ImportOneOnOneSummaryInput) {
@@ -206,9 +129,8 @@ export class DynamoDbAiJournalRepository implements AiJournalDataRepository {
       createdAt: now,
       updatedAt: now,
       lastSavedAt: now,
-      oneOnOneRunIds: [input.runId],
+      oneOnOneRunIds: [],
       relatedSummaryIds: [],
-      sourceRunId: input.runId,
       targetNoteIds: input.targetNoteIds,
       contextSummaryIds: input.contextSummaryIds,
       discussedThemes: input.discussedThemes,
@@ -269,53 +191,6 @@ export class DynamoDbAiJournalRepository implements AiJournalDataRepository {
     });
 
     await this.client.putItem(toNoteItem(userId, updated));
-    return updated;
-  }
-
-  async getOneOnOneSnapshot(userId: string) {
-    const items = await this.client.queryByPrefix<OneOnOneRunItem>(toUserPk(userId), 'AI_ONE_ON_ONE_RUN#');
-    return normalizeOneOnOneSnapshot({
-      runs: items
-        .filter((item) => item.entityType === 'AI_ONE_ON_ONE_RUN')
-        .map((item) => normalizeOneOnOneRun(item.run)),
-    });
-  }
-
-  async createOneOnOneRun(userId: string, input: CreateOneOnOneRunInput) {
-    const snapshot = await this.getOneOnOneSnapshot(userId);
-    const now = new Date();
-    const todayKey = now.toISOString().slice(0, 10).replaceAll('-', '');
-    const sequence = snapshot.runs.filter((run) => run.id.startsWith(`oneonone-${todayKey}-`)).length + 1;
-    const run = normalizeOneOnOneRun({
-      id: createOneOnOneRunId(now, sequence),
-      createdAt: now.toISOString(),
-      targetNoteIds: input.targetNoteIds,
-      contextSummaryIds: input.contextSummaryIds,
-      promptText: input.promptText,
-      status: 'prompt_created',
-    });
-
-    await this.client.putItem(toRunItem(userId, run));
-    return run;
-  }
-
-  async markOneOnOneRunSummarized(userId: string, runId: string, summaryNoteId: string) {
-    const current = await this.client.getItem<OneOnOneRunItem>({
-      PK: toUserPk(userId),
-      SK: toRunSk(runId),
-    });
-
-    if (!current?.run) {
-      return null;
-    }
-
-    const updated = normalizeOneOnOneRun({
-      ...current.run,
-      summaryNoteId,
-      status: 'summarized',
-    });
-
-    await this.client.putItem(toRunItem(userId, updated));
     return updated;
   }
 }

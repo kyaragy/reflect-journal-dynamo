@@ -43,22 +43,14 @@ test('creates note and returns ai journal snapshot', async () => {
   assert.equal(snapshot.notes[0]?.id, note.id);
 });
 
-test('creates run, links notes, imports summary, and marks run summarized', async () => {
+test('imports summary and links target notes', async () => {
   const client = createClientStub();
   const repository = new DynamoDbAiJournalRepository(client as never);
 
   const note = await repository.createAiJournalNote('user-1', { type: 'Journal' });
-  const run = await repository.createOneOnOneRun('user-1', {
-    targetNoteIds: [note.id],
-    contextSummaryIds: [],
-    promptText: 'prompt',
-  });
-
-  await repository.attachRunToNotes('user-1', [note.id], run.id);
   const summaryNote = await repository.importOneOnOneSummary('user-1', {
     schemaVersion: '1.1',
     type: '1on1Summary',
-    runId: run.id,
     targetNoteIds: [note.id],
     contextSummaryIds: [],
     summary: {
@@ -74,21 +66,16 @@ test('creates run, links notes, imports summary, and marks run summarized', asyn
     newThemes: ['new'],
     nextQuestions: ['question'],
   });
-  const updatedRun = await repository.markOneOnOneRunSummarized('user-1', run.id, summaryNote.id);
   const snapshot = await repository.getAiJournalSnapshot('user-1');
-  const runSnapshot = await repository.getOneOnOneSnapshot('user-1');
 
   const target = snapshot.notes.find((item) => item.id === note.id);
   const summary = snapshot.notes.find((item) => item.id === summaryNote.id);
 
-  assert.equal(updatedRun?.summaryNoteId, summaryNote.id);
-  assert.equal(updatedRun?.status, 'summarized');
-  assert.equal(target?.oneOnOneRunIds.includes(run.id), true);
   assert.equal(target?.relatedSummaryIds.includes(summaryNote.id), true);
   assert.equal(summary?.type, 'OneOnOneSummary');
   assert.deepEqual(summary?.discussedThemes, ['テーマA']);
   assert.deepEqual(summary?.notableQuotes, ['まず導線を整えたい']);
   assert.deepEqual(summary?.insights, ['入口の分かりやすさが重要']);
   assert.deepEqual(summary?.nextActions, ['トップ導線を見直す']);
-  assert.equal(runSnapshot.runs[0]?.id, run.id);
+  assert.deepEqual(summary?.targetNoteIds, [note.id]);
 });

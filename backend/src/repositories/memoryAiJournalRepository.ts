@@ -4,31 +4,19 @@ import {
   normalizeAiJournalNote,
   normalizeAiJournalSnapshot,
   type AiJournalNote,
-  type AiJournalSnapshot,
   type CreateAiJournalNoteInput,
   type UpdateAiJournalNoteInput,
 } from '../../../src/domain/aiJournal';
 import type { BookProperties } from '../../../src/domain/book';
-import {
-  createEmptyOneOnOneSnapshot,
-  createOneOnOneRunId,
-  normalizeOneOnOneRun,
-  normalizeOneOnOneSnapshot,
-  type ImportOneOnOneSummaryInput,
-  type OneOnOneRun,
-  type OneOnOneSnapshot,
-} from '../../../src/domain/oneOnOne';
-import type { CreateOneOnOneRunInput } from '../../../src/repositories/oneOnOneRepository';
+import { type ImportOneOnOneSummaryInput } from '../../../src/domain/oneOnOne';
 import type { AiJournalDataRepository } from './aiJournalDataRepository';
 
 type MemoryAiJournalState = {
-  notes: AiJournalSnapshot;
-  runs: OneOnOneSnapshot;
+  notes: ReturnType<typeof createEmptyAiJournalSnapshot>;
 };
 
 const createEmptyState = (): MemoryAiJournalState => ({
   notes: createEmptyAiJournalSnapshot(),
-  runs: createEmptyOneOnOneSnapshot(),
 });
 
 export class MemoryAiJournalRepository implements AiJournalDataRepository {
@@ -107,34 +95,7 @@ export class MemoryAiJournalRepository implements AiJournalDataRepository {
           })
         ),
     });
-    state.runs = normalizeOneOnOneSnapshot({
-      runs: state.runs.runs.map((run) =>
-        normalizeOneOnOneRun({
-          ...run,
-          targetNoteIds: run.targetNoteIds.filter((targetId) => targetId !== noteId),
-          contextSummaryIds: run.contextSummaryIds.filter((summaryId) => summaryId !== noteId),
-          summaryNoteId: run.summaryNoteId === noteId ? undefined : run.summaryNoteId,
-          status: run.summaryNoteId === noteId ? 'prompt_created' : run.status,
-        })
-      ),
-    });
     return { deleted: true as const };
-  }
-
-  async attachRunToNotes(userId: string, noteIds: string[], runId: string) {
-    const state = this.getState(userId);
-    const now = new Date().toISOString();
-    state.notes = normalizeAiJournalSnapshot({
-      notes: state.notes.notes.map((note) =>
-        noteIds.includes(note.id) && !note.oneOnOneRunIds.includes(runId)
-          ? normalizeAiJournalNote({
-              ...note,
-              oneOnOneRunIds: [runId, ...note.oneOnOneRunIds],
-              updatedAt: now,
-            })
-          : note
-      ),
-    });
   }
 
   async importOneOnOneSummary(userId: string, input: ImportOneOnOneSummaryInput) {
@@ -148,9 +109,8 @@ export class MemoryAiJournalRepository implements AiJournalDataRepository {
       createdAt: now,
       updatedAt: now,
       lastSavedAt: now,
-      oneOnOneRunIds: [input.runId],
+      oneOnOneRunIds: [],
       relatedSummaryIds: [],
-      sourceRunId: input.runId,
       targetNoteIds: input.targetNoteIds,
       contextSummaryIds: input.contextSummaryIds,
       discussedThemes: input.discussedThemes,
@@ -200,50 +160,6 @@ export class MemoryAiJournalRepository implements AiJournalDataRepository {
 
     state.notes = normalizeAiJournalSnapshot({
       notes: state.notes.notes.map((note) => (note.id === noteId ? updated : note)),
-    });
-    return updated;
-  }
-
-  async getOneOnOneSnapshot(userId: string) {
-    return normalizeOneOnOneSnapshot(this.getState(userId).runs);
-  }
-
-  async createOneOnOneRun(userId: string, input: CreateOneOnOneRunInput) {
-    const state = this.getState(userId);
-    const now = new Date();
-    const todayKey = now.toISOString().slice(0, 10).replaceAll('-', '');
-    const sequence =
-      state.runs.runs.filter((run) => run.id.startsWith(`oneonone-${todayKey}-`)).length + 1;
-    const run: OneOnOneRun = normalizeOneOnOneRun({
-      id: createOneOnOneRunId(now, sequence),
-      createdAt: now.toISOString(),
-      targetNoteIds: input.targetNoteIds,
-      contextSummaryIds: input.contextSummaryIds,
-      promptText: input.promptText,
-      status: 'prompt_created',
-    });
-
-    state.runs = normalizeOneOnOneSnapshot({
-      runs: [run, ...state.runs.runs],
-    });
-    return run;
-  }
-
-  async markOneOnOneRunSummarized(userId: string, runId: string, summaryNoteId: string) {
-    const state = this.getState(userId);
-    const current = state.runs.runs.find((run) => run.id === runId);
-    if (!current) {
-      return null;
-    }
-
-    const updated = normalizeOneOnOneRun({
-      ...current,
-      summaryNoteId,
-      status: 'summarized',
-    });
-
-    state.runs = normalizeOneOnOneSnapshot({
-      runs: state.runs.runs.map((run) => (run.id === runId ? updated : run)),
     });
     return updated;
   }

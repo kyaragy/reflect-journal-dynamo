@@ -1,13 +1,9 @@
 import {
   assertAiJournalNoteId,
-  assertOneOnOneRunId,
   type PostAiJournalNoteRequest,
-  type PostAttachRunToNotesRequest,
   type PostImportOneOnOneSummaryRequest,
-  type PostOneOnOneRunRequest,
   type PutAiJournalNoteRequest,
   type PutBookPropertiesRequest,
-  type PutOneOnOneRunSummaryRequest,
 } from '../../../src/contracts/aiJournalApi';
 import {
   assertCardId,
@@ -126,14 +122,6 @@ const validateAiJournalNoteId = (value: string) => {
   }
 };
 
-const validateOneOnOneRunId = (value: string) => {
-  try {
-    assertOneOnOneRunId(value);
-  } catch {
-    throw validationError('INVALID_REQUEST_BODY', 'Invalid runId: expected non-empty string', { runId: value });
-  }
-};
-
 const parseQuery = (event: ApiGatewayHttpEvent) => new URLSearchParams(event.rawQueryString ?? '');
 
 export const routeRequest = async (
@@ -177,16 +165,6 @@ export const routeRequest = async (
     throw methodNotAllowedError(method, path);
   }
 
-  if (path === '/ai-journal/notes/attach-run') {
-    if (method !== 'POST') {
-      throw methodNotAllowedError(method, path);
-    }
-
-    const payload = parseJsonBody<PostAttachRunToNotesRequest>(event);
-    await dependencies.aiJournalService.attachRunToNotes(userId, payload.noteIds ?? [], payload.runId ?? '');
-    return success({ attached: true }, requestId);
-  }
-
   if (path === '/ai-journal/notes/import-one-on-one-summary') {
     if (method !== 'POST') {
       throw methodNotAllowedError(method, path);
@@ -224,32 +202,6 @@ export const routeRequest = async (
 
     const payload = parseJsonBody<PutAiJournalNoteRequest>(event);
     return success(await dependencies.aiJournalService.updateNote(userId, noteId, payload), requestId);
-  }
-
-  if (path === '/ai-journal/one-on-one-runs') {
-    if (method === 'GET') {
-      return success(await dependencies.aiJournalService.getOneOnOneSnapshot(userId), requestId);
-    }
-
-    if (method === 'POST') {
-      const payload = parseJsonBody<PostOneOnOneRunRequest>(event);
-      return success(await dependencies.aiJournalService.createOneOnOneRun(userId, payload), requestId);
-    }
-
-    throw methodNotAllowedError(method, path);
-  }
-
-  const oneOnOneRunSummaryMatch = path.match(/^\/ai-journal\/one-on-one-runs\/([^/]+)\/summary$/);
-  if (oneOnOneRunSummaryMatch) {
-    const [, runId] = oneOnOneRunSummaryMatch;
-    validateOneOnOneRunId(runId);
-
-    if (method !== 'PUT') {
-      throw methodNotAllowedError(method, path);
-    }
-
-    const payload = parseJsonBody<PutOneOnOneRunSummaryRequest>(event);
-    return success(await dependencies.aiJournalService.markOneOnOneRunSummarized(userId, runId, payload.summaryNoteId), requestId);
   }
 
   if (path === '/todos') {

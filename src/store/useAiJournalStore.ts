@@ -24,7 +24,6 @@ type AiJournalState = {
   deleteNotes: (noteIds: string[]) => Promise<void>;
   importBookProperties: (rawJson: string) => Promise<AiJournalNote | null>;
   updateBookProperties: (noteId: string, book: BookProperties) => Promise<AiJournalNote | null>;
-  markNotesUsedInRun: (noteIds: string[], runId: string) => void;
   getNoteById: (noteId: string) => AiJournalNote | undefined;
 };
 
@@ -159,23 +158,6 @@ export const useAiJournalStore = create<AiJournalState>()((set, get) => ({
       }
       return note;
     });
-  },
-
-  markNotesUsedInRun(noteIds, runId) {
-    const now = new Date().toISOString();
-    set((state) => ({
-      notes: sortAiJournalNotes(
-        state.notes.map((note) =>
-          noteIds.includes(note.id) && !note.oneOnOneRunIds.includes(runId)
-            ? {
-                ...note,
-                oneOnOneRunIds: [runId, ...note.oneOnOneRunIds],
-                updatedAt: now,
-              }
-            : note
-        )
-      ),
-    }));
   },
 
   getNoteById(noteId) {

@@ -205,7 +205,7 @@ export default function AiJournalBooksPage() {
                   </div>
                   <div className="text-right">
                     <p>更新 {formatDateTime(book.updatedAt)}</p>
-                    <p className="mt-1">1on1 {book.oneOnOneRunIds.length}回</p>
+                    <p className="mt-1">1on1 {book.relatedSummaryIds.length}回</p>
                   </div>
                 </div>
               </button>
